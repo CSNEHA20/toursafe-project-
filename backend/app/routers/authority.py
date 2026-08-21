@@ -4,7 +4,7 @@ from ..routers.auth import get_current_user
 from ..schemas.user import AuthorityRegister, AuthorityProfile, VerificationUpdate
 from ..models.authority import Authority
 
-router = APIRouter(prefix="/authority", tags=["authority"])
+router = APIRouter(prefix="/api/v1/authority", tags=["authority"])
 
 
 @router.post("/register", response_model=AuthorityProfile, status_code=status.HTTP_201_CREATED)
@@ -44,9 +44,9 @@ async def authority_register(
         license_number=payload.license_number,
         verification_status="pending",
     )
-    await authority.insert(db)
+    await db["authority"].insert_one(authority.to_dict())
 
-    return authority.to_response()
+    return authority.to_dict()
 
 
 @router.get("/me", response_model=AuthorityProfile)

@@ -4,7 +4,7 @@ from ..routers.auth import get_current_user
 from ..schemas.user import TouristRegister, TouristProfile
 from ..models.tourist import Tourist
 
-router = APIRouter(prefix="/tourists", tags=["tourists"])
+router = APIRouter(prefix="/api/v1/tourists", tags=["tourists"])
 
 
 @router.post("/register", response_model=TouristProfile, status_code=status.HTTP_201_CREATED)
@@ -49,9 +49,9 @@ async def tourist_register(
         profile_photo_url=payload.profile_photo_url,
         is_active=True,
     )
-    await tourist.insert(db)
+    await db["tourists"].insert_one(tourist.to_dict())
 
-    return tourist.to_response()
+    return tourist.to_dict()
 
 
 @router.get("/me", response_model=TouristProfile)

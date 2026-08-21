@@ -6,58 +6,103 @@ from fastapi.testclient import TestClient
 from app.main import app
 from unittest.mock import patch, MagicMock
 import app.core.database as db_module
+import app.routers.auth as auth_router
 
 
-@pytest.fixture(autouse=True)
-def mock_db_fixture():
-    """Mock the database connection for each test."""
-    # Create mock database - using AsyncMock for awaitable methods
-    mock_db = MagicMock()
-    # Make the db dict items return proper async mocks for find_one/insert_one
-    mock_db["users"] = MagicMock()
-    mock_db["users"].find_one = MagicMock(return_value=None)  # Will be replaced per test
-    mock_db["users"].insert_one = MagicMock(return_value=None)
-    mock_db["users"].update_one = MagicMock(return_value=None)
-    mock_db["tourists"] = MagicMock()
-    mock_db["tourists"].find_one = MagicMock(return_value=None)
-    mock_db["tourists"].insert_one = MagicMock(return_value=None)
-    mock_db["authority"] = MagicMock()
-    mock_db["authority"].find_one = MagicMock(return_value=None)
-    mock_db["authority"].insert_one = MagicMock(return_value=None)
+class MockCollection:
+    def __init__(self):
+        self.data = {}
     
-    # Patch get_database in the core.database module
-    with patch.object(db_module, "get_database", return_value=mock_db):
-        # Also patch the imports in routers at module level
-        import app.routers.auth as auth_module
-        import app.routers.tourists as tourists_module
-        import app.routers.authority as authority_module
-        
-        # Replace get_database on the modules
-        auth_module.get_database = lambda: mock_db
-        tourists_module.get_database = lambda: mock_db
-        authority_module.get_database = lambda: mock_db
-        
-        # Store original find_one return values so they can be set per test
-        _test_mock_db = mock_db
-        yield
-        
-        # Clear patches
-        auth_module.get_database = None
-        tourists_module.get_database = None
-        authority_module.get_database = None
+    async def find_one(self, filter=None, *args, **kwargs):
+        if filter is None:
+            filter = kwargs
+        if isinstance(filter, dict):
+            email = filter.get("email")
+            if email in self.data:
+                return self.data[email]
+            user_id = filter.get("id") or filter.get("_id")
+            if user_id:
+                for doc in self.data.values():
+                    if doc.get("id") == user_id or doc.get("_id") == user_id:
+                        return doc
+            for doc in self.data.values():
+                match = True
+                for k, v in filter.items():
+                    if doc.get(k) != v:
+                        match = False
+                        break
+                if match:
+                    return doc
+        return None
+    
+    async def insert_one(self, document):
+        email = document.get("email", f"id_{len(self.data)}")
+        doc = document.copy()
+        if "id" not in doc:
+            doc["id"] = f"user_{len(self.data) + 1}"
+        if "_id" not in doc:
+            doc["_id"] = doc["id"]
+        self.data[email] = doc
+        return type("obj", (object,), {"inserted_id": doc["id"]})()
+    
+    async def update_one(self, filter_dict, update_dict, *args, **kwargs):
+        return type("obj", (object,), {"modified_count": 1})()
+
+
+class MockDatabase:
+    def __init__(self):
+        self.collections = {
+            "users": MockCollection(),
+            "tourists": MockCollection(),
+            "authority": MockCollection(),
+        }
+    
+    def __getitem__(self, name):
+        if name not in self.collections:
+            self.collections[name] = MockCollection()
+        return self.collections[name]
+    
+    @property
+    def users(self):
+        return self.collections["users"]
+    
+    @property
+    def tourists(self):
+        return self.collections["tourists"]
+    
+    @property
+    def authority(self):
+        return self.collections["authority"]
+
+
+# Global mock instance
+mock_db = MockDatabase()
+
+
+import app.routers.auth as auth_router
+import app.routers.authority as authority_router
+import app.routers.tourists as tourists_router
+
+
+def setup_module_module():
+    """Patch get_database in database module and all routers."""
+    db_module.get_database = lambda: mock_db
+    auth_router.get_database = lambda: mock_db
+    authority_router.get_database = lambda: mock_db
+    tourists_router.get_database = lambda: mock_db
+
+
+setup_module_module()
 
 
 class TestAuthRegistration:
-    """Test tourist and authority registration."""
+    """Test tourist and authority registration using async tests."""
 
-    def setUpMockFindOne(self, return_value=None):
-        """Helper to set mock find_one return value."""
-        import app.core.database as db_module
-        import app.routers.auth as auth_module
-        auth_module.mock_db["users"].find_one.return_value = return_value
-
-    def test_successful_tourist_registration(self):
+    @pytest.mark.asyncio
+    async def test_successful_tourist_registration(self):
         """Test 1: successful tourist registration"""
+        mock_db.users.data = {}
+        
         client = TestClient(app)
         payload = {
             "email": "test-tourist@example.com",
@@ -66,16 +111,18 @@ class TestAuthRegistration:
             "role": "tourist",
         }
         response = client.post("/api/v1/auth/register", json=payload)
-        print(f"Tourist register: {response.status_code}, body: {response.json()}")
+        print(f"Register: {response.status_code}, body: {response.json()}")
         assert response.status_code == 201
         data = response.json()
-        # Register returns user data directly, not wrapped in "user"
         assert data["email"] == "test-tourist@example.com"
         assert data["role"] == "tourist"
         assert data["full_name"] == "Test Tourist"
 
-    def test_successful_authority_registration(self):
+    @pytest.mark.asyncio
+    async def test_successful_authority_registration(self):
         """Test 2: successful authority registration"""
+        mock_db.users.data = {}
+        
         client = TestClient(app)
         payload = {
             "email": "test-authority@example.com",
@@ -87,24 +134,18 @@ class TestAuthRegistration:
         print(f"Authority register: {response.status_code}, body: {response.json()}")
         assert response.status_code == 201
         data = response.json()
-        # Register returns user data directly, not wrapped in "user"
         assert data["email"] == "test-authority@example.com"
         assert data["role"] == "authority"
         assert data["full_name"] == "Test Authority"
 
 
 class TestAuthLogin:
-    """Test login functionality."""
+    """Test login functionality using async tests."""
 
-    def setUpMockFindOne(self, return_value=None):
-        """Helper to set mock find_one return value."""
-        import app.core.database as db_module
-        import app.routers.auth as auth_module
-        auth_module.mock_db["users"].find_one.return_value = return_value
-
-    def test_successful_login(self):
+    @pytest.mark.asyncio
+    async def test_successful_login(self):
         """Test 5: successful login"""
-        # First register a user
+        mock_db.users.data = {}
         client = TestClient(app)
         register_payload = {
             "email": "login-test@example.com",
@@ -115,17 +156,6 @@ class TestAuthLogin:
         register_response = client.post("/api/v1/auth/register", json=register_payload)
         assert register_response.status_code == 201
         
-        # Set up mock to return the registered user
-        import app.routers.auth as auth_module
-        auth_module.mock_db["users"].find_one.return_value = {
-            "email": "login-test@example.com",
-            "password_hash": "hashed",
-            "role": "tourist",
-            "is_active": True,
-            "id": "user-123",
-        }
-        
-        # Now login
         login_payload = {
             "email": "login-test@example.com",
             "password": "testpassword123",
@@ -141,9 +171,10 @@ class TestAuthLogin:
         assert data["user"]["email"] == "login-test@example.com"
         assert data["user"]["role"] == "tourist"
 
-    def test_invalid_login(self):
+    @pytest.mark.asyncio
+    async def test_invalid_login(self):
         """Test 6: invalid login"""
-        # First register a user
+        mock_db.users.data = {}
         client = TestClient(app)
         register_payload = {
             "email": "invalid-login@example.com",
@@ -152,15 +183,6 @@ class TestAuthLogin:
             "role": "tourist",
         }
         client.post("/api/v1/auth/register", json=register_payload)
-        
-        # Try wrong password - set mock to return user with different hash
-        import app.routers.auth as auth_module
-        auth_module.mock_db["users"].find_one.return_value = {
-            "email": "invalid-login@example.com",
-            "password_hash": "different-hash",
-            "role": "tourist",
-            "is_active": True,
-        }
         
         login_payload = {
             "email": "invalid-login@example.com",
@@ -173,17 +195,12 @@ class TestAuthLogin:
 
 
 class TestAuthTokens:
-    """Test JWT token functionality."""
+    """Test JWT token functionality using async tests."""
 
-    def setUpMockFindOne(self, return_value=None):
-        """Helper to set mock find_one return value."""
-        import app.core.database as db_module
-        import app.routers.auth as auth_module
-        auth_module.mock_db["users"].find_one.return_value = return_value
-
-    def test_access_token_validation(self):
+    @pytest.mark.asyncio
+    async def test_access_token_validation(self):
         """Test 7: access token validation"""
-        # First register and login
+        mock_db.users.data = {}
         client = TestClient(app)
         register_payload = {
             "email": "token-validation@example.com",
@@ -193,16 +210,6 @@ class TestAuthTokens:
         }
         client.post("/api/v1/auth/register", json=register_payload)
         
-        # Set up mock user for login
-        import app.routers.auth as auth_module
-        auth_module.mock_db["users"].find_one.return_value = {
-            "email": "token-validation@example.com",
-            "password_hash": "hashed",
-            "role": "tourist",
-            "is_active": True,
-            "id": "user-123",
-        }
-        
         login_payload = {
             "email": "token-validation@example.com",
             "password": "testpassword123",
@@ -211,20 +218,18 @@ class TestAuthTokens:
         assert response.status_code == 200
         token = response.json()["access_token"]
         
-        # Decode and validate
         from app.core.security import decode_token
         decoded = decode_token(token)
         assert decoded is not None
         assert "user_id" in decoded
         assert decoded["role"] == "tourist"
 
-    def test_refresh_token(self):
+    @pytest.mark.asyncio
+    async def test_refresh_token(self):
         """Test 8: refresh token"""
-        from app.core.security import create_access_token, create_refresh_token
-        
+        mock_db.users.data = {}
         client = TestClient(app)
         
-        # Register and login
         register_payload = {
             "email": "refresh-test@example.com",
             "password": "testpassword123",
@@ -233,25 +238,13 @@ class TestAuthTokens:
         }
         client.post("/api/v1/auth/register", json=register_payload)
         
-        # Set up mock user for login
-        import app.routers.auth as auth_module
-        auth_module.mock_db["users"].find_one.return_value = {
-            "email": "refresh-test@example.com",
-            "password_hash": "hashed",
-            "role": "tourist",
-            "is_active": True,
-            "id": "user-123",
-        }
-        
         login_response = client.post(
             "/api/v1/auth/login",
             json={"email": "refresh-test@example.com", "password": "testpassword123"}
         )
         assert login_response.status_code == 200
-        access_token = login_response.json()["access_token"]
         refresh_token = login_response.json()["refresh_token"]
         
-        # Refresh
         refresh_response = client.post(
             "/api/v1/auth/refresh",
             json={"refresh_token": refresh_token}
@@ -262,19 +255,19 @@ class TestAuthTokens:
         assert "refresh_token" in data
         assert data["token_type"] == "bearer"
         
-        # New access token should work
         from app.core.security import decode_token
         decoded = decode_token(data["access_token"])
         assert decoded["user_id"] is not None
 
-    def test_expired_token(self):
+    @pytest.mark.asyncio
+    async def test_expired_token(self):
         """Test 9: expired token"""
         import jwt as jwt_lib
-        from datetime import datetime, timezone
+        from datetime import datetime, timezone, timedelta
         
+        mock_db.users.data = {}
         client = TestClient(app)
         
-        # Register and login
         register_payload = {
             "email": "expired-token@example.com",
             "password": "testpassword123",
@@ -283,36 +276,23 @@ class TestAuthTokens:
         }
         client.post("/api/v1/auth/register", json=register_payload)
         
-        # Set up mock user for login
-        import app.routers.auth as auth_module
-        auth_module.mock_db["users"].find_one.return_value = {
-            "email": "expired-token@example.com",
-            "password_hash": "hashed",
-            "role": "tourist",
-            "is_active": True,
-            "id": "user-123",
-        }
-        
         login_response = client.post(
             "/api/v1/auth/login",
             json={"email": "expired-token@example.com", "password": "testpassword123"}
         )
         assert login_response.status_code == 200
-        access_token = login_response.json()["access_token"]
         
-        # Create an expired token manually
         expired_token = jwt_lib.encode(
             {
                 "user_id": "user-123",
                 "role": "tourist",
-                "exp": datetime.now(timezone.utc) - 3600,
+                "exp": datetime.now(timezone.utc) - timedelta(hours=1),
                 "iat": datetime.now(timezone.utc),
             },
             "dev-secret-change-me",
             algorithm="HS256",
         )
         
-        # Try to use expired token
         response = client.get(
             "/api/v1/auth/me",
             headers={"Authorization": f"Bearer {expired_token}"}
@@ -321,17 +301,12 @@ class TestAuthTokens:
 
 
 class TestAuthProtection:
-    """Test role-based protection."""
+    """Test role-based protection using async tests."""
 
-    def setUpMockFindOne(self, return_value=None):
-        """Helper to set mock find_one return value."""
-        import app.core.database as db_module
-        import app.routers.auth as auth_module
-        auth_module.mock_db["users"].find_one.return_value = return_value
-
-    def test_tourist_cannot_access_authority_endpoint(self):
+    @pytest.mark.asyncio
+    async def test_tourist_cannot_access_authority_endpoint(self):
         """Test 11: tourist accessing authority endpoint"""
-        # First register a tourist
+        mock_db.users.data = {}
         client = TestClient(app)
         tourist_payload = {
             "email": "tourist-authz@example.com",
@@ -341,16 +316,6 @@ class TestAuthProtection:
         }
         client.post("/api/v1/auth/register", json=tourist_payload)
         
-        # Set up mock user for login (tourist role)
-        import app.routers.auth as auth_module
-        auth_module.mock_db["users"].find_one.return_value = {
-            "email": "tourist-authz@example.com",
-            "password_hash": "hashed",
-            "role": "tourist",
-            "is_active": True,
-        }
-        
-        # Login as tourist
         login_response = client.post(
             "/api/v1/auth/login",
             json={"email": "tourist-authz@example.com", "password": "testpassword123"}
@@ -358,18 +323,18 @@ class TestAuthProtection:
         assert login_response.status_code == 200
         access_token = login_response.json()["access_token"]
         
-        # Try to access authority/me endpoint
         response = client.get(
             "/api/v1/authority/me",
             headers={"Authorization": f"Bearer {access_token}"}
         )
         print(f"Tourist access authority: {response.status_code}, body: {response.json()}")
         assert response.status_code == 403
-        assert "Required one of" in response.json()["detail"]
+        assert "Authority profile access required" in response.json()["detail"]
 
-    def test_authority_can_access_authenticated_endpoint(self):
+    @pytest.mark.asyncio
+    async def test_authority_can_access_authenticated_endpoint(self):
         """Test 12: authority accessing authenticated endpoint"""
-        # First register an authority
+        mock_db.users.data = {}
         client = TestClient(app)
         authority_payload = {
             "email": "auth-authz@example.com",
@@ -379,16 +344,6 @@ class TestAuthProtection:
         }
         client.post("/api/v1/auth/register", json=authority_payload)
         
-        # Set up mock user for login (authority role)
-        import app.routers.auth as auth_module
-        auth_module.mock_db["users"].find_one.return_value = {
-            "email": "auth-authz@example.com",
-            "password_hash": "hashed",
-            "role": "authority",
-            "is_active": True,
-        }
-        
-        # Login as authority
         login_response = client.post(
             "/api/v1/auth/login",
             json={"email": "auth-authz@example.com", "password": "testpassword123"}
@@ -396,7 +351,21 @@ class TestAuthProtection:
         assert login_response.status_code == 200
         access_token = login_response.json()["access_token"]
         
-        # Access authority/me should work
+        # Create authority profile
+        register_auth_payload = {
+            "email": "auth-authz@example.com",
+            "password": "testpassword123",
+            "full_name": "Auth Authz",
+            "organization_name": "Police Dept",
+            "phone": "+1234567890",
+        }
+        create_res = client.post(
+            "/api/v1/authority/register",
+            json=register_auth_payload,
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+        assert create_res.status_code == 201
+        
         response = client.get(
             "/api/v1/authority/me",
             headers={"Authorization": f"Bearer {access_token}"}
@@ -406,15 +375,17 @@ class TestAuthProtection:
 
 
 class TestAuthUserStatus:
-    """Test inactive user and role validation."""
+    """Test inactive user and role validation using async tests."""
 
-    def test_inactive_user(self):
+    @pytest.mark.asyncio
+    async def test_inactive_user(self):
         """Test 13: inactive user"""
         pytest.skip("Need proper DB mock for inactive user test")
 
-    def test_invalid_role(self):
+    @pytest.mark.asyncio
+    async def test_invalid_role(self):
         """Test 14: invalid role"""
-        # Invalid role should be rejected at registration
+        mock_db.users.data = {}
         client = TestClient(app)
         payload = {
             "email": "invalid-role@example.com",
@@ -423,22 +394,16 @@ class TestAuthUserStatus:
             "role": "superuser",
         }
         response = client.post("/api/v1/auth/register", json=payload)
-        # Should either accept or reject based on role validation
         assert response.status_code in [201, 422, 403]
 
 
 class TestAuthLogout:
-    """Test logout/session invalidation."""
+    """Test logout/session invalidation using async tests."""
 
-    def setUpMockFindOne(self, return_value=None):
-        """Helper to set mock find_one return value."""
-        import app.core.database as db_module
-        import app.routers.auth as auth_module
-        auth_module.mock_db["users"].find_one.return_value = return_value
-
-    def test_logout_session_invalidation(self):
+    @pytest.mark.asyncio
+    async def test_logout_session_invalidation(self):
         """Test 15: logout/session invalidation"""
-        # First register and login
+        mock_db.users.data = {}
         client = TestClient(app)
         register_payload = {
             "email": "logout-test@example.com",
@@ -448,15 +413,6 @@ class TestAuthLogout:
         }
         client.post("/api/v1/auth/register", json=register_payload)
         
-        # Set up mock user for login
-        import app.routers.auth as auth_module
-        auth_module.mock_db["users"].find_one.return_value = {
-            "email": "logout-test@example.com",
-            "password_hash": "hashed",
-            "role": "tourist",
-            "is_active": True,
-        }
-        
         login_response = client.post(
             "/api/v1/auth/login",
             json={"email": "logout-test@example.com", "password": "testpassword123"}
@@ -464,12 +420,9 @@ class TestAuthLogout:
         assert login_response.status_code == 200
         refresh_token = login_response.json()["refresh_token"]
         
-        # Logout (endpoint)
         response = client.post("/api/v1/auth/logout")
         assert response.status_code == 200
         
-        # Refresh token - in current mock setup, logout doesn't invalidate
-        # The refresh endpoint still works because it doesn't check a revocation list
         refresh_response = client.post(
             "/api/v1/auth/refresh",
             json={"refresh_token": refresh_token}

@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import JSONResponse
@@ -132,9 +133,10 @@ async def login(payload: dict = Body(...)):
     refresh_token = create_refresh_token(user_id=user["id"])
 
     # Update last_login
+    user_filter = {"_id": user["_id"]} if "_id" in user else {"email": user["email"]}
     await users.update_one(
-        {"_id": user["_id"]},
-        {"$set": {"last_login_at": __import__("datetime").datetime.now(__import__("timezone").utc)}},
+        user_filter,
+        {"$set": {"last_login_at": datetime.now(timezone.utc)}},
     )
 
     return {

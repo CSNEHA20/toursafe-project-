@@ -5,7 +5,7 @@ client = AsyncIOMotorClient(settings.mongodb_uri)
 database = client[settings.mongodb_database]
 
 
-async def get_database():
+def get_database():
     return database
 
 

@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+.npm/
+
+# Expo / React Native
+.expo/
+frontend/.expo/
+dist/
+frontend/dist/
+web-build/
+frontend/web-build/
+
+# Python / Backend
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+backend/__pycache__/
+backend/app/**/__pycache__/
+backend/tests/__pycache__/
+.pytest_cache/
+*.pytest_cache/
+.coverage
+htmlcov/
+*.sqlite3
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+backend/.venv/
+backend/venv/
+
+# Environment Variables & Secrets
+.env
+*.env
+!.env.example
+frontend/.env
+backend/.env
+
+# IDE / Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
