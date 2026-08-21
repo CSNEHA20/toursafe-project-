@@ -2,7 +2,7 @@ import { ScrollView, View, Text, StyleSheet, TouchableOpacity, ActivityIndicator
 import { UserRound, HeartPulse, Shield, BellRing, LogOut } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { toast } from 'react-native-toast-message';
+import Toast from 'react-native-toast-message';
 
 export default function Profile() {
   const { user, signOut, isAuthenticated, accessToken } = useAuthStore();
@@ -32,13 +32,13 @@ export default function Profile() {
 
       try {
         // Get tourist profile
-        const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/v1/tourists/me`, {
+        const profileRes = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/tourists/me`, {
           method: 'GET',
           headers: { Authorization: `Bearer ${accessToken}` },
         });
 
         if (!profileRes.ok) {
-          const errData = await profileRes.json();
+          const errData = await profileRes.json().catch(() => ({}));
           throw new Error(errData.error?.message || 'Failed to load profile');
         }
 
@@ -46,9 +46,9 @@ export default function Profile() {
         setTourist(profileData);
 
         // Get KYC status
-        const kycRes = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/v1/tourists/me/kyc`, {
+        const kycRes = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/tourists/me/kyc`, {
           method: 'GET',
-          headers: { Authorization: `Bearer ${user.accessToken}` },
+          headers: { Authorization: `Bearer ${accessToken}` },
         });
 
         if (kycRes.ok) {
@@ -57,9 +57,9 @@ export default function Profile() {
         }
 
         // Get profile status
-        const statusRes = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/v1/tourists/me/status`, {
+        const statusRes = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/tourists/me/status`, {
           method: 'GET',
-          headers: { Authorization: `Bearer ${user.accessToken}` },
+          headers: { Authorization: `Bearer ${accessToken}` },
         });
 
         if (statusRes.ok) {
@@ -68,23 +68,22 @@ export default function Profile() {
         }
 
         // Get medical profile
-        const medicalRes = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/v1/tourists/me/medical`, {
+        const medicalRes = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/tourists/me/medical`, {
           method: 'GET',
-          headers: { Authorization: `Bearer ${user.accessToken}` },
+          headers: { Authorization: `Bearer ${accessToken}` },
         });
 
         if (medicalRes.ok) {
           const medicalData = await medicalRes.json();
           setMedical(medicalData);
         } else if (medicalRes.status === 404) {
-          // No medical profile yet - that's OK
           setMedical({ blood_group: '', allergies: [], medical_conditions: [], medications: [] });
         }
 
         // Get emergency contacts
-        const contactsRes = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/v1/tourists/me/emergency-contacts`, {
+        const contactsRes = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/tourists/me/emergency-contacts`, {
           method: 'GET',
-          headers: { Authorization: `Bearer ${user.accessToken}` },
+          headers: { Authorization: `Bearer ${accessToken}` },
         });
 
         if (contactsRes.ok) {
@@ -93,9 +92,9 @@ export default function Profile() {
         }
 
         // Get itineraries
-        const itineraryRes = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/v1/tourists/me/itinerary`, {
+        const itineraryRes = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/tourists/me/itinerary`, {
           method: 'GET',
-          headers: { Authorization: `Bearer ${user.accessToken}` },
+          headers: { Authorization: `Bearer ${accessToken}` },
         });
 
         if (itineraryRes.ok) {
@@ -116,8 +115,8 @@ export default function Profile() {
 
     loadData();
 
-    return () => { mounted = false; }
-  }, [isAuthenticated, user?.accessToken]);
+    return () => { mounted = false; };
+  }, [isAuthenticated, accessToken]);
 
   if (!isAuthenticated || !user) {
     return (
@@ -162,7 +161,7 @@ export default function Profile() {
         </View>
       )}
 
-      {loading && <ActivityIndicator size="large" animated />}
+      {loading && <ActivityIndicator size="large" color="#1a365d" />}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>KYC Status</Text>
@@ -253,6 +252,9 @@ const styles = StyleSheet.create({
   contactName: { fontSize: 14, fontWeight: '700', color: '#0f172a' },
   contactPhone: { marginTop: 2, color: '#334155', fontSize: 13 },
   contactRelation: { marginTop: 2, color: '#64748b', fontSize: 11, fontStyle: 'italic' },
+  itineraryCard: { backgroundColor: '#f8fafc', borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: '#e2e8f0' },
+  itineraryTitle: { fontSize: 14, fontWeight: '700', color: '#0f172a' },
+  itineraryMeta: { fontSize: 12, color: '#64748b', marginTop: 4 },
   logoutButton: { backgroundColor: '#0f172a', borderRadius: 14, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   logoutText: { color: '#fff', fontWeight: '800' },
 });

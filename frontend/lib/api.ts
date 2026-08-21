@@ -1,6 +1,8 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { router } from "expo-router";
 import Toast from "react-native-toast-message";
+import { useAuthStore } from "@/store/authStore";
+import type { Zone, ZoneMapItem, ZoneAudit } from "@/types";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -19,18 +21,7 @@ function processQueue(error: any, token: string | null = null) {
   failedQueue = [];
 }
 
-api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
-  const supabase = createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (session?.access_token) {
-    config.headers.Authorization = `Bearer ${session.access_token}`;
-  }
-  return config;
-});
-
-// Attach access token and handle retry logic
+// Attach access token
 let isMounted = true;
 
 api.interceptors.request.use(
@@ -49,17 +40,21 @@ api.interceptors.request.use(
 // Handle token refresh on 401
 let isHandling401 = false;
 
+interface RetryConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
+
 api.interceptors.response.use(
   (res) => res,
   async (err: AxiosError) => {
-    const originalRequest = err.config;
+    const originalRequest = err.config as RetryConfig | undefined;
 
-    if (err.response?.status === 401 && !originalRequest._retry) {
+    if (err.response?.status === 401 && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true;
 
       if (isHandling401) {
         return new Promise((resolve) => {
-          processQueue(null, originalRequest._retry);
+          processQueue(null, null);
           resolve(originalRequest);
         });
       }
@@ -73,7 +68,7 @@ api.interceptors.response.use(
           return Promise.reject(err);
         }
 
-        const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/v1/auth/refresh`, {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/auth/refresh`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ refresh_token: store.refreshToken }),
@@ -90,7 +85,9 @@ api.interceptors.response.use(
           });
 
           // Retry the original request
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          }
           return api(originalRequest);
         } else {
           // Refresh failed - logout
@@ -200,11 +197,30 @@ export const sosApi = {
 };
 
 export const zoneApi = {
-  getAll: () => api.get("/zones"),
-  getById: (id: string) => api.get(`/zones/${id}`),
-  create: (data: unknown) => api.post("/zones", data),
-  update: (id: string, data: unknown) => api.patch(`/zones/${id}`, data),
-  delete: (id: string) => api.delete(`/zones/${id}`),
+  // Tourist / Map endpoints
+  getAll: (params?: { zone_type?: string; risk_level?: string; skip?: number; limit?: number }) =>
+    api.get<{ zones: ZoneMapItem[]; total: number }>("/zones", { params }),
+  getById: (id: string) => api.get<ZoneMapItem>(`/zones/${id}`),
+
+  // Authority / Admin management endpoints
+  getAuthorityZones: (params?: {
+    q?: string;
+    status?: string;
+    zone_type?: string;
+    risk_level?: string;
+    skip?: number;
+    limit?: number;
+    sort_by?: string;
+    sort_order?: string;
+  }) => api.get<{ items: Zone[]; total: number; skip: number; limit: number }>("/authority/zones", { params }),
+  getAuthorityZoneById: (id: string) => api.get<Zone>(`/authority/zones/${id}`),
+  create: (data: Partial<Zone>) => api.post<Zone>("/authority/zones", data),
+  update: (id: string, data: Partial<Zone>) => api.patch<Zone>(`/authority/zones/${id}`, data),
+  delete: (id: string, hard_delete = false) =>
+    api.delete<{ success: boolean; zone_id: string; message: string }>(`/authority/zones/${id}`, {
+      params: { hard_delete },
+    }),
+  getAudits: (id: string) => api.get<ZoneAudit[]>(`/authority/zones/${id}/audits`),
 };
 
 export const analyticsApi = {
@@ -357,34 +373,82 @@ if (process.env.EXPO_PUBLIC_USE_MOCK === "true") {
   alertApi.escalate = (_id: string) => okd({ success: true }, 300);
 
   // ── zoneApi ─────────────────────────────────────────────────────────────────
-  const mockZonesToGeoZone = (zones: {
-    id: string; name: string; zone_type: string; is_active: boolean;
-    tourist_count: number; active_alerts: number; center_lat: number; center_lng: number; radius_m: number;
-  }[]) =>
+  const mockZonesToZoneMapItems = (zones: any[]): ZoneMapItem[] =>
     zones.map((z) => ({
-      id: z.id,
+      zone_id: z.id,
       name: z.name,
-      type: z.zone_type as "safe" | "warning" | "danger" | "restricted",
+      description: z.alert_message_en || "",
+      type: z.zone_type as any,
+      risk_level: z.zone_type === "danger" ? "critical" : z.zone_type === "warning" ? "medium" : "low",
       status: z.is_active ? "active" : "inactive",
-      tourist_count: z.tourist_count,
-      alert_count: z.active_alerts,
-      center_lat: z.center_lat,
-      center_lng: z.center_lng,
-      radius: z.radius_m,
-      radius_meters: z.radius_m,
-      polygon: { type: "Polygon", coordinates: [[]] },
+      geometry: {
+        type: "Polygon",
+        coordinates: [
+          [
+            [z.center_lng - 0.005, z.center_lat - 0.005],
+            [z.center_lng + 0.005, z.center_lat - 0.005],
+            [z.center_lng + 0.005, z.center_lat + 0.005],
+            [z.center_lng - 0.005, z.center_lat + 0.005],
+            [z.center_lng - 0.005, z.center_lat - 0.005],
+          ],
+        ],
+      },
+      center: {
+        type: "Point",
+        coordinates: [z.center_lng, z.center_lat],
+      },
+      properties: { dataset: "DEVELOPMENT GEOMETRY" },
+    }));
+
+  zoneApi.getAll = (params?: any) => {
+    const items = mockZonesToZoneMapItems(MOCK_ZONES);
+    return okd({ zones: items, total: items.length }) as any;
+  };
+  zoneApi.getById = (id: string) => {
+    const z = MOCK_ZONES.find((x: { id: string }) => x.id === id) ?? MOCK_ZONES[0];
+    return okd(mockZonesToZoneMapItems([z])[0]) as any;
+  };
+  zoneApi.getAuthorityZones = (params?: any) => {
+    const items = mockZonesToZoneMapItems(MOCK_ZONES).map((z, idx) => ({
+      id: z.zone_id,
+      zone_id: z.zone_id,
+      name: z.name,
+      description: z.description,
+      zone_type: z.type,
+      risk_level: z.risk_level,
+      status: z.status,
+      boundary: z.geometry,
+      center: z.center,
+      properties: z.properties,
+      is_active: z.status === "active",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }));
-
-  zoneApi.getAll = () => okd(mockZonesToGeoZone(MOCK_ZONES));
-  zoneApi.getById = (id: string) => {
-    const z = MOCK_ZONES.find((x: { id: string }) => x.id === id) ?? MOCK_ZONES[0];
-    return okd(mockZonesToGeoZone([z])[0]);
+    return okd({ items, total: items.length, skip: 0, limit: items.length }) as any;
   };
-  zoneApi.create = (data: unknown) => okd({ id: `zone-new-${Date.now()}`, ...(data as object) }, 600);
-  zoneApi.update = (_id: string, data: unknown) => okd({ ...(data as object) }, 300);
-  zoneApi.delete = (_id: string) => okd({ success: true }, 300);
+  zoneApi.getAuthorityZoneById = (id: string) => {
+    const z = MOCK_ZONES.find((x: { id: string }) => x.id === id) ?? MOCK_ZONES[0];
+    const mapItem = mockZonesToZoneMapItems([z])[0];
+    return okd({
+      id: mapItem.zone_id,
+      zone_id: mapItem.zone_id,
+      name: mapItem.name,
+      description: mapItem.description,
+      zone_type: mapItem.type,
+      risk_level: mapItem.risk_level,
+      status: mapItem.status,
+      boundary: mapItem.geometry,
+      center: mapItem.center,
+      properties: mapItem.properties,
+      is_active: mapItem.status === "active",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }) as any;
+  };
+  zoneApi.create = (data: any) => okd({ id: `zone-${Date.now()}`, zone_id: `zone-${Date.now()}`, ...data }, 500) as any;
+  zoneApi.update = (id: string, data: any) => okd({ id, zone_id: id, ...data }, 300) as any;
+  zoneApi.delete = (id: string) => okd({ success: true, zone_id: id, message: "Zone deleted" }, 300) as any;
+  zoneApi.getAudits = (_id: string) => okd([]) as any;
 
   // ── touristApi ──────────────────────────────────────────────────────────────
   const mockTouristToType = (t: {

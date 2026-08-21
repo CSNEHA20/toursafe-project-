@@ -1,5 +1,6 @@
 import "react-native-url-polyfill/auto";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 // Supabase client - configured for development only.
 // Production authentication is handled by the FastAPI backend.

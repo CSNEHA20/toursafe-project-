@@ -38,7 +38,7 @@ export default function AdminTourists() {
 
         const res = await fetch(url.toString(), {
           method: 'GET',
-          headers: { Authorization: `Bearer ${user.accessToken}` },
+          headers: { Authorization: `Bearer ${accessToken}` },
         });
 
         if (!res.ok) {
@@ -62,7 +62,7 @@ export default function AdminTourists() {
     loadData();
 
     return () => { mounted = false; };
-  }, [isAuthenticated, user?.accessToken, user?.role, search, statusFilter]);
+  }, [isAuthenticated, accessToken, user?.role, search, statusFilter]);
 
   if (!isAuthenticated || !user || user.role !== 'admin') {
     return (

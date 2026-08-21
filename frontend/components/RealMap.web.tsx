@@ -4,12 +4,21 @@ import React from 'react';
 
 type LatLng = { latitude: number; longitude: number };
 
+export type ZonePolygonProp = {
+  coordinates: LatLng[];
+  color?: string;
+  fillColor?: string;
+  name?: string;
+  risk_level?: string;
+};
+
 type RealMapProps = {
   region: {
     latitude: number;
     longitude: number;
-    latitudeDelta: number;
-    longitudeDelta: number;
+    latitudeDelta?: number;
+    longitudeDelta?: number;
+    zoom?: number;
   };
   markers?: Array<{
     latitude: number;
@@ -19,21 +28,46 @@ type RealMapProps = {
   }>;
   route?: LatLng[];
   polygon?: LatLng[];
+  polygons?: ZonePolygonProp[];
   overlayTitle?: string;
   overlayText?: string;
 };
 
-// Leaflet loaded from CDN inside the iframe's own document — keeps this a
-// web-only concern with no react-native-maps/leaflet bundling dependency.
+// Leaflet loaded from CDN inside the iframe's own document
 function buildMapHtml({
   region,
-  markers,
-  route,
-  polygon,
-}: Required<Pick<RealMapProps, 'region' | 'markers' | 'route' | 'polygon'>>) {
-  const markersJson = JSON.stringify(markers);
-  const routeJson = JSON.stringify(route.map((p) => [p.latitude, p.longitude]));
-  const polygonJson = JSON.stringify(polygon.map((p) => [p.latitude, p.longitude]));
+  markers = [],
+  route = [],
+  polygon = [],
+  polygons = [],
+}: {
+  region: RealMapProps['region'];
+  markers?: RealMapProps['markers'];
+  route?: LatLng[];
+  polygon?: LatLng[];
+  polygons?: ZonePolygonProp[];
+}) {
+  // Combine single polygon into polygons array
+  const allPolygons: ZonePolygonProp[] = [...polygons];
+  if (polygon && polygon.length > 2) {
+    allPolygons.push({
+      coordinates: polygon,
+      color: '#1e40af',
+      fillColor: '#1e40af',
+      name: 'Primary Boundary',
+    });
+  }
+
+  const markersJson = JSON.stringify(markers || []);
+  const routeJson = JSON.stringify((route || []).map((p) => [p.latitude, p.longitude]));
+  const polygonsJson = JSON.stringify(
+    allPolygons.map((poly) => ({
+      coords: poly.coordinates.map((p) => [p.latitude, p.longitude]),
+      color: poly.color || (poly.risk_level === 'critical' || poly.risk_level === 'high' ? '#ef4444' : poly.risk_level === 'medium' ? '#f59e0b' : '#10b981'),
+      fillColor: poly.fillColor || (poly.risk_level === 'critical' || poly.risk_level === 'high' ? '#ef4444' : poly.risk_level === 'medium' ? '#f59e0b' : '#10b981'),
+      name: poly.name || 'Safety Zone',
+    }))
+  );
 
   return `<!DOCTYPE html>
 <html>
@@ -41,14 +75,15 @@ function buildMapHtml({
   <meta charset="utf-8" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    html, body, #map { margin: 0; padding: 0; height: 100%; width: 100%; }
+    html, body, #map { margin: 0; padding: 0; height: 100%; width: 100%; font-family: system-ui, sans-serif; }
+    .leaflet-popup-content { font-size: 13px; font-weight: 600; }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    var map = L.map('map', { zoomControl: true }).setView([${region.latitude}, ${region.longitude}], 13);
+    var map = L.map('map', { zoomControl: true }).setView([${region.latitude}, ${region.longitude}], ${region.zoom || 13});
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 19,
@@ -58,15 +93,25 @@ function buildMapHtml({
 
     var route = ${routeJson};
     if (route.length > 1) {
-      var polyline = L.polyline(route, { color: '#1e40af', weight: 5 }).addTo(map);
+      L.polyline(route, { color: '#1e40af', weight: 4, opacity: 0.8 }).addTo(map);
       bounds = bounds.concat(route);
     }
 
-    var polygonCoords = ${polygonJson};
-    if (polygonCoords.length > 2) {
-      L.polygon(polygonCoords, { color: '#1e40af', weight: 2, fillColor: '#1e40af', fillOpacity: 0.12 }).addTo(map);
-      bounds = bounds.concat(polygonCoords);
-    }
+    var polygons = ${polygonsJson};
+    polygons.forEach(function(poly) {
+      if (poly.coords && poly.coords.length > 2) {
+        var p = L.polygon(poly.coords, {
+          color: poly.color,
+          weight: 2,
+          fillColor: poly.fillColor,
+          fillOpacity: 0.22
+        }).addTo(map);
+        if (poly.name) {
+          p.bindPopup(poly.name);
+        }
+        bounds = bounds.concat(poly.coords);
+      }
+    });
 
     var markers = ${markersJson};
     markers.forEach(function (m) {
@@ -75,7 +120,7 @@ function buildMapHtml({
     });
 
     if (bounds.length > 0) {
-      map.fitBounds(bounds, { padding: [32, 32] });
+      map.fitBounds(bounds, { padding: [36, 36], maxZoom: 15 });
     }
   </script>
 </body>
@@ -87,12 +132,13 @@ export default function RealMap({
   markers = [],
   route = [],
   polygon = [],
+  polygons = [],
   overlayTitle,
   overlayText,
 }: RealMapProps) {
   const html = useMemo(
-    () => buildMapHtml({ region, markers, route, polygon }),
-    [region, markers, route, polygon]
+    () => buildMapHtml({ region, markers, route, polygon, polygons }),
+    [region, markers, route, polygon, polygons]
   );
 
   return (

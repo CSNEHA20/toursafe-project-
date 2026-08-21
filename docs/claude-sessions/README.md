@@ -10,6 +10,8 @@ Each session has its own subdirectory under `prompt-<number>-<description>/` con
 - `files-changed.md` - List of files modified/created
 - `verification.md` - Test results and verification status
 - `decisions.md` - Key architectural decisions made
+- `problems-and-solutions.md` - Technical challenges resolved
+- `agent-response.md` - Implementation response summary
 
 ## Available Sessions
 
@@ -17,5 +19,4 @@ Each session has its own subdirectory under `prompt-<number>-<description>/` con
 |---------|-------------|
 | prompt-01-backend-foundation-authentication | Backend foundation with FastAPI + MongoDB + JWT authentication |
 | prompt-02-tourist-authority-profiles | Tourist & Authority Data Management |
-
-Use the `oh-my-opencode-slim` skill to quickly list or search through sessions.
+| prompt-03-geospatial-zone-foundation | Real Geospatial Zone Foundation with RFC 7946 GeoJSON, 2dsphere indexing & Audit Trails |

@@ -2,7 +2,7 @@ import { ScrollView, View, Text, StyleSheet, Switch } from 'react-native';
 import { useEffect, useState } from 'react';
 import { ShieldCheck, BellRing, DatabaseZap, LockKeyhole } from 'lucide-react-native';
 import { useAuthStore } from '@/store/authStore';
-import { toast } from 'react-native-toast-message';
+import Toast from 'react-native-toast-message';
 
 export default function AdminSettings() {
   const { user, isAuthenticated, signOut, accessToken } = useAuthStore();
@@ -14,7 +14,7 @@ export default function AdminSettings() {
 
   useEffect(() => {
     async function loadData() {
-      if (!isAuthenticated || !user || user.role !== 'authority' && user.role !== 'admin') {
+      if (!isAuthenticated || !user || (user.role !== 'authority' && user.role !== 'admin')) {
         return;
       }
 
@@ -22,7 +22,7 @@ export default function AdminSettings() {
       try {
         const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/authority/me`, {
           method: 'GET',
-          headers: { Authorization: `Bearer ${user.accessToken}` },
+          headers: { Authorization: `Bearer ${accessToken}` },
         });
 
         if (res.ok) {
@@ -37,7 +37,7 @@ export default function AdminSettings() {
     }
 
     loadData();
-  }, [isAuthenticated, user?.accessToken, user?.role]);
+  }, [isAuthenticated, accessToken, user?.role]);
 
   const getStatusColor = (status?: string) => {
     if (status === 'verified') return '#0d9488';

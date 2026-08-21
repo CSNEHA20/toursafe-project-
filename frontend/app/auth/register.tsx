@@ -11,10 +11,15 @@ type AuthorityType = "police" | "agency" | "hospital" | "other";
 interface FormData {
   email: string;
   password: string;
+  full_name?: string;
   authority_type: AuthorityType;
   org_name: string;
+  designation?: string;
   badge_number: string;
   contact_phone: string;
+  office_phone?: string;
+  address?: string;
+  license_number?: string;
   agency_tour_types: string[];
   jurisdiction_spots: string[];
 }
@@ -22,10 +27,15 @@ interface FormData {
 const INITIAL_FORM: FormData = {
   email: "",
   password: "",
+  full_name: "",
   authority_type: "police",
   org_name: "",
+  designation: "",
   badge_number: "",
   contact_phone: "",
+  office_phone: "",
+  address: "",
+  license_number: "",
   agency_tour_types: [],
   jurisdiction_spots: [],
 };

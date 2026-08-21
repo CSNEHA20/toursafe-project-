@@ -26,7 +26,6 @@ export default function LoginPage() {
   const { width } = useWindowDimensions();
   const isCompact = width < 900;
   const initialTab = params.role === 'tourist' ? 'tourist' : 'authority';
-  const supabase = createClient();
 
   const [tab, setTab] = useState<Tab>(initialTab);
   const [email, setEmail] = useState(initialTab === 'authority' ? ADMIN_ACCOUNTS[0].email : '');

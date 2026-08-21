@@ -1,12 +1,21 @@
 import { View, StyleSheet, Text } from 'react-native';
 import MapView, { Marker, Polygon, Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
 
+export type ZonePolygonProp = {
+  coordinates: Array<{ latitude: number; longitude: number }>;
+  color?: string;
+  fillColor?: string;
+  name?: string;
+  risk_level?: string;
+};
+
 type RealMapProps = {
   region: {
     latitude: number;
     longitude: number;
-    latitudeDelta: number;
-    longitudeDelta: number;
+    latitudeDelta?: number;
+    longitudeDelta?: number;
+    zoom?: number;
   };
   markers?: Array<{
     latitude: number;
@@ -16,6 +25,7 @@ type RealMapProps = {
   }>;
   route?: Array<{ latitude: number; longitude: number }>;
   polygon?: Array<{ latitude: number; longitude: number }>;
+  polygons?: ZonePolygonProp[];
   overlayTitle?: string;
   overlayText?: string;
 };
@@ -25,27 +35,66 @@ export default function RealMap({
   markers = [],
   route = [],
   polygon = [],
+  polygons = [],
   overlayTitle,
   overlayText,
 }: RealMapProps) {
+  const allPolygons: ZonePolygonProp[] = [...polygons];
+  if (polygon && polygon.length > 2) {
+    allPolygons.push({
+      coordinates: polygon,
+      color: '#1e40af',
+      fillColor: 'rgba(30,64,175,0.12)',
+      name: 'Primary Boundary',
+    });
+  }
+
   return (
     <View style={styles.wrapper}>
       <MapView
         style={styles.map}
         provider={PROVIDER_DEFAULT}
-        initialRegion={region}
+        initialRegion={{
+          latitude: region.latitude,
+          longitude: region.longitude,
+          latitudeDelta: region.latitudeDelta || 0.08,
+          longitudeDelta: region.longitudeDelta || 0.08,
+        }}
         showsCompass
         showsScale
         showsMyLocationButton={false}
         toolbarEnabled={false}
       >
-        {route.length > 1 && <Polyline coordinates={route} strokeWidth={5} strokeColor="#1e40af" />}
-        {polygon.length > 2 && (
-          <Polygon coordinates={polygon} strokeColor="rgba(30,64,175,0.85)" fillColor="rgba(30,64,175,0.12)" strokeWidth={2} />
-        )}
-        {markers.map((marker) => (
+        {route.length > 1 && <Polyline coordinates={route} strokeWidth={4} strokeColor="#1e40af" />}
+        {allPolygons.map((poly, idx) => {
+          const strokeColor =
+            poly.color ||
+            (poly.risk_level === 'critical' || poly.risk_level === 'high'
+              ? '#ef4444'
+              : poly.risk_level === 'medium'
+              ? '#f59e0b'
+              : '#10b981');
+          const fillColor =
+            poly.fillColor ||
+            (poly.risk_level === 'critical' || poly.risk_level === 'high'
+              ? 'rgba(239, 68, 68, 0.2)'
+              : poly.risk_level === 'medium'
+              ? 'rgba(245, 158, 11, 0.2)'
+              : 'rgba(16, 185, 129, 0.2)');
+
+          return (
+            <Polygon
+              key={`poly-${idx}-${poly.name || ''}`}
+              coordinates={poly.coordinates}
+              strokeColor={strokeColor}
+              fillColor={fillColor}
+              strokeWidth={2}
+            />
+          );
+        })}
+        {markers.map((marker, idx) => (
           <Marker
-            key={`${marker.title}-${marker.latitude}-${marker.longitude}`}
+            key={`${marker.title}-${idx}-${marker.latitude}-${marker.longitude}`}
             coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
             title={marker.title}
             pinColor={marker.color}

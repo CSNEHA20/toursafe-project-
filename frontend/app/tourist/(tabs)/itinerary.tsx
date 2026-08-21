@@ -2,7 +2,7 @@ import { ScrollView, View, Text, StyleSheet, TouchableOpacity, ActivityIndicator
 import { CalendarDays, MapPin, Route, TimerReset } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { toast } from 'react-native-toast-message';
+import Toast from 'react-native-toast-message';
 
 export default function Itinerary() {
   const { user, isAuthenticated, refreshSession, accessToken } = useAuthStore();
@@ -27,7 +27,7 @@ export default function Itinerary() {
       try {
         const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/v1/tourists/me/itinerary`, {
           method: 'GET',
-          headers: { Authorization: `Bearer ${user.accessToken}` },
+          headers: { Authorization: `Bearer ${accessToken}` },
         });
 
         if (!res.ok) {
@@ -50,16 +50,16 @@ export default function Itinerary() {
 
     loadData();
 
-    return () => { mounted = false; }
-  }, [isAuthenticated, user?.accessToken]);
+    return () => { mounted = false; };
+  }, [isAuthenticated, accessToken]);
 
   if (!isAuthenticated || !user) {
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>My Itinerary</Text>
-          <Text style={styles.subtitle}>Loading...</Text>
         </View>
+        <Text style={styles.errorText}>Please log in to view your itinerary</Text>
       </ScrollView>
     );
   }
@@ -68,14 +68,14 @@ export default function Itinerary() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Text style={styles.title}>My Itinerary</Text>
-        <Text style={styles.subtitle}>A prototype day-by-day travel plan with safety context</Text>
+        <Text style={styles.subtitle}>Your planned travel schedule and safety waypoints</Text>
       </View>
 
       <View style={styles.summaryCard}>
         <CalendarDays size={18} color="#1a365d" />
         <View style={{ flex: 1 }}>
-          <Text style={styles.summaryTitle}>Trip status: {'active'}</Text>
-          <Text style={styles.summaryText}>({itineraries.length} itinerary{'s' + (itineraries.length !== 1 ? 's' : '')} loaded)</Text>
+          <Text style={styles.summaryTitle}>Trip status: active</Text>
+          <Text style={styles.summaryText}>({itineraries.length} itinerary entries loaded)</Text>
         </View>
         <Route size={18} color="#0d9488" />
       </View>
@@ -86,7 +86,7 @@ export default function Itinerary() {
         </View>
       )}
 
-      {loading && <ActivityIndicator size="large" animated />}
+      {loading && <ActivityIndicator size="large" color="#1a365d" />}
 
       {itineraries.length === 0 ? (
         <View style={styles.emptyState}>

@@ -139,26 +139,91 @@ export interface SOSEvent {
   acknowledged_by?: string;
 }
 
-// ─── Geo-Zone Types ───────────────────────────────────────────────────────────
+// ─── Geo-Zone & Geospatial Types ─────────────────────────────────────────────
 
-export type ZoneType = "safe" | "warning" | "danger" | "restricted";
-export type ZoneStatus = "active" | "inactive" | "monitoring";
+export type ZoneType = "safe" | "warning" | "restricted" | "danger";
+export type ZoneRiskLevel = "low" | "medium" | "high" | "critical";
+export type ZoneStatus = "active" | "inactive" | "draft" | "monitoring";
+
+export interface GeoJSONPoint {
+  type: "Point";
+  coordinates: [number, number]; // [longitude, latitude]
+}
+
+export interface GeoJSONPolygon {
+  type: "Polygon";
+  coordinates: [number, number][][]; // [[[lon, lat], ...]]
+}
+
+export interface GeoJSONMultiPolygon {
+  type: "MultiPolygon";
+  coordinates: [number, number][][][];
+}
+
+export type ZoneGeometry = GeoJSONPolygon | GeoJSONMultiPolygon;
+
+export interface Zone {
+  id: string;
+  zone_id: string;
+  name: string;
+  description: string;
+  zone_type: ZoneType;
+  risk_level: ZoneRiskLevel;
+  status: ZoneStatus;
+  boundary: ZoneGeometry;
+  center: GeoJSONPoint;
+  properties: Record<string, any>;
+  is_active: boolean;
+  created_by?: string;
+  updated_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ZoneMapItem {
+  zone_id: string;
+  name: string;
+  description: string;
+  type: ZoneType;
+  risk_level: ZoneRiskLevel;
+  status: ZoneStatus;
+  geometry: ZoneGeometry;
+  center: GeoJSONPoint;
+  properties: Record<string, any>;
+}
+
+export interface ZoneAudit {
+  id: string;
+  audit_id: string;
+  zone_id: string;
+  action: "created" | "updated" | "boundary_updated" | "status_changed" | "deleted";
+  changed_by: string;
+  changed_at: string;
+  previous_values?: Record<string, any>;
+  new_values?: Record<string, any>;
+  change_summary?: string;
+}
 
 export interface GeoZone {
   id: string;
+  zone_id?: string;
   name: string;
   description?: string;
   type: ZoneType;
+  zone_type?: ZoneType;
+  risk_level?: ZoneRiskLevel;
   status: ZoneStatus;
-  polygon: GeoJSON.Polygon;
-  center_lat: number;
-  center_lng: number;
+  polygon?: GeoJSON.Polygon | ZoneGeometry;
+  boundary?: ZoneGeometry;
+  center?: GeoJSONPoint;
+  center_lat?: number;
+  center_lng?: number;
   radius?: number;
   radius_meters?: number;
-  tourist_count: number;
-  alert_count: number;
-  created_at: string;
-  updated_at: string;
+  tourist_count?: number;
+  alert_count?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // ─── Blockchain / DID Types ───────────────────────────────────────────────────
