@@ -21,6 +21,7 @@ import {
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import RealMap, { ZonePolygonProp } from '@/components/RealMap';
+import { ConnectionStatusBadge } from '@/components/ConnectionStatusBadge';
 import { zoneApi } from '@/lib/api';
 import type { ZoneMapItem } from '@/types';
 
@@ -114,10 +115,13 @@ export default function TouristMap() {
               Real-time safety zones and boundaries backed by MongoDB geospatial foundation.
             </Text>
           </View>
-          <TouchableOpacity onPress={() => router.push('/tourist/(tabs)/sos')} style={styles.sosButton}>
-            <ShieldAlert size={18} color="#fff" />
-            <Text style={styles.sosText}>SOS</Text>
-          </TouchableOpacity>
+          <View style={{ alignItems: "flex-end", gap: 8 }}>
+            <ConnectionStatusBadge />
+            <TouchableOpacity onPress={() => router.push('/tourist/(tabs)/sos')} style={styles.sosButton}>
+              <ShieldAlert size={18} color="#fff" />
+              <Text style={styles.sosText}>SOS</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.mapFrame}>

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react-native';
 import RealMap, { ZonePolygonProp } from '@/components/RealMap';
 import { zoneApi } from '@/lib/api';
+import { ConnectionStatusBadge } from '@/components/ConnectionStatusBadge';
 import type { ZoneMapItem } from '@/types';
 
 export default function AdminMap() {
@@ -103,9 +104,12 @@ export default function AdminMap() {
             <Text style={styles.title}>Live Command Map</Text>
             <Text style={styles.subtitle}>Geospatial zone boundaries from MongoDB 2dsphere index</Text>
           </View>
-          <TouchableOpacity onPress={fetchZones} style={styles.refreshBtn}>
-            <RefreshCw size={16} color="#1a365d" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <ConnectionStatusBadge />
+            <TouchableOpacity onPress={fetchZones} style={styles.refreshBtn}>
+              <RefreshCw size={16} color="#1a365d" />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 

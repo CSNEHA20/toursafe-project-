@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { useAuthStore } from '@/store/authStore';
-import { useSOSStore } from '@/store/sosStore';
 import { useAlertStore } from '@/store/alertStore';
 import { touristApi } from '@/lib/api';
 import type { Tourist } from '@/types';
 import RoleSwitch from '@/components/RoleSwitch';
+import { ConnectionStatusBadge } from '@/components/ConnectionStatusBadge';
 import {
   ShieldAlert,
   MapPin,
@@ -20,7 +20,6 @@ import { useRouter } from 'expo-router';
 export default function TouristDashboard() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const { activeEvents } = useSOSStore();
   const { alerts } = useAlertStore();
   const [tourist, setTourist] = useState<Tourist | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,7 +34,10 @@ export default function TouristDashboard() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      <RoleSwitch currentRole="tourist" />
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <RoleSwitch currentRole="tourist" />
+        <ConnectionStatusBadge />
+      </View>
       {/* Welcome banner */}
       <View style={styles.welcomeBanner}>
         <View style={styles.welcomeContent}>

@@ -3,6 +3,8 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { AuthUser } from "@/types";
 import Toast from "react-native-toast-message";
+import { realtimeClient } from "@/lib/realtimeClient";
+import { initRealtimeEventDispatcher } from "@/lib/eventDispatcher";
 
 interface AuthState {
   user: AuthUser | null;
@@ -36,6 +38,7 @@ export const useAuthStore = create<AuthState>()(
         } catch (e) {
           // Ignore errors during sign out
         }
+        realtimeClient.disconnect();
         set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
       },
       isAuthority: () => {
@@ -57,15 +60,22 @@ export const useAuthStore = create<AuthState>()(
                 refreshToken,
                 isAuthenticated: true,
               });
+              initRealtimeEventDispatcher();
+              if (accessToken) {
+                realtimeClient.connect(accessToken);
+              }
             } else {
               await AsyncStorage.removeItem("toursafe-auth");
+              realtimeClient.disconnect();
               set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
             }
           } else {
+            realtimeClient.disconnect();
             set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
           }
         } catch (error) {
           await AsyncStorage.removeItem("toursafe-auth");
+          realtimeClient.disconnect();
           set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
         } finally {
           set({ isLoading: false });
@@ -114,6 +124,9 @@ export const useAuthStore = create<AuthState>()(
             refreshToken: refresh_token,
             isAuthenticated: true,
           });
+
+          initRealtimeEventDispatcher();
+          realtimeClient.connect(access_token);
 
           return true;
         } catch (error: any) {

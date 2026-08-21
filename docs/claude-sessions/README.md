@@ -15,8 +15,7 @@ Each session has its own subdirectory under `prompt-<number>-<description>/` con
 
 ## Available Sessions
 
-| Session | Description |
-|---------|-------------|
 | prompt-01-backend-foundation-authentication | Backend foundation with FastAPI + MongoDB + JWT authentication |
 | prompt-02-tourist-authority-profiles | Tourist & Authority Data Management |
 | prompt-03-geospatial-zone-foundation | Real Geospatial Zone Foundation with RFC 7946 GeoJSON, 2dsphere indexing & Audit Trails |
+| prompt-04-realtime-communication | Real-Time Communication Infrastructure with WebSockets, Connection Management, Role Channels & Event Bus |
