@@ -123,6 +123,63 @@ export const touristApi = {
   getTrail: (id: string, hours = 24) =>
     api.get(`/tourists/${id}/trail`, { params: { hours } }),
   bulkImport: (data: unknown[]) => api.post("/tourists/bulk-import", { tourists: data }),
+  getMyProfile: () => api.get("/tourists/me"),
+  updateMyProfile: (data: unknown) => api.patch("/tourists/me", data),
+  getMyProfileStatus: () => api.get("/tourists/me/status"),
+  submitKYC: (data: { document_type: string; document_reference: string }) =>
+    api.post("/tourists/me/kyc", data),
+  getMyKYCStatus: () => api.get("/tourists/me/kyc"),
+  getMyMedical: () => api.get("/tourists/me/medical"),
+  updateMyMedical: (data: unknown) => api.put("/tourists/me/medical", data),
+  deleteMyMedical: () => api.delete("/tourists/me/medical"),
+  createEmergencyContact: (data: {
+    name: string;
+    relationship: string;
+    phone: string;
+    alternate_phone?: string;
+    email?: string;
+    priority?: number;
+  }) => api.post("/tourists/me/emergency-contacts", data),
+  getMyEmergencyContacts: () => api.get("/tourists/me/emergency-contacts"),
+  updateEmergencyContact: (contactId: string, data: {
+    name?: string;
+    relationship?: string;
+    phone?: string;
+    alternate_phone?: string;
+    email?: string;
+    priority?: number;
+  }) => api.patch(`/tourists/me/emergency-contacts/${contactId}`, data),
+  deleteEmergencyContact: (contactId: string) =>
+    api.delete(`/tourists/me/emergency-contacts/${contactId}`),
+  createItinerary: (data: {
+    title: string;
+    destination?: string;
+    start_date?: string;
+    end_date?: string;
+    notes?: string;
+    stops?: any[];
+  }) => api.post("/tourists/me/itinerary", data),
+  getMyItinerary: () => api.get("/tourists/me/itinerary"),
+  updateItinerary: (itineraryId: string, data: {
+    title?: string;
+    destination?: string;
+    start_date?: string;
+    end_date?: string;
+    notes?: string;
+    status?: string;
+  }) => api.patch(`/tourists/me/itinerary/${itineraryId}`, data),
+  deleteItinerary: (itineraryId: string) =>
+    api.delete(`/tourists/me/itinerary/${itineraryId}`),
+};
+
+export const authorityApi = {
+  getMe: () => api.get("/authority/me"),
+  create: (data: unknown) => api.post("/authority", data),
+  updateMe: (data: unknown) => api.patch("/authority/me", data),
+  list: () => api.get("/authority"),
+  getTouristDirectory: (params?: Record<string, unknown>) =>
+    api.get("/authority/tourists", { params }),
+  getTouristDetail: (touristId: string) => api.get(`/authority/tourists/${touristId}`),
 };
 
 export const alertApi = {
@@ -192,12 +249,6 @@ export const itineraryApi = {
     api.delete(`/itinerary/${itineraryId}/stops/${stopId}`),
 };
 
-export const authorityApi = {
-  getMe: () => api.get("/authority/me"),
-  create: (data: unknown) => api.post("/authority", data),
-  updateMe: (data: unknown) => api.patch("/authority/me", data),
-  list: () => api.get("/authority"),
-};
 
 export const safetyCheckApi = {
   getMine: () => api.get("/safety-check"),

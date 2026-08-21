@@ -1,0 +1,14 @@
+{
+  "name": "toursafe-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "web": "npm --prefix frontend run web",
+    "start": "npm --prefix frontend start",
+    "android": "npm --prefix frontend run android",
+    "ios": "npm --prefix frontend run ios",
+    "lint": "npm --prefix frontend run lint",
+    "backend": "python -m uvicorn backend.app.main:app --reload --port 8000",
+    "backend:test": "python -m pytest backend/tests"
+  }
+}

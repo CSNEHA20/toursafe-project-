@@ -5,6 +5,10 @@ from .core.database import get_database, close_database
 from .routers.auth import router as auth_router
 from .routers.tourists import router as tourists_router
 from .routers.authority import router as authority_router
+from .routers.kyc_documents import router as kyc_router
+from .routers.medical import router as medical_router
+from .routers.emergency_contacts import router as emergency_contacts_router
+from .routers.itineraries import router as itineraries_router
 
 app = FastAPI(
     title="TourSafe Backend",
@@ -45,3 +49,7 @@ async def shutdown():
 app.include_router(auth_router)
 app.include_router(tourists_router)
 app.include_router(authority_router)
+app.include_router(kyc_router)
+app.include_router(medical_router)
+app.include_router(emergency_contacts_router)
+app.include_router(itineraries_router)

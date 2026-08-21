@@ -1,5 +1,5 @@
 import uuid
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime, timezone
 from pydantic import Field
 from .user import TimeStampedModel
@@ -16,6 +16,13 @@ class Tourist(TimeStampedModel):
     gender: Optional[str] = None  # "male", "female", "other"
     passport_number: Optional[str] = None
     profile_photo_url: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    kyc_status: str = "pending"  # "pending", "submitted", "verified", "rejected"
+    identity_document_type: Optional[str] = None  # "passport", "aadhaar", "driver_license", etc.
+    identity_document_reference: Optional[str] = None
+    identity_verified_at: Optional[datetime] = None
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -35,6 +42,13 @@ class Tourist(TimeStampedModel):
             gender=data.get("gender"),
             passport_number=data.get("passport_number"),
             profile_photo_url=data.get("profile_photo_url"),
+            address=data.get("address"),
+            city=data.get("city"),
+            country=data.get("country"),
+            kyc_status=data.get("kyc_status", "pending"),
+            identity_document_type=data.get("identity_document_type"),
+            identity_document_reference=data.get("identity_document_reference"),
+            identity_verified_at=data.get("identity_verified_at"),
             is_active=data.get("is_active", True),
             created_at=data.get("created_at"),
             updated_at=data.get("updated_at"),
@@ -52,6 +66,13 @@ class Tourist(TimeStampedModel):
             "gender": self.gender,
             "passport_number": self.passport_number,
             "profile_photo_url": self.profile_photo_url,
+            "address": self.address,
+            "city": self.city,
+            "country": self.country,
+            "kyc_status": self.kyc_status,
+            "identity_document_type": self.identity_document_type,
+            "identity_document_reference": self.identity_document_reference,
+            "identity_verified_at": self.identity_verified_at,
             "is_active": self.is_active,
             "created_at": self.created_at,
             "updated_at": self.updated_at,

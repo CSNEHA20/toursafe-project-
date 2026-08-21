@@ -1,8 +1,69 @@
-import { ScrollView, View, Text, StyleSheet } from 'react-native';
+import { ScrollView, View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { CalendarDays, MapPin, Route, TimerReset } from 'lucide-react-native';
-import { demoItinerary } from '@/lib/demoContent';
+import { useEffect, useState } from 'react';
+import { useAuthStore } from '@/store/authStore';
+import { toast } from 'react-native-toast-message';
 
 export default function Itinerary() {
+  const { user, isAuthenticated, refreshSession } = useAuthStore();
+  const [loading, setLoading] = useState(true);
+  const [itineraries, setItineraries] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<string | null>('none');
+
+  useEffect(() => {
+    let mounted = true;
+
+    if (!isAuthenticated || !user) {
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    async function loadData() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/v1/tourists/me/itinerary`, {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${user.accessToken}` },
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.error?.message || 'Failed to load itinerary');
+        }
+
+        const data = await res.json();
+        setItineraries(data.items || []);
+      } catch (err: any) {
+        console.error('Itinerary load error:', err);
+        setError(err.message || 'Failed to load itinerary data');
+        setErrorType('network');
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadData();
+
+    return () => { mounted = false; }
+  }, [isAuthenticated, user?.accessToken]);
+
+  if (!isAuthenticated || !user) {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.title}>My Itinerary</Text>
+          <Text style={styles.subtitle}>Loading...</Text>
+        </View>
+      </ScrollView>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
@@ -13,29 +74,51 @@ export default function Itinerary() {
       <View style={styles.summaryCard}>
         <CalendarDays size={18} color="#1a365d" />
         <View style={{ flex: 1 }}>
-          <Text style={styles.summaryTitle}>Trip status: Active</Text>
-          <Text style={styles.summaryText}>All stops are synced locally for demo mode.</Text>
+          <Text style={styles.summaryTitle}>Trip status: {'active'}</Text>
+          <Text style={styles.summaryText}>({itineraries.length} itinerary{'s' + (itineraries.length !== 1 ? 's' : '')} loaded)</Text>
         </View>
         <Route size={18} color="#0d9488" />
       </View>
 
-      {demoItinerary.map((day) => (
-        <View key={day.id} style={styles.dayCard}>
-          <View style={styles.dayHeader}>
-            <View>
-              <Text style={styles.dayDate}>{day.date}</Text>
-              <Text style={styles.dayTitle}>{day.title}</Text>
-            </View>
-            <TimerReset size={18} color="#0d9488" />
-          </View>
-          {day.steps.map((step) => (
-            <View key={step} style={styles.stepRow}>
-              <MapPin size={14} color="#1a365d" />
-              <Text style={styles.stepText}>{step}</Text>
-            </View>
-          ))}
+      {error && (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{error}</Text>
         </View>
-      ))}
+      )}
+
+      {loading && <ActivityIndicator size="large" animated />}
+
+      {itineraries.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>No itineraries yet</Text>
+          <Text style={styles.emptyHint}>Add your first itinerary using the + button</Text>
+        </View>
+      ) : (
+        itineraries.map((day: any, index: number) => (
+          <View key={day.itinerary_id || index} style={styles.dayCard}>
+            <View style={styles.dayHeader}>
+              <View>
+                <Text style={styles.dayDate}>{day.start_date ? new Date(day.start_date).toLocaleDateString() : 'No date'}</Text>
+                <Text style={styles.dayTitle}>{day.title}</Text>
+              </View>
+              <TimerReset size={18} color="#0d9488" />
+            </View>
+            {day.entries && day.entries.length > 0 ? (
+              day.entries.map((step: any, i: number) => (
+                <View key={i} style={styles.stepRow}>
+                  <MapPin size={14} color="#1a365d" />
+                  <Text style={styles.stepText}>{step.spot_name || step.name || 'Step ' + (i + 1)}</Text>
+                </View>
+              ))
+            ) : (
+              <View style={styles.stepRow}>
+                <MapPin size={14} color="#1a365d" />
+                <Text style={styles.stepText}>No stops added</Text>
+              </View>
+            )}
+          </View>
+        ))
+      )}
     </ScrollView>
   );
 }
@@ -55,4 +138,9 @@ const styles = StyleSheet.create({
   dayTitle: { fontSize: 18, fontWeight: '800', color: '#1a365d', marginTop: 2 },
   stepRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#eef2f7' },
   stepText: { color: '#0f172a', flex: 1 },
+  emptyState: { padding: 40, alignItems: 'center', justifyContent: 'center' },
+  emptyText: { fontSize: 18, color: '#64748b', marginBottom: 8 },
+  emptyHint: { color: '#94a3b8', fontStyle: 'italic' },
+  errorBox: { backgroundColor: '#fef3c7', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#eab308', margin: 12 },
+  errorText: { color: '#92400e', fontSize: 14 },
 });
