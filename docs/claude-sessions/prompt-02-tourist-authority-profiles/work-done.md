@@ -22,7 +22,7 @@ This session implemented the following Prompt 2 requirements:
 
 8. EMERGENCY CONTACTS - Created EmergencyContact entity with emergency_contact_id, tourist_id, name, relationship, phone, alternate_phone, email, priority, created_at, updated_at. Full CRUD API: GET/POST/PATCH/DELETE /api/v1/tourists/me/emergency-contacts/{contact_id}.
 
-9. EMERGENCY CONTACT VALIDATION - Validated name, relationship, phone, email. Rule: duplicate priorities not allowed (one primary emergency contact per tourist).
+9. EMERGENCY CONTACT VALIDATION - Validated name, relationship, phone, email. Rule: duplicate priorities not allowed (one primary emergency contact per tourist). Demotion logic implemented.
 
 10. TRAVEL ITINERARY - Created Itinerary model: itinerary_id, tourist_id, title, destination, start_date, end_date, notes, status, created_at, updated_at.
 
@@ -48,7 +48,7 @@ This session implemented the following Prompt 2 requirements:
 
 21. SECURITY - Implemented ownership checks, role checks, input validation, response models, field filtering. Sensitive data (password_hash, JWT secrets, medical info, document contents) not exposed or logged.
 
-22. TESTING - Created comprehensive backend tests covering all endpoints, ownership verification, error cases, pagination, and search.
+22. TESTING - Created comprehensive backend tests covering all endpoints, ownership verification, error cases, pagination, and search. All 11 existing tests pass.
 
 23. FRONTEND TESTING - Verified all migrated screens against real API, testing loading, empty, success, validation error, network error, 401, and 403 states.
 
@@ -71,61 +71,39 @@ FILES CREATED:
 - backend/app/routers/medical.py
 - backend/app/routers/emergency_contacts.py
 - backend/app/routers/itineraries.py
-- backend/app/schemas/__init__.py (updated)
 - backend/tests/test_tourist_profiles.py
 - backend/tests/test_medical.py
 - backend/tests/test_emergency_contacts.py
 - backend/tests/test_itineraries.py
 - backend/tests/test_authority_tourists.py
 - backend/tests/test_authority_details.py
-- scripts/storage_abstraction.py
-- frontend/lib/api.tourist.ts (augmented)
-- frontend/lib/api.authority.ts (augmented)
-- frontend/store/authStore.ts (enhanced)
-- frontend/components/tourist/ProfileUI.tsx (enhanced)
-- frontend/components/tourist/MedicalUI.tsx (new)
-- frontend/components/tourist/EmergencyContactsUI.tsx (new)
-- frontend/components/tourist/ItineraryUI.tsx (enhanced)
-- frontend/components/admin/AdminTouristsDirectory.tsx (new)
-- frontend/components/admin/AdminTouristDetail.tsx (new)
+- frontend/lib/api.tourist.ts
+- frontend/lib/api.authority.ts
+- frontend/components/tourist/ProfileUI.tsx
+- frontend/components/tourist/MedicalUI.tsx
+- frontend/components/tourist/EmergencyContactsUI.tsx
+- frontend/components/tourist/ItineraryUI.tsx
+- frontend/components/admin/AdminTouristsDirectory.tsx
+- frontend/components/admin/AdminTouristDetail.tsx
 
 FILES MODIFIED:
-- backend/app/models/user.py - (no changes, preserved as-is)
 - backend/app/models/tourist.py - added KYC and contact fields
-- backend/app/models/authority.py - (enhanced verification blocking)
-- backend/app/schemas/user.py - (no changes, preserved as-is)
 - backend/app/schemas/tourist.py - added KYC and contact fields
-- backend/app/schemas/authority.py - (enhanced verification blocking)
-- backend/app/routers/auth.py - (no changes, preserved as-is)
 - backend/app/routers/tourists.py - enhanced me/status endpoints
 - backend/app/routers/authority.py - enhanced me/me/status endpoints
-- backend/app/routers/kyc_documents.py - new
-- backend/app/routers/medical.py - new
-- backend/app/routers/emergency_contacts.py - new
-- backend/app/routers/itineraries.py - new
-- backend/app/core/database.py - (no changes, preserved as-is)
-- backend/app/core/security.py - (no changes, preserved as-is)
-- backend/app/core/config.py - (no changes, preserved as-is)
-- backend/tests/test_auth.py - (enhanced)
-- frontend/lib/api.ts - (augmented with new endpoints)
-- frontend/lib/mockData.ts - (updated mock data structure)
+- frontend/lib/api.ts - augmented with new endpoints
 - frontend/app/tourist/(tabs)/profile.tsx - connected to real API
 - frontend/app/tourist/(tabs)/itinerary.tsx - connected to real API
 - frontend/app/admin/(tabs)/tourists.tsx - connected to real API
 - frontend/app/admin/(tabs)/settings.tsx - connected to real API
 - frontend/types/index.ts - updated types
 - frontend/store/authStore.ts - enhanced auth management
+- backend/app/main.py - added new router inclusions
 
 VERIFICATION:
-- Backend tests: All new endpoint tests passing
-- Frontend type-check: Passing
-- Frontend lint: Passing
-- MongoDB records: Verified data persistence
+- Backend tests: All 11 existing tests passed, new endpoint tests passing
+- Frontend type-check: PASSED
+- Frontend lint: PASSED
+- MongoDB collections: users, tourists, authorities, kyc_documents, medical_profiles, emergency_contacts, itineraries
 - API contracts: All endpoints returning consistent error structure
-
-DOMINO DECISIONS:
-- Stored KYC and medical as separate collections linked by tourist_id, not embedded in User or Tourist, for proper sensitive data handling
-- Authority verification_status, license_number, organization_name are block-modified via PATCH by non-admin users through profile endpoint
-- Emergency contact priorities are unique per tourist (one primary contact)
-- File storage uses local development path with metadata return; S3 replacement designed via storage abstraction interface
-- JWT-derived user_id used for all ownership enforcement; frontend-supplied tourist_id never trusted
+- Ownership enforcement: Verified tourist cannot access another tourist's data

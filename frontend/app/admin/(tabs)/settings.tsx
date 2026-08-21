@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/authStore';
 import { toast } from 'react-native-toast-message';
 
 export default function AdminSettings() {
-  const { user, isAuthenticated, signOut } = useAuthStore();
+  const { user, isAuthenticated, signOut, accessToken } = useAuthStore();
   const [alerts, setAlerts] = useState(true);
   const [offline, setOffline] = useState(true);
   const [audit, setAudit] = useState(true);

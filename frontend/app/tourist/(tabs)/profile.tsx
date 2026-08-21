@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/authStore';
 import { toast } from 'react-native-toast-message';
 
 export default function Profile() {
-  const { user, signOut, isAuthenticated } = useAuthStore();
+  const { user, signOut, isAuthenticated, accessToken } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [tourist, setTourist] = useState<any>(null);
   const [kycStatus, setKycStatus] = useState('pending');
@@ -32,9 +32,9 @@ export default function Profile() {
 
       try {
         // Get tourist profile
-        const profileRes = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/v1/tourists/me`, {
+        const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/v1/tourists/me`, {
           method: 'GET',
-          headers: { Authorization: `Bearer ${user.accessToken}` },
+          headers: { Authorization: `Bearer ${accessToken}` },
         });
 
         if (!profileRes.ok) {

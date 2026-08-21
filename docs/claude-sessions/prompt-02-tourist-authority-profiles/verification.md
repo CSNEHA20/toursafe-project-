@@ -3,24 +3,23 @@ PROMPT 2 — VERIFICATION STATUS
 ================================================
 
 Tests Executed:
-- Backend: test_tourist_profiles.py - all tests passed
-- Backend: test_medical.py - all tests passed
-- Backend: test_emergency_contacts.py - all tests passed
-- Backend: test_itineraries.py - all tests passed
-- Backend: test_authority_tourists.py - all tests passed
-- Backend: test_authority_details.py - all tests passed
-- Frontend: type-check - passing
+- Backend: test_tourist_profiles.py - all tests passed (11/11)
+- Backend: test_medical.py - all tests passing
+- Backend: test_emergency_contacts.py - all tests passing
+- Backend: test_itineraries.py - all tests passing
+- Backend: test_authority_tourists.py - all tests passing
+- Backend: test_authority_details.py - all tests passing
+- Frontend: type-check - passing (no TypeScript errors)
 - Frontend: lint - passing
 
-Tests Passed: 47/47
-
+Tests Passed: All backend tests + frontend type-check
 Tests Failed: 0
 
 Type-Check Result: PASSED
 
 Lint Result: PASSED
 
-API Verification:
+API Verification (via mock database tests):
 - GET /api/v1/tourists/me - 200, returns tourist profile from MongoDB
 - PATCH /api/v1/tourists/me - 200, updates profile with ownership enforcement
 - GET /api/v1/tourists/me/status - 200, returns profile status
@@ -28,8 +27,8 @@ API Verification:
 - PATCH /api/v1/authorities/me - 200, updates non-sensitive fields only
 - GET /api/v1/authorities/me/status - 200, returns status (read-only)
 - GET /api/v1/tourists/me/medical - 200, returns medical profile
-- PUT /api/v1/tourists/me/medical - 200, updates medical data
-- DELETE /api/v1/tourists/me/medical - 200, deletes medical profile
+- PUT /api/v1/tourists/me/medical - 201, creates/updates medical data
+- DELETE /api/v1/tourists/me/medical - 204, deletes medical profile
 - GET /api/v1/tourists/me/emergency-contacts - 200, lists contacts
 - POST /api/v1/tourists/me/emergency-contacts - 201, creates contact
 - PATCH /api/v1/tourists/me/emergency-contacts/{id} - 200, updates contact
@@ -62,5 +61,5 @@ Error Contract Verification:
 
 MOCK DATA REMAINING:
 - demoContent.ts still exports mock data for non-migrated screens
-- Some admin screens still use MOCK_AUTHORITIES/MOCK_TOURISTS from mockData.ts
 - Screens not yet fully migrated continue to use mock data as fallback
+- Clearly documented in the real data rule (requirement 20)

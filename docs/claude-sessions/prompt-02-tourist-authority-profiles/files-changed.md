@@ -27,7 +27,6 @@ FILES CREATED:
 - backend/tests/test_itineraries.py
 - backend/tests/test_authority_tourists.py
 - backend/tests/test_authority_details.py
-- scripts/storage_abstraction.py
 - frontend/lib/api.tourist.ts
 - frontend/lib/api.authority.ts
 - frontend/components/tourist/ProfileUI.tsx
@@ -42,7 +41,6 @@ FILES MODIFIED:
 - backend/app/schemas/tourist.py - added KYC and contact fields
 - backend/app/routers/tourists.py - enhanced me/status endpoints
 - backend/app/routers/authority.py - enhanced me/me/status endpoints
-- backend/app/routers/auth.py - (no changes)
 - frontend/lib/api.ts - augmented with new endpoints
 - frontend/app/tourist/(tabs)/profile.tsx - connected to real API
 - frontend/app/tourist/(tabs)/itinerary.tsx - connected to real API
@@ -50,7 +48,7 @@ FILES MODIFIED:
 - frontend/app/admin/(tabs)/settings.tsx - connected to real API
 - frontend/types/index.ts - updated types
 - frontend/store/authStore.ts - enhanced auth management
-- backend/app/__init__.py - (no changes)
+- backend/app/main.py - added new router inclusions
 
 FILES DELETED:
 - None

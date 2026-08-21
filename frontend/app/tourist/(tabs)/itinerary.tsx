@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/authStore';
 import { toast } from 'react-native-toast-message';
 
 export default function Itinerary() {
-  const { user, isAuthenticated, refreshSession } = useAuthStore();
+  const { user, isAuthenticated, refreshSession, accessToken } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [itineraries, setItineraries] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);

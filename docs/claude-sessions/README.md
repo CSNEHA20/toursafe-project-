@@ -16,5 +16,6 @@ Each session has its own subdirectory under `prompt-<number>-<description>/` con
 | Session | Description |
 |---------|-------------|
 | prompt-01-backend-foundation-authentication | Backend foundation with FastAPI + MongoDB + JWT authentication |
+| prompt-02-tourist-authority-profiles | Tourist & Authority Data Management |
 
 Use the `oh-my-opencode-slim` skill to quickly list or search through sessions.

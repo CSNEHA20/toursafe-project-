@@ -4,7 +4,7 @@ import { UserRound, MapPin, ShieldAlert } from 'lucide-react-native';
 import { useAuthStore } from '@/store/authStore';
 
 export default function AdminTourists() {
-  const { user, isAuthenticated, signOut } = useAuthStore();
+  const { user, isAuthenticated, signOut, accessToken } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [tourists, setTourists] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
