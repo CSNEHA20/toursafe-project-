@@ -40,6 +40,10 @@ class RealtimeEventType(str, Enum):
     TELEMETRY_STARTED = "telemetry.started"
     TELEMETRY_STOPPED = "telemetry.stopped"
     TELEMETRY_STATUS = "telemetry.status"
+    TELEMETRY_SESSION_STARTED = "telemetry.session.started"
+    TELEMETRY_SESSION_STOPPED = "telemetry.session.stopped"
+    TELEMETRY_STATUS_UPDATED = "telemetry.status.updated"
+    TELEMETRY_QUALITY_UPDATED = "telemetry.quality.updated"
 
     # AI Anomaly events
     ANOMALY_DETECTED = "anomaly.detected"

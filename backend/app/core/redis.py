@@ -7,6 +7,7 @@ from .config import settings
 logger = logging.getLogger("toursafe.redis")
 
 _redis_client: Optional[aioredis.Redis] = None
+_last_redis_fail_time: float = 0.0
 
 
 async def get_redis_client() -> Optional[aioredis.Redis]:
@@ -14,11 +15,16 @@ async def get_redis_client() -> Optional[aioredis.Redis]:
     Get or initialize the asynchronous Redis connection pool.
     Returns None if Redis cannot be reached, allowing graceful degradation.
     """
-    global _redis_client
+    global _redis_client, _last_redis_fail_time
     if _redis_client is not None:
         return _redis_client
 
     if not settings.redis_url:
+        return None
+
+    import time
+    # 5-second cooldown between failed connection attempts to avoid blocking event loop
+    if time.time() - _last_redis_fail_time < 5.0:
         return None
 
     try:
@@ -26,16 +32,17 @@ async def get_redis_client() -> Optional[aioredis.Redis]:
             settings.redis_url,
             encoding="utf-8",
             decode_responses=True,
-            socket_connect_timeout=0.5,
-            socket_timeout=0.5,
+            socket_connect_timeout=0.2,
+            socket_timeout=0.2,
         )
         # Test ping with timeout
-        await asyncio.wait_for(client.ping(), timeout=0.5)
+        await asyncio.wait_for(client.ping(), timeout=0.2)
         _redis_client = client
         logger.info("Connected to Redis at %s", settings.redis_url)
         return _redis_client
     except Exception as e:
-        logger.warning("Redis not reachable (%s). Operating in degraded in-memory mode.", e)
+        _last_redis_fail_time = time.time()
+        logger.debug("Redis not reachable (%s). Operating in degraded in-memory mode.", e)
         _redis_client = None
         return None
 

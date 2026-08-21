@@ -2,8 +2,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .core.config import settings
-from .core.database import get_database, close_database, init_db_indexes
-from .core.redis import get_redis_client, close_redis
+from .core import database as db_core
+from .core import redis as redis_core
 from .services.seed_zones import seed_initial_zones
 from .routers.auth import router as auth_router
 from .routers.tourists import router as tourists_router
@@ -19,16 +19,17 @@ from .routers.realtime import router as realtime_router
 from .routers.dev_realtime import router as dev_realtime_router
 from .routers.location import router as location_router
 from .routers.imu import router as imu_router
+from .routers.telemetry import router as telemetry_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     try:
-        db = get_database()
+        db = db_core.get_database()
         await db.command("ping")
         print("✅ MongoDB connection verified on startup")
-        await init_db_indexes(db)
+        await db_core.init_db_indexes(db)
         seeded = await seed_initial_zones(db)
         if seeded > 0:
             print(f"✅ Successfully seeded {seeded} initial development geospatial zones")
@@ -36,15 +37,15 @@ async def lifespan(app: FastAPI):
         print(f"⚠️  MongoDB startup initialization note: {e}")
 
     try:
-        await get_redis_client()
+        await redis_core.get_redis_client()
     except Exception as e:
         print(f"⚠️  Redis startup initialization note: {e}")
 
     yield
 
     # Shutdown
-    await close_redis()
-    await close_database()
+    await redis_core.close_redis()
+    await db_core.close_database()
 
 
 app = FastAPI(
@@ -72,6 +73,7 @@ app.include_router(realtime_router)
 app.include_router(dev_realtime_router)
 app.include_router(location_router)
 app.include_router(imu_router)
+app.include_router(telemetry_router)
 app.include_router(auth_router)
 app.include_router(tourists_router)
 app.include_router(authority_router)

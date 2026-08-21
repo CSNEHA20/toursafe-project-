@@ -21,3 +21,4 @@ Each session has its own subdirectory under `prompt-<number>-<description>/` con
 | prompt-04-realtime-communication | Real-Time Communication Infrastructure with WebSockets, Connection Management, Role Channels & Event Bus |
 | prompt-05-real-gps-location | Real GPS Location Tracking with Foreground/Background Tracking, Redis Live State, MongoDB History & Authority Live Map |
 | prompt-06-real-imu-sensors | Real IMU Sensor Acquisition (Accelerometer + Gyroscope, 50 Hz Pipeline, Timestamp Synchronization, Quality Monitoring & Telemetry Foundation) |
+| prompt-07-telemetry-pipeline | Real Telemetry Ingestion + Storage Pipeline (15-step Ingestion Pipeline, Sequence Tracking, Redis Live Cache, MongoDB Persistence, 3-Second Window Engine, Offline Buffer & Privacy) |

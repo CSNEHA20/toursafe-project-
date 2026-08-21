@@ -87,6 +87,8 @@ class RealtimeEventBus:
         )
         return delivered_count
 
+    publish_to_channel = broadcast_to_channel
+
     async def broadcast_to_authority(self, envelope: RealtimeEventEnvelope) -> int:
         """Deliver event to the authority operations channel."""
         return await self.broadcast_to_channel("authority:operations", envelope)

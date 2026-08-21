@@ -226,33 +226,79 @@ async def websocket_endpoint(
                     )
                     await websocket.send_text(status_env.model_dump_json())
 
-            elif action in ("telemetry.imu", "imu.sample"):
-                # High-frequency telemetry ingestion from authenticated tourist client
+            elif action in ("telemetry.packet", "telemetry.sample", "telemetry.imu", "imu.sample"):
+                # Canonical telemetry packet ingestion over WebSocket
                 payload = msg_json.get("payload") or {}
-                sample_data = payload.get("sample") or payload
                 try:
-                    # Validate against IMUSampleIn schema
-                    from ..schemas.imu import IMUSampleIn
-                    imu_sample = IMUSampleIn(**sample_data)
-                    derived = imu_sample.calculate_server_magnitudes()
+                    from ..schemas.telemetry import TelemetryPacketEnvelope, TelemetryPacketType
+                    from ..services.telemetry import telemetry_service
 
-                    # Lightweight telemetry ack
+                    # Resolve tourist_id from connection context
+                    tourist_id = ctx.user_profile.get("tourist_id") or ctx.user_id
+
+                    # If envelope format
+                    if "packet_type" in payload or "packet_id" in payload:
+                        envelope = TelemetryPacketEnvelope(**payload)
+                    else:
+                        # Wrap raw payload into envelope
+                        pkt_type = TelemetryPacketType.IMU_SAMPLE if "accelerometer" in payload or "ax" in payload else TelemetryPacketType.TELEMETRY_SAMPLE
+                        envelope = TelemetryPacketEnvelope(
+                            packet_type=pkt_type,
+                            session_id=payload.get("session_id", "ws_default_session"),
+                            device_id=payload.get("device_id"),
+                            sequence_number=payload.get("sequence_number", 1),
+                            timestamp=payload.get("timestamp", datetime.now(timezone.utc).isoformat()),
+                            payload=payload,
+                        )
+
+                    ack = await telemetry_service.ingest_packet(
+                        envelope=envelope,
+                        authenticated_tourist_id=tourist_id,
+                        user_id=ctx.user_id,
+                    )
+
                     ack_env = RealtimeEventEnvelope(
-                        event_type="telemetry.imu.ack",
+                        event_type="telemetry.ack",
                         source="backend",
-                        payload={
-                            "status": "accepted",
-                            "session_id": imu_sample.session_id,
-                            "sequence_number": imu_sample.sequence_number,
-                            "recomputed_a_mag": derived.acceleration_magnitude,
-                            "recomputed_g_mag": derived.angular_velocity_magnitude,
-                        },
+                        payload=ack.model_dump(),
                     )
                     await websocket.send_text(ack_env.model_dump_json())
+
                 except Exception as val_err:
                     err_env = RealtimeEventEnvelope(
                         event_type=RealtimeEventType.SYSTEM_ERROR.value,
-                        payload={"error": f"Invalid IMU sample: {str(val_err)}"},
+                        payload={"error": f"Invalid telemetry packet: {str(val_err)}"},
+                    )
+                    await websocket.send_text(err_env.model_dump_json())
+
+            elif action in ("telemetry.batch", "telemetry.imu.batch"):
+                # Bounded batch ingestion over WebSocket
+                payload = msg_json.get("payload") or {}
+                try:
+                    from ..schemas.telemetry import TelemetryBatchRequest
+                    from ..services.telemetry import telemetry_service
+
+                    tourist_id = ctx.user_profile.get("tourist_id") or ctx.user_id
+                    batch_req = TelemetryBatchRequest(**payload)
+
+                    batch_ack = await telemetry_service.ingest_packet_batch(
+                        session_id=batch_req.session_id,
+                        packets=batch_req.packets,
+                        authenticated_tourist_id=tourist_id,
+                        user_id=ctx.user_id,
+                    )
+
+                    ack_env = RealtimeEventEnvelope(
+                        event_type="telemetry.batch.ack",
+                        source="backend",
+                        payload=batch_ack.model_dump(),
+                    )
+                    await websocket.send_text(ack_env.model_dump_json())
+
+                except Exception as val_err:
+                    err_env = RealtimeEventEnvelope(
+                        event_type=RealtimeEventType.SYSTEM_ERROR.value,
+                        payload={"error": f"Invalid telemetry batch: {str(val_err)}"},
                     )
                     await websocket.send_text(err_env.model_dump_json())
 

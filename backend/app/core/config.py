@@ -16,6 +16,16 @@ class Settings(BaseSettings):
     ws_ping_interval_seconds: int = Field(default=30, alias="WS_PING_INTERVAL_SECONDS")
     ws_max_payload_bytes: int = Field(default=65536, alias="WS_MAX_PAYLOAD_BYTES")
 
+    # Telemetry Pipeline Settings
+    telemetry_retention_days: int = Field(default=30, alias="TELEMETRY_RETENTION_DAYS")
+    telemetry_window_duration_sec: float = Field(default=3.0, alias="TELEMETRY_WINDOW_DURATION_SEC")
+    telemetry_window_stride_sec: float = Field(default=1.0, alias="TELEMETRY_WINDOW_STRIDE_SEC")
+    telemetry_nominal_frequency_hz: float = Field(default=50.0, alias="TELEMETRY_NOMINAL_FREQUENCY_HZ")
+    telemetry_min_completeness_ratio: float = Field(default=0.6, alias="TELEMETRY_MIN_COMPLETENESS_RATIO")
+    telemetry_max_time_gap_ms: float = Field(default=250.0, alias="TELEMETRY_MAX_TIME_GAP_MS")
+    telemetry_max_queue_depth: int = Field(default=5000, alias="TELEMETRY_MAX_QUEUE_DEPTH")
+    telemetry_redis_ttl_seconds: int = Field(default=120, alias="TELEMETRY_REDIS_TTL_SECONDS")
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors_origins(cls, v):

@@ -55,6 +55,26 @@ async def init_db_indexes(db=None):
         await db.tracking_sessions.create_index([("tourist_id", pymongo.ASCENDING), ("started_at", pymongo.DESCENDING)])
         await db.tracking_sessions.create_index([("status", pymongo.ASCENDING)])
 
+        # Telemetry Collections indexes
+        # 1. Telemetry Samples (Idempotency + High-throughput temporal queries)
+        await db.telemetry_samples.create_index("packet_id", unique=True, sparse=True)
+        await db.telemetry_samples.create_index([("session_id", pymongo.ASCENDING), ("sequence_number", pymongo.ASCENDING)], unique=True, sparse=True)
+        await db.telemetry_samples.create_index([("tourist_id", pymongo.ASCENDING), ("timestamp", pymongo.DESCENDING)])
+        await db.telemetry_samples.create_index([("session_id", pymongo.ASCENDING), ("timestamp", pymongo.DESCENDING)])
+        await db.telemetry_samples.create_index([("timestamp", pymongo.DESCENDING)])
+        await db.telemetry_samples.create_index([("location", "2dsphere")], sparse=True)
+
+        # 2. Telemetry Windows (AI/ML foundation temporal indexes)
+        await db.telemetry_windows.create_index("window_id", unique=True, sparse=True)
+        await db.telemetry_windows.create_index([("session_id", pymongo.ASCENDING), ("window_start", pymongo.DESCENDING)])
+        await db.telemetry_windows.create_index([("tourist_id", pymongo.ASCENDING), ("window_start", pymongo.DESCENDING)])
+        await db.telemetry_windows.create_index([("window_start", pymongo.DESCENDING)])
+
+        # 3. Telemetry Sessions
+        await db.telemetry_sessions.create_index("session_id", unique=True, sparse=True)
+        await db.telemetry_sessions.create_index([("tourist_id", pymongo.ASCENDING), ("started_at", pymongo.DESCENDING)])
+        await db.telemetry_sessions.create_index([("status", pymongo.ASCENDING)])
+
         print("✅ Geospatial and collection indexes successfully initialized.")
     except Exception as e:
         print(f"⚠️ Index initialization warning: {e}")
