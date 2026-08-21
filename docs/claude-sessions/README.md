@@ -22,3 +22,5 @@ Each session has its own subdirectory under `prompt-<number>-<description>/` con
 | prompt-05-real-gps-location | Real GPS Location Tracking with Foreground/Background Tracking, Redis Live State, MongoDB History & Authority Live Map |
 | prompt-06-real-imu-sensors | Real IMU Sensor Acquisition (Accelerometer + Gyroscope, 50 Hz Pipeline, Timestamp Synchronization, Quality Monitoring & Telemetry Foundation) |
 | prompt-07-telemetry-pipeline | Real Telemetry Ingestion + Storage Pipeline (15-step Ingestion Pipeline, Sequence Tracking, Redis Live Cache, MongoDB Persistence, 3-Second Window Engine, Offline Buffer & Privacy) |
+| prompt-08-lstm-anomaly-training | Offline Machine Learning Dataset Research, Preprocessing & LSTM Autoencoder Anomaly Detection Model Training (UCI-HAR, Robust Scaling, Threshold Calibration, ONNX Export) |
+| prompt-09-realtime-lstm-inference | Real-Time LSTM Inference Service (Live Telemetry -> LSTM, Anomaly Scoring, Model Versioning v1.0.0, State Machine Hysteresis, Deduplication, Redis State, MongoDB Persistence & Authority Dashboard) |

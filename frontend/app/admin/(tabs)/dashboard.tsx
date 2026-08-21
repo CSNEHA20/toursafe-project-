@@ -1,12 +1,15 @@
+import React from 'react';
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { BellRing, Gauge, MapPinned, Users, ShieldAlert, FileText } from 'lucide-react-native';
+import { BellRing, Gauge, MapPinned, Users, ShieldAlert, FileText, Activity, AlertTriangle } from 'lucide-react-native';
 import RoleSwitch from '@/components/RoleSwitch';
 import { demoTourists, demoZones, demoActivityFeed } from '@/lib/demoContent';
+import { useAnomalyStore } from '@/store/anomalyStore';
 import Toast from 'react-native-toast-message';
 import { useRouter } from 'expo-router';
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const activeAnomalies = useAnomalyStore((state) => Object.values(state.activeAnomalies));
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -15,9 +18,9 @@ export default function AdminDashboard() {
       <View style={styles.hero}>
         <View style={{ flex: 1 }}>
           <Text style={styles.kicker}>Authority command center</Text>
-          <Text style={styles.title}>TourSafe prototype dashboard</Text>
+          <Text style={styles.title}>TourSafe Operational Dashboard</Text>
           <Text style={styles.subtitle}>
-            Frontend-only control room for live tourists, zones, and incidents.
+            Live tourist tracking, geospatial zone surveillance, and ML motion anomaly observability.
           </Text>
         </View>
         <View style={styles.alertBubble}>
@@ -28,10 +31,55 @@ export default function AdminDashboard() {
 
       <View style={styles.kpiRow}>
         <Kpi icon={<Users size={16} color="#1a365d" />} label="Tourists" value={String(demoTourists.length)} />
+        <Kpi icon={<Activity size={16} color="#d97706" />} label="Sensor Anomalies" value={String(activeAnomalies.length)} />
         <Kpi icon={<BellRing size={16} color="#b45309" />} label="Alerts" value={String(demoActivityFeed.length)} />
-        <Kpi icon={<Gauge size={16} color="#0d9488" />} label="Response" value="7.2m" />
         <Kpi icon={<MapPinned size={16} color="#ef4444" />} label="Zones" value={String(demoZones.length)} />
       </View>
+
+      {/* Real-Time ML Motion Anomaly Section */}
+      {activeAnomalies.length > 0 && (
+        <View style={styles.anomalySection}>
+          <View style={styles.anomalyHeader}>
+            <Activity size={18} color="#d97706" />
+            <Text style={styles.anomalySectionTitle}>Active Motion Anomalies ({activeAnomalies.length})</Text>
+          </View>
+          <Text style={styles.anomalyDisclaimer}>
+            ML-detected kinetic anomaly episodes. Evaluated via 3-second LSTM Autoencoder reconstruction.
+          </Text>
+
+          {activeAnomalies.map((anom) => (
+            <View key={anom.anomaly_id} style={styles.anomalyCard}>
+              <View style={styles.anomalyTopRow}>
+                <View style={styles.anomalyBadge}>
+                  <Text style={styles.anomalyBadgeText}>MOTION ANOMALY</Text>
+                </View>
+                <Text style={styles.modelTag}>Model: {anom.model_version}</Text>
+              </View>
+
+              <View style={styles.anomalyGrid}>
+                <View style={styles.gridItem}>
+                  <Text style={styles.gridLabel}>Tourist ID</Text>
+                  <Text style={styles.gridVal}>{anom.tourist_id.slice(0, 10)}...</Text>
+                </View>
+                <View style={styles.gridItem}>
+                  <Text style={styles.gridLabel}>Score / Threshold</Text>
+                  <Text style={[styles.gridVal, { color: '#b45309', fontWeight: '800' }]}>
+                    {anom.current_score.toFixed(2)} / {anom.threshold.toFixed(2)}
+                  </Text>
+                </View>
+                <View style={styles.gridItem}>
+                  <Text style={styles.gridLabel}>Peak Score</Text>
+                  <Text style={styles.gridVal}>{anom.peak_score.toFixed(2)}</Text>
+                </View>
+                <View style={styles.gridItem}>
+                  <Text style={styles.gridLabel}>Duration</Text>
+                  <Text style={styles.gridVal}>{anom.duration_seconds.toFixed(0)}s ({anom.window_count} win)</Text>
+                </View>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Quick actions</Text>
@@ -113,7 +161,7 @@ const styles = StyleSheet.create({
   alertBubble: { width: 72, height: 72, borderRadius: 22, backgroundColor: '#ef4444', alignItems: 'center', justifyContent: 'center' },
   alertBubbleText: { color: '#fff', fontWeight: '800', marginTop: 4 },
   kpiRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  kpi: { flex: 1, minWidth: '30%', backgroundColor: '#fff', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: '#e2e8f0', gap: 6 },
+  kpi: { flex: 1, minWidth: '22%', backgroundColor: '#fff', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: '#e2e8f0', gap: 6 },
   kpiLabel: { fontSize: 11, textTransform: 'uppercase', color: 'rgba(100,116,139,0.7)', fontWeight: '700' },
   kpiValue: { fontSize: 18, fontWeight: '800', color: '#0f172a' },
   section: { backgroundColor: '#fff', borderRadius: 18, padding: 16, borderWidth: 1, borderColor: '#e2e8f0' },
@@ -125,4 +173,17 @@ const styles = StyleSheet.create({
   dot: { width: 10, height: 10, borderRadius: 5 },
   rowTitle: { fontSize: 14, fontWeight: '700', color: '#0f172a' },
   rowMeta: { marginTop: 4, fontSize: 12, color: 'rgba(100,116,139,0.8)' },
+  anomalySection: { backgroundColor: '#fffbeb', borderRadius: 18, padding: 16, borderWidth: 1, borderColor: '#fde68a', gap: 10 },
+  anomalyHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  anomalySectionTitle: { fontSize: 16, fontWeight: '800', color: '#92400e' },
+  anomalyDisclaimer: { fontSize: 12, color: '#b45309', lineHeight: 16 },
+  anomalyCard: { backgroundColor: '#fff', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: '#fef3c7', gap: 8 },
+  anomalyTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  anomalyBadge: { backgroundColor: '#fef3c7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  anomalyBadgeText: { color: '#b45309', fontSize: 10, fontWeight: '800' },
+  modelTag: { fontSize: 11, color: '#94a3b8', fontWeight: '600' },
+  anomalyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  gridItem: { flex: 1, minWidth: '45%' },
+  gridLabel: { fontSize: 10, textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700' },
+  gridVal: { fontSize: 13, fontWeight: '700', color: '#1e293b', marginTop: 2 },
 });

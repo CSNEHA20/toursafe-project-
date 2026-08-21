@@ -20,6 +20,8 @@ from .routers.dev_realtime import router as dev_realtime_router
 from .routers.location import router as location_router
 from .routers.imu import router as imu_router
 from .routers.telemetry import router as telemetry_router
+from .routers.ml import router as ml_router
+from .services.ml.engine import ml_inference_engine
 
 
 @asynccontextmanager
@@ -41,9 +43,19 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"⚠️  Redis startup initialization note: {e}")
 
+    # Initialize ML Inference Engine
+    try:
+        await ml_inference_engine.start()
+    except Exception as e:
+        print(f"⚠️  ML Inference Engine initialization note: {e}")
+
     yield
 
     # Shutdown
+    try:
+        await ml_inference_engine.stop()
+    except Exception as e:
+        print(f"⚠️  ML Inference Engine shutdown note: {e}")
     await redis_core.close_redis()
     await db_core.close_database()
 
@@ -74,6 +86,7 @@ app.include_router(dev_realtime_router)
 app.include_router(location_router)
 app.include_router(imu_router)
 app.include_router(telemetry_router)
+app.include_router(ml_router)
 app.include_router(auth_router)
 app.include_router(tourists_router)
 app.include_router(authority_router)

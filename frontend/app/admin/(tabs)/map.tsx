@@ -23,6 +23,7 @@ import RealMap, { ZonePolygonProp } from '@/components/RealMap';
 import { zoneApi, locationApi } from '@/lib/api';
 import { ConnectionStatusBadge } from '@/components/ConnectionStatusBadge';
 import { useMapStore } from '@/store/mapStore';
+import { useAnomalyStore } from '@/store/anomalyStore';
 import type { ZoneMapItem } from '@/types';
 
 export default function AdminMap() {
@@ -33,6 +34,7 @@ export default function AdminMap() {
   // Live tourist markers updated via WebSocket and polling
   const liveMarkers = useMapStore((state) => state.markers);
   const updateMarker = useMapStore((state) => state.updateMarker);
+  const activeAnomalies = useAnomalyStore((state) => state.activeAnomalies);
 
   const fetchMapData = useCallback(async () => {
     setLoading(true);
@@ -110,12 +112,18 @@ export default function AdminMap() {
     });
 
   // Real-time live tourist markers from WebSocket / Redis live pipeline
-  const touristMapMarkers = liveMarkers.map((m) => ({
-    latitude: m.latitude,
-    longitude: m.longitude,
-    title: `📍 ${m.name} (${m.status.toUpperCase()})`,
-    color: '#2563eb', // Blue marker for live tourists
-  }));
+  const touristMapMarkers = liveMarkers.map((m) => {
+    const hasAnomaly = Boolean(activeAnomalies[m.tourist_id]);
+    const anom = activeAnomalies[m.tourist_id];
+    return {
+      latitude: m.latitude,
+      longitude: m.longitude,
+      title: hasAnomaly
+        ? `⚠️ ${m.name} (MOTION ANOMALY: score ${anom.current_score.toFixed(1)})`
+        : `📍 ${m.name} (${m.status.toUpperCase()})`,
+      color: hasAnomaly ? '#d97706' : '#2563eb', // Amber marker for subtle sensor anomaly
+    };
+  });
 
   const allMapMarkers = [...zoneMarkers, ...touristMapMarkers];
 
@@ -220,20 +228,32 @@ export default function AdminMap() {
       {liveMarkers.length > 0 && (
         <View style={styles.listCard}>
           <Text style={styles.listTitle}>Live Tracked Tourists ({liveMarkers.length})</Text>
-          {liveMarkers.map((m) => (
-            <View key={m.tourist_id} style={styles.row}>
-              <Radio size={16} color="#2563eb" />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rowTitle}>{m.name}</Text>
-                <Text style={styles.rowMeta}>
-                  {m.latitude.toFixed(4)}°N, {m.longitude.toFixed(4)}°E · Last fix: {new Date(m.last_seen).toLocaleTimeString()}
-                </Text>
+          {liveMarkers.map((m) => {
+            const anom = activeAnomalies[m.tourist_id];
+            return (
+              <View key={m.tourist_id} style={styles.row}>
+                <Radio size={16} color={anom ? "#d97706" : "#2563eb"} />
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={styles.rowTitle}>{m.name}</Text>
+                    {anom && (
+                      <View style={[styles.statusBadge, { backgroundColor: '#fef3c7' }]}>
+                        <Text style={[styles.statusText, { color: '#92400e' }]}>
+                          ANOMALY ({anom.current_score.toFixed(1)})
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.rowMeta}>
+                    {m.latitude.toFixed(4)}°N, {m.longitude.toFixed(4)}°E · Last fix: {new Date(m.last_seen).toLocaleTimeString()}
+                  </Text>
+                </View>
+                <View style={[styles.statusBadge, styles.statusActive]}>
+                  <Text style={styles.statusText}>{m.status.toUpperCase()}</Text>
+                </View>
               </View>
-              <View style={[styles.statusBadge, styles.statusActive]}>
-                <Text style={styles.statusText}>{m.status.toUpperCase()}</Text>
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
       )}
 

@@ -2,7 +2,9 @@ import { realtimeClient } from "./realtimeClient";
 import { useAlertStore } from "@/store/alertStore";
 import { useMapStore } from "@/store/mapStore";
 import { useSOSStore } from "@/store/sosStore";
+import { useAnomalyStore } from "@/store/anomalyStore";
 import type { Alert, GeoZone, SOSEvent } from "@/types";
+import type { AnomalyDetectedPayload, AnomalyClearedPayload } from "@/types/anomaly";
 
 let isInitialized = false;
 let unsubscribers: (() => void)[] = [];
@@ -107,6 +109,41 @@ export function initRealtimeEventDispatcher() {
     }
   );
 
+  // 5. ML Sensor Anomaly Events (Prompt 9: Real-time LSTM Inference)
+  const unsubAnomalyDetected = realtimeClient.onEvent<AnomalyDetectedPayload>(
+    "anomaly.detected",
+    (payload) => {
+      if (!payload || !payload.tourist_id) return;
+      useAnomalyStore.getState().addOrUpdateAnomaly(payload);
+
+      // Create or update operational alert in alert store
+      const alertItem: Alert = {
+        id: payload.anomaly_id,
+        type: "anomaly",
+        severity: payload.anomaly_score >= (payload.threshold * 1.3) ? "high" : "medium",
+        status: "active",
+        title: "Motion Anomaly Detected",
+        description: `Unusual sensor kinematics (Score: ${payload.anomaly_score.toFixed(2)}, Threshold: ${payload.threshold.toFixed(2)}, Model: ${payload.model_version})`,
+        tourist_id: payload.tourist_id,
+        latitude: payload.last_known_gps?.latitude,
+        longitude: payload.last_known_gps?.longitude,
+        created_at: payload.timestamp || new Date().toISOString(),
+      };
+      useAlertStore.getState().addAlert(alertItem);
+    }
+  );
+
+  const unsubAnomalyCleared = realtimeClient.onEvent<AnomalyClearedPayload>(
+    "anomaly.cleared",
+    (payload) => {
+      if (!payload || !payload.tourist_id) return;
+      useAnomalyStore.getState().clearAnomaly(payload.tourist_id, payload.duration_seconds, payload.peak_score);
+      if (payload.anomaly_id) {
+        useAlertStore.getState().markRead(payload.anomaly_id);
+      }
+    }
+  );
+
   unsubscribers = [
     unsubZoneCreated,
     unsubZoneUpdated,
@@ -117,6 +154,8 @@ export function initRealtimeEventDispatcher() {
     unsubSOSCreated,
     unsubSOSUpdated,
     unsubLocationUpdated,
+    unsubAnomalyDetected,
+    unsubAnomalyCleared,
   ];
 
   console.log("[EventDispatcher] Realtime event subscriptions initialized.");

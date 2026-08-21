@@ -24,6 +24,7 @@ from .redis_state import telemetry_redis_state
 from .session import telemetry_session_manager
 from .validation import TelemetryValidationException, telemetry_validator
 from .windowing import telemetry_window_engine
+from ..ml.engine import ml_inference_engine
 
 logger = logging.getLogger("toursafe.telemetry.ingestion")
 
@@ -169,6 +170,8 @@ class TelemetryIngestionService:
                 session_state.invalid_window_count += 1
             # Persist generated window
             telemetry_queue.enqueue(w)
+            # Submit to Real-Time ML Inference Engine
+            ml_inference_engine.submit_window(w)
 
         # Step 8: Publish Summarized Realtime Events (Periodic or on change)
         # Note: Raw 50Hz IMU is strictly NOT broadcast to authorities!
