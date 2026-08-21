@@ -7,12 +7,14 @@ import type { Tourist } from '@/types';
 import RoleSwitch from '@/components/RoleSwitch';
 import { ConnectionStatusBadge } from '@/components/ConnectionStatusBadge';
 import { useLocationStore } from '@/store/locationStore';
+import { useIMUStore } from '@/store/imuStore';
+import { imuController } from '@/lib/sensors/imuController';
 import {
   ShieldAlert,
   MapPin,
   Bell,
   Navigation,
-  Wifi,
+  Activity,
   Phone,
   Radio,
 } from 'lucide-react-native';
@@ -23,16 +25,50 @@ export default function TouristDashboard() {
   const { user } = useAuthStore();
   const { alerts } = useAlertStore();
   const { trackingStatus, currentLocation, qualityMetrics } = useLocationStore();
+  const { imuStatus, qualityMetrics: imuQuality } = useIMUStore();
   const [tourist, setTourist] = useState<Tourist | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    imuController.checkAvailability();
     Promise.all([
       touristApi.getMe().then((r) => setTourist(r.data)),
     ]).finally(() => setLoading(false));
   }, []);
 
   const myAlerts = alerts.slice(0, 5);
+
+  // Compute subtle IMU sensor status
+  const getIMUSensorStatus = (): { label: string; color: string; sub: string } => {
+    if (!imuQuality.accelerometerAvailable && !imuQuality.gyroscopeAvailable) {
+      return {
+        label: "Sensors Unavailable",
+        color: "#94a3b8",
+        sub: "Hardware not detected",
+      };
+    }
+    if (imuStatus === "active") {
+      if (imuQuality.qualityState === "degraded" || imuQuality.qualityState === "poor") {
+        return {
+          label: "Sensors Degraded",
+          color: "#f59e0b",
+          sub: `${imuQuality.observedFrequencyHz} Hz jitter`,
+        };
+      }
+      return {
+        label: "Sensors Active",
+        color: "#10b981",
+        sub: `${imuQuality.observedFrequencyHz} Hz IMU stream`,
+      };
+    }
+    return {
+      label: "Sensors Ready",
+      color: "#0d9488",
+      sub: "50 Hz pipeline standby",
+    };
+  };
+
+  const imuStatusInfo = getIMUSensorStatus();
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
@@ -96,6 +132,19 @@ export default function TouristDashboard() {
               : "Tap map to start"
           }
           loading={loading}
+          onPress={() => {
+            if (__DEV__) router.push("/dev/gps" as any);
+          }}
+        />
+        <StatusCard
+          icon={<Activity size={20} color={imuStatusInfo.color} />}
+          label="IMU Sensors"
+          value={imuStatusInfo.label}
+          sub={imuStatusInfo.sub}
+          loading={loading}
+          onPress={() => {
+            if (__DEV__) router.push("/dev/imu" as any);
+          }}
         />
         <StatusCard
           icon={<Bell size={20} color="#FF9933" />}
@@ -113,13 +162,6 @@ export default function TouristDashboard() {
               ? `${qualityMetrics.observedFrequencyHz} Hz rate`
               : "Real sensor"
           }
-          loading={loading}
-        />
-        <StatusCard
-          icon={<Wifi size={20} color="#1a365d" />}
-          label="Connectivity"
-          value="Online"
-          sub="Real-time Redis sync"
           loading={loading}
         />
       </View>
@@ -188,12 +230,14 @@ function StatusCard({
   value,
   sub,
   loading,
+  onPress,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   sub: string;
   loading: boolean;
+  onPress?: () => void;
 }) {
   if (loading) {
     return (
@@ -203,14 +247,18 @@ function StatusCard({
     );
   }
   return (
-    <View style={styles.statusCard}>
+    <TouchableOpacity
+      activeOpacity={onPress ? 0.7 : 1}
+      onPress={onPress}
+      style={styles.statusCard}
+    >
       <View style={styles.statusIcon}>{icon}</View>
-      <View>
+      <View style={{ flex: 1 }}>
         <Text style={styles.statusLabel}>{label}</Text>
         <Text style={styles.statusValue}>{value}</Text>
         <Text style={styles.statusSub}>{sub}</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 

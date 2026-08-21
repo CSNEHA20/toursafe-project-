@@ -226,6 +226,36 @@ async def websocket_endpoint(
                     )
                     await websocket.send_text(status_env.model_dump_json())
 
+            elif action in ("telemetry.imu", "imu.sample"):
+                # High-frequency telemetry ingestion from authenticated tourist client
+                payload = msg_json.get("payload") or {}
+                sample_data = payload.get("sample") or payload
+                try:
+                    # Validate against IMUSampleIn schema
+                    from ..schemas.imu import IMUSampleIn
+                    imu_sample = IMUSampleIn(**sample_data)
+                    derived = imu_sample.calculate_server_magnitudes()
+
+                    # Lightweight telemetry ack
+                    ack_env = RealtimeEventEnvelope(
+                        event_type="telemetry.imu.ack",
+                        source="backend",
+                        payload={
+                            "status": "accepted",
+                            "session_id": imu_sample.session_id,
+                            "sequence_number": imu_sample.sequence_number,
+                            "recomputed_a_mag": derived.acceleration_magnitude,
+                            "recomputed_g_mag": derived.angular_velocity_magnitude,
+                        },
+                    )
+                    await websocket.send_text(ack_env.model_dump_json())
+                except Exception as val_err:
+                    err_env = RealtimeEventEnvelope(
+                        event_type=RealtimeEventType.SYSTEM_ERROR.value,
+                        payload={"error": f"Invalid IMU sample: {str(val_err)}"},
+                    )
+                    await websocket.send_text(err_env.model_dump_json())
+
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected for connection %s", ctx.connection_id)
     except Exception as e:

@@ -18,6 +18,7 @@ from .routers.health import router as health_router
 from .routers.realtime import router as realtime_router
 from .routers.dev_realtime import router as dev_realtime_router
 from .routers.location import router as location_router
+from .routers.imu import router as imu_router
 
 
 @asynccontextmanager
@@ -70,6 +71,7 @@ app.include_router(health_router)
 app.include_router(realtime_router)
 app.include_router(dev_realtime_router)
 app.include_router(location_router)
+app.include_router(imu_router)
 app.include_router(auth_router)
 app.include_router(tourists_router)
 app.include_router(authority_router)
