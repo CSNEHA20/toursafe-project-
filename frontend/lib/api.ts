@@ -239,6 +239,26 @@ export const zoneApi = {
   getAudits: (id: string) => api.get<ZoneAudit[]>(`/authority/zones/${id}/audits`),
 };
 
+export const geofenceApi = {
+  // Tourist endpoints
+  getMyCurrentZones: () =>
+    api.get<import("@/types").TouristGeofenceSnapshotResponse>("/tourists/me/zones/current"),
+  getMyZoneHistory: (params?: { start_time?: string; end_time?: string; zone_id?: string; limit?: number; skip?: number }) =>
+    api.get<{ tourist_id: string; items: import("@/types").ZoneTransitionHistoryRecord[]; total: number; limit: number; skip: number }>("/tourists/me/zones/history", { params }),
+
+  // Authority endpoints
+  getTouristCurrentZones: (touristId: string) =>
+    api.get<import("@/types").TouristGeofenceSnapshotResponse>(`/authority/tourists/${touristId}/zones/current`),
+  getTouristZoneHistory: (touristId: string, params?: { start_time?: string; end_time?: string; zone_id?: string; limit?: number; skip?: number }) =>
+    api.get<{ tourist_id: string; items: import("@/types").ZoneTransitionHistoryRecord[]; total: number; limit: number; skip: number }>(`/authority/tourists/${touristId}/zones/history`, { params }),
+  getLiveOccupancy: () =>
+    api.get<{ total_active_zones: number; zones: Array<{ zone_id: string; name: string; zone_type: string; risk_level: string; active_tourists_count: number; center?: any; boundary?: any }> }>("/authority/zones/live-occupancy"),
+
+  // Dev diagnostics
+  getDiagnostics: (touristId: string) =>
+    api.get<import("@/types").GeofenceDiagnosticsData>(`/dev/geofence/diagnostics/${touristId}`),
+};
+
 export const analyticsApi = {
   getKPIs: () => api.get("/analytics/kpis"),
   getResponseTimes: (days = 30) =>

@@ -168,11 +168,18 @@ class MockAppDatabase:
         self.tourists = MockMongoCollection("tourists")
         self.authority = MockMongoCollection("authority")
         self.users = MockMongoCollection("users")
+        self.zones = MockMongoCollection("zones")
+        self.zone_transitions = MockMongoCollection("zone_transitions")
 
     def __getitem__(self, name):
         if not hasattr(self, name):
             setattr(self, name, MockMongoCollection(name))
         return getattr(self, name)
+
+    def __getattr__(self, name):
+        if name not in self.__dict__:
+            self.__dict__[name] = MockMongoCollection(name)
+        return self.__dict__[name]
 
 
 @pytest.fixture(autouse=True)

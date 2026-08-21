@@ -39,6 +39,15 @@ async def init_db_indexes(db=None):
         await db.zone_audits.create_index([("zone_id", pymongo.ASCENDING), ("changed_at", pymongo.DESCENDING)])
         await db.zone_audits.create_index("audit_id", unique=True, sparse=True)
 
+        # Zone Transitions collection indexes (Prompt 10 Geofencing Engine)
+        await db.zone_transitions.create_index("transition_id", unique=True, sparse=True)
+        await db.zone_transitions.create_index("id", unique=True, sparse=True)
+        await db.zone_transitions.create_index([("tourist_id", pymongo.ASCENDING), ("timestamp", pymongo.DESCENDING)])
+        await db.zone_transitions.create_index([("zone_id", pymongo.ASCENDING), ("timestamp", pymongo.DESCENDING)])
+        await db.zone_transitions.create_index([("event_type", pymongo.ASCENDING)])
+        await db.zone_transitions.create_index([("timestamp", pymongo.DESCENDING)])
+        await db.zone_transitions.create_index([("location", "2dsphere")], sparse=True)
+
         # Location History collection indexes
         # 1. Unique index on location_id and id
         await db.location_history.create_index("location_id", unique=True, sparse=True)

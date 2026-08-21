@@ -25,6 +25,11 @@ class RealtimeEventType(str, Enum):
     ZONE_CREATED = "zone.created"
     ZONE_UPDATED = "zone.updated"
     ZONE_STATUS_CHANGED = "zone.status_changed"
+    ZONE_ENTERED = "zone.entered"
+    ZONE_EXITED = "zone.exited"
+    ZONE_DWELL_THRESHOLD_REACHED = "zone.dwell.threshold_reached"
+    ZONE_MEMBERSHIP_UNCERTAIN = "zone.membership.uncertain"
+    ZONE_MEMBERSHIP_STALE = "zone.membership.stale"
 
     # Alert events
     ALERT_CREATED = "alert.created"

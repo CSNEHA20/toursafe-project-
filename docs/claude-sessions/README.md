@@ -24,3 +24,4 @@ Each session has its own subdirectory under `prompt-<number>-<description>/` con
 | prompt-07-telemetry-pipeline | Real Telemetry Ingestion + Storage Pipeline (15-step Ingestion Pipeline, Sequence Tracking, Redis Live Cache, MongoDB Persistence, 3-Second Window Engine, Offline Buffer & Privacy) |
 | prompt-08-lstm-anomaly-training | Offline Machine Learning Dataset Research, Preprocessing & LSTM Autoencoder Anomaly Detection Model Training (UCI-HAR, Robust Scaling, Threshold Calibration, ONNX Export) |
 | prompt-09-realtime-lstm-inference | Real-Time LSTM Inference Service (Live Telemetry -> LSTM, Anomaly Scoring, Model Versioning v1.0.0, State Machine Hysteresis, Deduplication, Redis State, MongoDB Persistence & Authority Dashboard) |
+| prompt-10-geo-fencing | Real-Time Geo-Fencing Engine (GPS + GeoJSON Zones, Point-in-Polygon Detection, Temporal Hysteresis, Dwell Tracking, Overlapping Zones, Redis Active State, MongoDB Transitions & Realtime Events) |

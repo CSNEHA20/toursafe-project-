@@ -442,3 +442,6 @@ export interface SafetyCheck {
   escalated: boolean;
   created_at: string;
 }
+
+export * from "./geofence";
+

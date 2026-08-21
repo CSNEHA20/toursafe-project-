@@ -14,6 +14,7 @@ from .routers.emergency_contacts import router as emergency_contacts_router
 from .routers.itineraries import router as itineraries_router
 from .routers.zones import router as zones_router
 from .routers.authority_zones import router as authority_zones_router
+from .routers.geofence import router as geofence_router
 from .routers.health import router as health_router
 from .routers.realtime import router as realtime_router
 from .routers.dev_realtime import router as dev_realtime_router
@@ -94,5 +95,6 @@ app.include_router(kyc_router)
 app.include_router(medical_router)
 app.include_router(emergency_contacts_router)
 app.include_router(itineraries_router)
+app.include_router(geofence_router)
 app.include_router(zones_router)
 app.include_router(authority_zones_router)

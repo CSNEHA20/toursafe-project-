@@ -25,8 +25,9 @@ import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import RealMap, { ZonePolygonProp } from '@/components/RealMap';
 import { ConnectionStatusBadge } from '@/components/ConnectionStatusBadge';
-import { zoneApi } from '@/lib/api';
+import { zoneApi, geofenceApi } from '@/lib/api';
 import { useLocationStore } from '@/store/locationStore';
+import { useGeofenceStore } from '@/store/geofenceStore';
 import { locationTrackingService } from '@/lib/location/trackingService';
 import type { ZoneMapItem } from '@/types';
 
@@ -45,15 +46,28 @@ export default function TouristMap() {
     qualityMetrics,
   } = useLocationStore();
 
+  // Real Geofence Store
+  const {
+    activeZones,
+    highestRiskLevel,
+    isStale,
+  } = useGeofenceStore();
+
   const fetchZones = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await zoneApi.getAll();
+      const [response, geoRes] = await Promise.all([
+        zoneApi.getAll(),
+        geofenceApi.getMyCurrentZones().catch(() => null),
+      ]);
       const loadedZones = response.data?.zones || [];
       setZones(loadedZones);
       if (loadedZones.length > 0) {
         setSelectedZone(loadedZones[0]);
+      }
+      if (geoRes?.data) {
+        useGeofenceStore.getState().setSnapshot(geoRes.data);
       }
     } catch (err: any) {
       console.error('Failed to fetch zones for tourist map:', err);
@@ -336,6 +350,27 @@ export default function TouristMap() {
           )}
         </View>
 
+        {/* Active Geofence Zone Membership Banner */}
+        {activeZones.length > 0 && (
+          <View style={[
+            styles.geofenceBanner,
+            highestRiskLevel === 'critical' ? styles.geofenceCritical : highestRiskLevel === 'high' ? styles.geofenceHigh : styles.geofenceSafe
+          ]}>
+            <View style={styles.geofenceHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <ShieldCheck size={16} color="#fff" />
+                <Text style={styles.geofenceTitle}>Active Zone: {activeZones[0].name}</Text>
+              </View>
+              <View style={styles.geofenceRiskBadge}>
+                <Text style={styles.geofenceRiskText}>{activeZones[0].risk_level.toUpperCase()}</Text>
+              </View>
+            </View>
+            <Text style={styles.geofenceSubtext}>
+              Dwell: {Math.floor(activeZones[0].dwell_duration_seconds / 60)}m {Math.floor(activeZones[0].dwell_duration_seconds % 60)}s | Boundary: {activeZones[0].distance_to_boundary_meters?.toFixed(0)}m {isStale ? ' (Stale GPS)' : ''}
+            </Text>
+          </View>
+        )}
+
         <View style={styles.mapFrame}>
           <View style={styles.mapHeader}>
             <View style={styles.mapChip}>
@@ -582,4 +617,45 @@ const styles = StyleSheet.create({
   typeBadge: { alignItems: 'flex-end', gap: 2 },
   placeType: { fontSize: 11, fontWeight: '800', color: '#1a365d' },
   riskSubtype: { fontSize: 9, fontWeight: '700', color: '#64748b' },
+  geofenceBanner: {
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 14,
+  },
+  geofenceSafe: {
+    backgroundColor: '#065f46',
+  },
+  geofenceHigh: {
+    backgroundColor: '#9a3412',
+  },
+  geofenceCritical: {
+    backgroundColor: '#991b1b',
+  },
+  geofenceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  geofenceTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  geofenceRiskBadge: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  geofenceRiskText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#ffffff',
+  },
+  geofenceSubtext: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.85)',
+  },
 });
+

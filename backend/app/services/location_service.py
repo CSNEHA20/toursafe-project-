@@ -17,6 +17,7 @@ from ..schemas.location import (
 )
 from ..schemas.realtime import RealtimeEventEnvelope, RealtimeEventType
 from ..services.realtime_bus import realtime_bus
+from ..services.geofencing import geofence_engine
 
 logger = logging.getLogger("toursafe.location")
 
@@ -215,6 +216,16 @@ class LocationService:
             await realtime_bus.publish_to_channel("authority:operations", envelope)
         except Exception as pe:
             logger.warning("Realtime broadcast note for location.updated: %s", pe)
+
+        # 7. Process real-time geo-fencing (Prompt 10)
+        try:
+            await geofence_engine.process_location_sample(
+                tourist_id=tourist_id,
+                user_id=user_id,
+                location_sample=sample,
+            )
+        except Exception as ge_err:
+            logger.error("Geofencing engine processing error for tourist %s: %s", tourist_id, ge_err)
 
         return LocationSampleResponse(
             location_id=mongo_doc.location_id,
