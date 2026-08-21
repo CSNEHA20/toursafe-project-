@@ -1,0 +1,20 @@
+{
+  "method": "percentile_99",
+  "primary_threshold": 5.804714,
+  "warning_threshold": 4.934007,
+  "critical_threshold": 7.546128,
+  "val_score_mean": 1.024683,
+  "val_score_std": 1.503574,
+  "val_score_median": 0.61659,
+  "val_score_iqr": 1.417732,
+  "val_score_p95": 5.464329,
+  "val_score_p99": 5.804714,
+  "calibrated_at_epoch": 10,
+  "tuning_metadata": {
+    "k_sigma": 3.0,
+    "n_val_samples": 900,
+    "q25": 0.014288,
+    "q75": 1.43202,
+    "p98": 5.73914
+  }
+}

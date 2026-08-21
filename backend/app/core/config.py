@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     telemetry_max_queue_depth: int = Field(default=5000, alias="TELEMETRY_MAX_QUEUE_DEPTH")
     telemetry_redis_ttl_seconds: int = Field(default=120, alias="TELEMETRY_REDIS_TTL_SECONDS")
 
+    # ML Pipeline Settings
+    ml_model_version: str = Field(default="v1.0.0", alias="ML_MODEL_VERSION")
+    ml_artifacts_dir: str = Field(default="app/ml/artifacts", alias="ML_ARTIFACTS_DIR")
+    ml_window_samples: int = Field(default=150, alias="ML_WINDOW_SAMPLES")
+    ml_feature_count: int = Field(default=8, alias="ML_FEATURE_COUNT")
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors_origins(cls, v):
