@@ -90,6 +90,23 @@ export function initRealtimeEventDispatcher() {
     }
   );
 
+  // 4. Location Events
+  const unsubLocationUpdated = realtimeClient.onEvent<any>(
+    "location.updated",
+    (data) => {
+      if (!data || !data.tourist_id || !data.location) return;
+      const { tourist_id, location, timestamp, tracking_status } = data;
+      useMapStore.getState().updateMarker({
+        tourist_id,
+        name: `Tourist ${tourist_id.slice(0, 6)}`,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        status: tracking_status === "active" ? "safe" : "inactive",
+        last_seen: timestamp || new Date().toISOString(),
+      });
+    }
+  );
+
   unsubscribers = [
     unsubZoneCreated,
     unsubZoneUpdated,
@@ -99,6 +116,7 @@ export function initRealtimeEventDispatcher() {
     unsubAlertResolved,
     unsubSOSCreated,
     unsubSOSUpdated,
+    unsubLocationUpdated,
   ];
 
   console.log("[EventDispatcher] Realtime event subscriptions initialized.");

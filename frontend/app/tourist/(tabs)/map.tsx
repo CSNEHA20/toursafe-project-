@@ -10,19 +10,24 @@ import {
 } from 'react-native';
 import {
   MapPin,
-  Navigation,
   ShieldAlert,
-  Clock3,
-  TriangleAlert,
   Layers3,
   RefreshCw,
   AlertCircle,
   ShieldCheck,
+  Play,
+  Pause,
+  Square,
+  Radio,
+  Gauge,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import Toast from 'react-native-toast-message';
 import RealMap, { ZonePolygonProp } from '@/components/RealMap';
 import { ConnectionStatusBadge } from '@/components/ConnectionStatusBadge';
 import { zoneApi } from '@/lib/api';
+import { useLocationStore } from '@/store/locationStore';
+import { locationTrackingService } from '@/lib/location/trackingService';
 import type { ZoneMapItem } from '@/types';
 
 export default function TouristMap() {
@@ -31,6 +36,14 @@ export default function TouristMap() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedZone, setSelectedZone] = useState<ZoneMapItem | null>(null);
+  const [actionLoading, setActionLoading] = useState<boolean>(false);
+
+  // Real GPS Location Store
+  const {
+    currentLocation,
+    trackingStatus,
+    qualityMetrics,
+  } = useLocationStore();
 
   const fetchZones = useCallback(async () => {
     setLoading(true);
@@ -52,7 +65,68 @@ export default function TouristMap() {
 
   useEffect(() => {
     fetchZones();
-  }, [fetchZones]);
+    // One-shot GPS fix on mount if idle
+    if (trackingStatus === 'idle') {
+      locationTrackingService.getCurrentLocation().catch(() => {
+        // user may grant permission via explicit start button
+      });
+    }
+  }, [fetchZones, trackingStatus]);
+
+  // Tracking Action Handlers
+  const handleStartTracking = async () => {
+    setActionLoading(true);
+    try {
+      await locationTrackingService.startForegroundLocationTracking();
+      Toast.show({
+        type: 'success',
+        text1: 'GPS Tracking Active',
+        text2: 'Transmitting real device location to TourSafe pipeline (~1 Hz).',
+      });
+    } catch (err: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'GPS Tracking Failed',
+        text2: err?.message || 'Please enable device location permissions.',
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handlePauseTracking = () => {
+    locationTrackingService.pauseTracking();
+    Toast.show({
+      type: 'info',
+      text1: 'Tracking Paused',
+      text2: 'GPS fix acquisition temporarily paused.',
+    });
+  };
+
+  const handleResumeTracking = () => {
+    locationTrackingService.resumeTracking();
+    Toast.show({
+      type: 'success',
+      text1: 'Tracking Resumed',
+      text2: 'Live GPS transmission active.',
+    });
+  };
+
+  const handleStopTracking = async () => {
+    setActionLoading(true);
+    try {
+      await locationTrackingService.stopForegroundLocationTracking();
+      Toast.show({
+        type: 'info',
+        text1: 'Tracking Stopped',
+        text2: 'GPS subscription cleanly closed.',
+      });
+    } catch (err: any) {
+      console.error('Failed to stop tracking:', err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   // Convert GeoJSON polygons to RealMap polygon props
   const mapPolygons: ZonePolygonProp[] = zones
@@ -73,7 +147,7 @@ export default function TouristMap() {
     })
     .filter((p) => p.coordinates.length > 2);
 
-  // Markers from zone centers
+  // Markers from zone centers + real device GPS location marker
   const mapMarkers = zones
     .filter((z) => z.center && z.center.coordinates)
     .map((z) => {
@@ -92,30 +166,63 @@ export default function TouristMap() {
       };
     });
 
-  const defaultCenter =
-    zones.length > 0 && zones[0].center?.coordinates
-      ? {
-          latitude: zones[0].center.coordinates[1],
-          longitude: zones[0].center.coordinates[0],
-          latitudeDelta: 0.08,
-          longitudeDelta: 0.08,
-        }
-      : { latitude: 10.2381, longitude: 77.4892, latitudeDelta: 0.08, longitudeDelta: 0.08 };
+  // Attach real physical device location marker
+  if (currentLocation) {
+    mapMarkers.push({
+      latitude: currentLocation.latitude,
+      longitude: currentLocation.longitude,
+      title: `📍 My Physical Location (${qualityMetrics.qualityState.toUpperCase()})`,
+      color: '#2563eb', // Blue marker for tourist device
+    });
+  }
+
+  // Priority center: current GPS position, then selected zone, then default region
+  const defaultCenter = currentLocation
+    ? {
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      }
+    : zones.length > 0 && zones[0].center?.coordinates
+    ? {
+        latitude: zones[0].center.coordinates[1],
+        longitude: zones[0].center.coordinates[0],
+        latitudeDelta: 0.08,
+        longitudeDelta: 0.08,
+      }
+    : { latitude: 10.2381, longitude: 77.4892, latitudeDelta: 0.08, longitudeDelta: 0.08 };
+
+  const getQualityBadgeColor = () => {
+    switch (qualityMetrics.qualityState) {
+      case 'excellent':
+        return '#10b981';
+      case 'good':
+        return '#0d9488';
+      case 'degraded':
+        return '#f59e0b';
+      case 'poor':
+      case 'stale':
+        return '#ef4444';
+      default:
+        return '#64748b';
+    }
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.hero}>
         <View style={styles.heroTop}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.kicker}>Geospatial Safety</Text>
+            <Text style={styles.kicker}>Real GPS Location Tracking</Text>
             <Text style={styles.title}>
               {selectedZone ? selectedZone.name : 'TourSafe Live Map'}
             </Text>
             <Text style={styles.subtitle}>
-              Real-time safety zones and boundaries backed by MongoDB geospatial foundation.
+              Physical device location tracking at ~1 Hz connected to Redis live state.
             </Text>
           </View>
-          <View style={{ alignItems: "flex-end", gap: 8 }}>
+          <View style={{ alignItems: 'flex-end', gap: 8 }}>
             <ConnectionStatusBadge />
             <TouchableOpacity onPress={() => router.push('/tourist/(tabs)/sos')} style={styles.sosButton}>
               <ShieldAlert size={18} color="#fff" />
@@ -124,11 +231,118 @@ export default function TouristMap() {
           </View>
         </View>
 
+        {/* GPS Tracking Controls Panel */}
+        <View style={styles.controlPanel}>
+          <View style={styles.controlHeader}>
+            <View style={styles.controlStatusRow}>
+              <View
+                style={[
+                  styles.statusIndicator,
+                  {
+                    backgroundColor:
+                      trackingStatus === 'active'
+                        ? '#22c55e'
+                        : trackingStatus === 'paused'
+                        ? '#f59e0b'
+                        : '#94a3b8',
+                  },
+                ]}
+              />
+              <Text style={styles.controlStatusText}>
+                TRACKING: {trackingStatus.toUpperCase()}
+              </Text>
+            </View>
+
+            <View style={styles.qualityChip}>
+              <Gauge size={12} color={getQualityBadgeColor()} />
+              <Text style={[styles.qualityText, { color: getQualityBadgeColor() }]}>
+                {qualityMetrics.qualityState.toUpperCase()} GPS
+              </Text>
+            </View>
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.btnRow}>
+            {trackingStatus === 'idle' || trackingStatus === 'stopped' || trackingStatus === 'error' ? (
+              <TouchableOpacity
+                onPress={handleStartTracking}
+                disabled={actionLoading}
+                style={[styles.actionBtn, styles.startBtn]}
+              >
+                <Play size={16} color="#fff" />
+                <Text style={styles.btnText}>Start GPS Tracking</Text>
+              </TouchableOpacity>
+            ) : trackingStatus === 'active' ? (
+              <>
+                <TouchableOpacity
+                  onPress={handlePauseTracking}
+                  style={[styles.actionBtn, styles.pauseBtn]}
+                >
+                  <Pause size={16} color="#1a365d" />
+                  <Text style={[styles.btnText, { color: '#1a365d' }]}>Pause</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleStopTracking}
+                  disabled={actionLoading}
+                  style={[styles.actionBtn, styles.stopBtn]}
+                >
+                  <Square size={16} color="#fff" />
+                  <Text style={styles.btnText}>Stop Tracking</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity
+                  onPress={handleResumeTracking}
+                  style={[styles.actionBtn, styles.resumeBtn]}
+                >
+                  <Play size={16} color="#fff" />
+                  <Text style={styles.btnText}>Resume</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleStopTracking}
+                  disabled={actionLoading}
+                  style={[styles.actionBtn, styles.stopBtn]}
+                >
+                  <Square size={16} color="#fff" />
+                  <Text style={styles.btnText}>Stop</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+
+          {/* Live Telemetry Summary */}
+          {currentLocation && (
+            <View style={styles.telemetryGrid}>
+              <View style={styles.telemetryItem}>
+                <Text style={styles.telemetryLabel}>Coordinates</Text>
+                <Text style={styles.telemetryValue}>
+                  {currentLocation.latitude.toFixed(4)}°, {currentLocation.longitude.toFixed(4)}°
+                </Text>
+              </View>
+              <View style={styles.telemetryItem}>
+                <Text style={styles.telemetryLabel}>Accuracy</Text>
+                <Text style={styles.telemetryValue}>
+                  {currentLocation.accuracy ? `±${currentLocation.accuracy.toFixed(1)}m` : 'N/A'}
+                </Text>
+              </View>
+              <View style={styles.telemetryItem}>
+                <Text style={styles.telemetryLabel}>Rate</Text>
+                <Text style={styles.telemetryValue}>
+                  {qualityMetrics.observedFrequencyHz > 0 ? `${qualityMetrics.observedFrequencyHz} Hz` : '~1 Hz'}
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
+
         <View style={styles.mapFrame}>
           <View style={styles.mapHeader}>
             <View style={styles.mapChip}>
-              <Navigation size={14} color="#0d9488" />
-              <Text style={styles.mapChipText}>GPS Ready</Text>
+              <Radio size={14} color="#2563eb" />
+              <Text style={styles.mapChipText}>
+                {currentLocation ? 'Live Device GPS Active' : 'Waiting for GPS Fix'}
+              </Text>
             </View>
             <View style={styles.mapChip}>
               <ShieldCheck size={14} color="#1a365d" />
@@ -136,7 +350,9 @@ export default function TouristMap() {
             </View>
             <View style={styles.mapChip}>
               <Layers3 size={14} color="#475569" />
-              <Text style={styles.mapChipText}>{Platform.OS === 'web' ? 'OpenStreetMap' : 'Native Map'}</Text>
+              <Text style={styles.mapChipText}>
+                {Platform.OS === 'web' ? 'OpenStreetMap' : 'Native Map'}
+              </Text>
             </View>
           </View>
 
@@ -163,10 +379,15 @@ export default function TouristMap() {
               region={defaultCenter}
               polygons={mapPolygons}
               markers={mapMarkers}
-              overlayTitle={selectedZone?.name || 'TourSafe Verified Zones'}
+              overlayTitle={
+                currentLocation
+                  ? `Live GPS: ${currentLocation.latitude.toFixed(4)}°N, ${currentLocation.longitude.toFixed(4)}°E`
+                  : selectedZone?.name || 'TourSafe Verified Zones'
+              }
               overlayText={
-                selectedZone?.description ||
-                'Verified GeoJSON safety boundaries for Tamil Nadu & Nilgiris tourist corridors.'
+                currentLocation
+                  ? `Physical device GPS sample #${currentLocation.sequence_number} | Accuracy: ±${currentLocation.accuracy?.toFixed(1) || '0'}m`
+                  : selectedZone?.description || 'Verified GeoJSON safety boundaries for Tamil Nadu.'
               }
             />
           )}
@@ -222,16 +443,6 @@ export default function TouristMap() {
           );
         })}
       </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Corridor Advisory</Text>
-        <View style={styles.alertCard}>
-          <TriangleAlert size={18} color="#b45309" />
-          <Text style={styles.alertText}>
-            Restricted zones like Guna Caves & Berijam Lake require forest permits and strict adherence to marked boundaries. Always check zone alerts before traveling.
-          </Text>
-        </View>
-      </View>
     </ScrollView>
   );
 }
@@ -254,6 +465,59 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sosText: { color: '#fff', fontWeight: '700' },
+  controlPanel: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 16,
+    padding: 12,
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  controlHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  controlStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  statusIndicator: { width: 8, height: 8, borderRadius: 4 },
+  controlStatusText: { color: '#fff', fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
+  qualityChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  qualityText: { fontSize: 11, fontWeight: '700' },
+  btnRow: { flexDirection: 'row', gap: 8 },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  startBtn: { backgroundColor: '#10b981' },
+  pauseBtn: { backgroundColor: '#fef08a' },
+  resumeBtn: { backgroundColor: '#3b82f6' },
+  stopBtn: { backgroundColor: '#ef4444' },
+  btnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  telemetryGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 10,
+  },
+  telemetryItem: { alignItems: 'center' },
+  telemetryLabel: { color: 'rgba(255, 255, 255, 0.6)', fontSize: 10, textTransform: 'uppercase' },
+  telemetryValue: { color: '#fff', fontSize: 12, fontWeight: '700', marginTop: 2 },
   mapFrame: { marginTop: 16, backgroundColor: '#fff', borderRadius: 18, padding: 12 },
   mapHeader: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   mapChip: {
@@ -318,14 +582,4 @@ const styles = StyleSheet.create({
   typeBadge: { alignItems: 'flex-end', gap: 2 },
   placeType: { fontSize: 11, fontWeight: '800', color: '#1a365d' },
   riskSubtype: { fontSize: 9, fontWeight: '700', color: '#64748b' },
-  alertCard: {
-    backgroundColor: '#fff7ed',
-    borderRadius: 14,
-    padding: 14,
-    flexDirection: 'row',
-    gap: 10,
-    borderWidth: 1,
-    borderColor: '#fed7aa',
-  },
-  alertText: { flex: 1, color: '#7c2d12', lineHeight: 20 },
 });

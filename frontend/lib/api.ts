@@ -169,6 +169,22 @@ export const touristApi = {
     api.delete(`/tourists/me/itinerary/${itineraryId}`),
 };
 
+export const locationApi = {
+  updateLocation: (sample: any) => api.post("/location/update", sample),
+  startSession: (data?: { device_id?: string; source?: string }) =>
+    api.post("/location/session/start", data || {}),
+  stopSession: (sessionId: string) =>
+    api.post("/location/session/stop", { session_id: sessionId }),
+  getMyLocation: () => api.get("/tourists/me/location"),
+  getMyHistory: (params?: { start_time?: string; end_time?: string; limit?: number; skip?: number }) =>
+    api.get("/tourists/me/location-history", { params }),
+  getAuthorityTouristLocation: (touristId: string) =>
+    api.get(`/authority/tourists/${touristId}/location`),
+  getAuthorityTouristHistory: (touristId: string, params?: { start_time?: string; end_time?: string; limit?: number; skip?: number }) =>
+    api.get(`/authority/tourists/${touristId}/location-history`, { params }),
+  getAuthorityLiveLocations: () => api.get("/authority/live-locations"),
+};
+
 export const authorityApi = {
   getMe: () => api.get("/authority/me"),
   create: (data: unknown) => api.post("/authority", data),

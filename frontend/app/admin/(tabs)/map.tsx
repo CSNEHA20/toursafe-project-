@@ -16,10 +16,13 @@ import {
   RefreshCw,
   AlertOctagon,
   ShieldCheck,
+  Radio,
+  Users,
 } from 'lucide-react-native';
 import RealMap, { ZonePolygonProp } from '@/components/RealMap';
-import { zoneApi } from '@/lib/api';
+import { zoneApi, locationApi } from '@/lib/api';
 import { ConnectionStatusBadge } from '@/components/ConnectionStatusBadge';
+import { useMapStore } from '@/store/mapStore';
 import type { ZoneMapItem } from '@/types';
 
 export default function AdminMap() {
@@ -27,23 +30,46 @@ export default function AdminMap() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchZones = useCallback(async () => {
+  // Live tourist markers updated via WebSocket and polling
+  const liveMarkers = useMapStore((state) => state.markers);
+  const updateMarker = useMapStore((state) => state.updateMarker);
+
+  const fetchMapData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await zoneApi.getAll();
-      setZones(response.data?.zones || []);
+      const [zonesRes, liveLocsRes] = await Promise.all([
+        zoneApi.getAll(),
+        locationApi.getAuthorityLiveLocations().catch(() => ({ data: [] })),
+      ]);
+
+      setZones(zonesRes.data?.zones || []);
+
+      // Populate live locations
+      const liveList = Array.isArray(liveLocsRes.data) ? liveLocsRes.data : [];
+      liveList.forEach((loc: any) => {
+        if (loc.location && loc.tourist_id) {
+          updateMarker({
+            tourist_id: loc.tourist_id,
+            name: `Tourist ${loc.tourist_id.slice(0, 6)}`,
+            latitude: loc.location.latitude,
+            longitude: loc.location.longitude,
+            status: loc.tracking_status === 'active' ? 'safe' : 'inactive',
+            last_seen: loc.timestamp || new Date().toISOString(),
+          });
+        }
+      });
     } catch (err: any) {
-      console.error('Failed to fetch zones for admin map:', err);
-      setError(err?.response?.data?.detail || err?.message || 'Failed to load zones');
+      console.error('Failed to fetch data for admin map:', err);
+      setError(err?.response?.data?.detail || err?.message || 'Failed to load map data');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [updateMarker]);
 
   useEffect(() => {
-    fetchZones();
-  }, [fetchZones]);
+    fetchMapData();
+  }, [fetchMapData]);
 
   // Convert GeoJSON polygons to RealMap polygons
   const mapPolygons: ZonePolygonProp[] = zones
@@ -64,7 +90,8 @@ export default function AdminMap() {
     })
     .filter((p) => p.coordinates.length > 2);
 
-  const mapMarkers = zones
+  // Zone center markers
+  const zoneMarkers = zones
     .filter((z) => z.center && z.center.coordinates)
     .map((z) => {
       const [lon, lat] = z.center.coordinates;
@@ -82,8 +109,25 @@ export default function AdminMap() {
       };
     });
 
+  // Real-time live tourist markers from WebSocket / Redis live pipeline
+  const touristMapMarkers = liveMarkers.map((m) => ({
+    latitude: m.latitude,
+    longitude: m.longitude,
+    title: `📍 ${m.name} (${m.status.toUpperCase()})`,
+    color: '#2563eb', // Blue marker for live tourists
+  }));
+
+  const allMapMarkers = [...zoneMarkers, ...touristMapMarkers];
+
   const baseRegion =
-    zones.length > 0 && zones[0].center?.coordinates
+    touristMapMarkers.length > 0
+      ? {
+          latitude: touristMapMarkers[0].latitude,
+          longitude: touristMapMarkers[0].longitude,
+          latitudeDelta: 0.12,
+          longitudeDelta: 0.12,
+        }
+      : zones.length > 0 && zones[0].center?.coordinates
       ? {
           latitude: zones[0].center.coordinates[1],
           longitude: zones[0].center.coordinates[0],
@@ -102,11 +146,13 @@ export default function AdminMap() {
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View>
             <Text style={styles.title}>Live Command Map</Text>
-            <Text style={styles.subtitle}>Geospatial zone boundaries from MongoDB 2dsphere index</Text>
+            <Text style={styles.subtitle}>
+              Live GPS telemetry and MongoDB 2dsphere zone boundaries
+            </Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <ConnectionStatusBadge />
-            <TouchableOpacity onPress={fetchZones} style={styles.refreshBtn}>
+            <TouchableOpacity onPress={fetchMapData} style={styles.refreshBtn}>
               <RefreshCw size={16} color="#1a365d" />
             </TouchableOpacity>
           </View>
@@ -114,6 +160,11 @@ export default function AdminMap() {
       </View>
 
       <View style={styles.kpiRow}>
+        <MiniStat
+          icon={<Radio size={16} color="#2563eb" />}
+          label="Live GPS Tracked"
+          value={String(liveMarkers.length)}
+        />
         <MiniStat
           icon={<ShieldCheck size={16} color="#10b981" />}
           label="Safe Zones"
@@ -129,31 +180,28 @@ export default function AdminMap() {
           label="Restricted"
           value={String(restrictedCount)}
         />
-        <MiniStat
-          icon={<Layers3 size={16} color="#475569" />}
-          label="Map Mode"
-          value={Platform.OS === 'web' ? 'OpenStreetMap' : 'Native'}
-        />
       </View>
 
       <View style={styles.mapCard}>
         <View style={styles.mapTopRow}>
           <View style={styles.mapPill}>
             <MapPinned size={14} color="#0f172a" />
-            <Text style={styles.mapPillText}>Operator View</Text>
+            <Text style={styles.mapPillText}>Command Live Stream</Text>
           </View>
-          <Text style={styles.mapNote}>{zones.length} active GeoJSON polygons rendered</Text>
+          <Text style={styles.mapNote}>
+            {liveMarkers.length} live GPS tourists · {zones.length} GeoJSON polygons
+          </Text>
         </View>
 
         {loading ? (
           <View style={styles.loadingFrame}>
             <ActivityIndicator size="large" color="#fff" />
-            <Text style={styles.loadingFrameText}>Loading authoritative geospatial zones...</Text>
+            <Text style={styles.loadingFrameText}>Loading authoritative geospatial layer & live GPS...</Text>
           </View>
         ) : error ? (
           <View style={styles.errorFrame}>
             <Text style={styles.errorFrameText}>{error}</Text>
-            <TouchableOpacity onPress={fetchZones} style={styles.retryFrameBtn}>
+            <TouchableOpacity onPress={fetchMapData} style={styles.retryFrameBtn}>
               <Text style={styles.retryFrameBtnText}>Retry</Text>
             </TouchableOpacity>
           </View>
@@ -161,15 +209,36 @@ export default function AdminMap() {
           <RealMap
             region={baseRegion}
             polygons={mapPolygons}
-            markers={mapMarkers}
-            overlayTitle="TourSafe Live Command Geospatial Layer"
-            overlayText="Authoritative GeoJSON safety polygons rendered on OpenStreetMap with risk-level color codes."
+            markers={allMapMarkers}
+            overlayTitle={`Command Center | ${liveMarkers.length} Live Tourist Tracks`}
+            overlayText="Real-time physical device coordinates received via authenticated WebSocket and Redis live pipeline."
           />
         )}
       </View>
 
+      {/* Live Tracked Tourists Registry */}
+      {liveMarkers.length > 0 && (
+        <View style={styles.listCard}>
+          <Text style={styles.listTitle}>Live Tracked Tourists ({liveMarkers.length})</Text>
+          {liveMarkers.map((m) => (
+            <View key={m.tourist_id} style={styles.row}>
+              <Radio size={16} color="#2563eb" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowTitle}>{m.name}</Text>
+                <Text style={styles.rowMeta}>
+                  {m.latitude.toFixed(4)}°N, {m.longitude.toFixed(4)}°E · Last fix: {new Date(m.last_seen).toLocaleTimeString()}
+                </Text>
+              </View>
+              <View style={[styles.statusBadge, styles.statusActive]}>
+                <Text style={styles.statusText}>{m.status.toUpperCase()}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+
       <View style={styles.listCard}>
-        <Text style={styles.listTitle}>Live Zone Registry ({zones.length})</Text>
+        <Text style={styles.listTitle}>Active Zone Boundaries ({zones.length})</Text>
         {zones.map((zone) => (
           <View key={zone.zone_id} style={styles.row}>
             <MapPinned

@@ -6,14 +6,15 @@ import { touristApi } from '@/lib/api';
 import type { Tourist } from '@/types';
 import RoleSwitch from '@/components/RoleSwitch';
 import { ConnectionStatusBadge } from '@/components/ConnectionStatusBadge';
+import { useLocationStore } from '@/store/locationStore';
 import {
   ShieldAlert,
   MapPin,
   Bell,
-  CheckCircle,
   Navigation,
   Wifi,
   Phone,
+  Radio,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
@@ -21,6 +22,7 @@ export default function TouristDashboard() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { alerts } = useAlertStore();
+  const { trackingStatus, currentLocation, qualityMetrics } = useLocationStore();
   const [tourist, setTourist] = useState<Tourist | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -49,7 +51,9 @@ export default function TouristDashboard() {
             <View style={styles.locationRow}>
               <MapPin size={16} color="rgba(255, 255, 255, 0.7)" />
               <Text style={styles.locationText}>
-                {tourist?.current_zone ?? "Location updating…"}
+                {currentLocation
+                  ? `GPS: ${currentLocation.latitude.toFixed(4)}°N, ${currentLocation.longitude.toFixed(4)}°E (±${currentLocation.accuracy?.toFixed(0) || 5}m)`
+                  : tourist?.current_zone ?? "Location updating…"}
               </Text>
             </View>
           </View>
@@ -66,10 +70,31 @@ export default function TouristDashboard() {
       {/* Status grid */}
       <View style={styles.statusGrid}>
         <StatusCard
-          icon={<CheckCircle size={20} color="#10b981" />}
-          label="Safety Status"
-          value={tourist?.status === "safe" ? "Safe" : tourist?.status ?? "Unknown"}
-          sub="Position shared"
+          icon={
+            <Radio
+              size={20}
+              color={
+                trackingStatus === "active"
+                  ? "#10b981"
+                  : trackingStatus === "paused"
+                  ? "#f59e0b"
+                  : "#64748b"
+              }
+            />
+          }
+          label="GPS Tracking"
+          value={
+            trackingStatus === "active"
+              ? "Active"
+              : trackingStatus === "paused"
+              ? "Paused"
+              : "Stopped"
+          }
+          sub={
+            currentLocation?.accuracy
+              ? `Acc: ±${currentLocation.accuracy.toFixed(1)}m`
+              : "Tap map to start"
+          }
           loading={loading}
         />
         <StatusCard
@@ -81,16 +106,20 @@ export default function TouristDashboard() {
         />
         <StatusCard
           icon={<Navigation size={20} color="#0d9488" />}
-          label="Current Zone"
-          value={tourist?.current_zone ?? "—"}
-          sub="Geofence active"
+          label="GPS Quality"
+          value={qualityMetrics.qualityState.toUpperCase()}
+          sub={
+            qualityMetrics.observedFrequencyHz > 0
+              ? `${qualityMetrics.observedFrequencyHz} Hz rate`
+              : "Real sensor"
+          }
           loading={loading}
         />
         <StatusCard
           icon={<Wifi size={20} color="#1a365d" />}
           label="Connectivity"
           value="Online"
-          sub="Real-time tracking"
+          sub="Real-time Redis sync"
           loading={loading}
         />
       </View>

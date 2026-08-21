@@ -39,6 +39,22 @@ async def init_db_indexes(db=None):
         await db.zone_audits.create_index([("zone_id", pymongo.ASCENDING), ("changed_at", pymongo.DESCENDING)])
         await db.zone_audits.create_index("audit_id", unique=True, sparse=True)
 
+        # Location History collection indexes
+        # 1. Unique index on location_id and id
+        await db.location_history.create_index("location_id", unique=True, sparse=True)
+        await db.location_history.create_index("id", unique=True, sparse=True)
+        # 2. Geospatial 2dsphere index on location field (GeoJSON Point)
+        await db.location_history.create_index([("location", "2dsphere")])
+        # 3. Compound and temporal indexes for high-throughput queries
+        await db.location_history.create_index([("tourist_id", pymongo.ASCENDING), ("timestamp", pymongo.DESCENDING)])
+        await db.location_history.create_index([("session_id", pymongo.ASCENDING), ("timestamp", pymongo.DESCENDING)])
+        await db.location_history.create_index([("timestamp", pymongo.DESCENDING)])
+
+        # Tracking Sessions collection indexes
+        await db.tracking_sessions.create_index("session_id", unique=True, sparse=True)
+        await db.tracking_sessions.create_index([("tourist_id", pymongo.ASCENDING), ("started_at", pymongo.DESCENDING)])
+        await db.tracking_sessions.create_index([("status", pymongo.ASCENDING)])
+
         print("✅ Geospatial and collection indexes successfully initialized.")
     except Exception as e:
         print(f"⚠️ Index initialization warning: {e}")
