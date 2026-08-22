@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 import logging
 import math
 from typing import Any, Dict, List, Optional, Tuple
+import zoneinfo
 
 from ...core import database as db_core
 from ...schemas.analytics import (
@@ -22,6 +23,7 @@ from ...schemas.analytics import (
     QualityStatus,
     TimeGranularity,
     TimeSeriesPoint,
+    TimeWindowType,
 )
 
 logger = logging.getLogger("toursafe.analytics.aggregation")
@@ -121,22 +123,61 @@ def decode_geohash_center(geohash: str) -> Tuple[float, float]:
 # ---------------------------------------------------------------------------
 
 def normalize_time_range(
-    start_time: Optional[str],
-    end_time: Optional[str],
+    start_time: Optional[str] = None,
+    end_time: Optional[str] = None,
     granularity: TimeGranularity = TimeGranularity.DAY,
+    time_window: Optional[TimeWindowType] = None,
+    tz_str: str = "UTC",
 ) -> Tuple[str, str]:
     """
-    Validates and bounds time ranges against maximum query span limits.
-    Defaults to last 24 hours if unprovided.
+    Validates and bounds time ranges against maximum query span limits and named time windows.
+    Respects client / authority timezone for TODAY and LIVE calculations.
     """
-    now = datetime.now(timezone.utc)
+    try:
+        target_tz = zoneinfo.ZoneInfo(tz_str)
+    except Exception:
+        target_tz = timezone.utc
+
+    now_utc = datetime.now(timezone.utc)
+    now_local = now_utc.astimezone(target_tz)
+
+    if time_window == TimeWindowType.LIVE:
+        # Last 15 minutes
+        start_dt = now_utc - timedelta(minutes=15)
+        end_dt = now_utc
+        return start_dt.isoformat(), end_dt.isoformat()
+
+    elif time_window == TimeWindowType.TODAY:
+        start_local = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+        start_dt = start_local.astimezone(timezone.utc)
+        end_dt = now_utc
+        return start_dt.isoformat(), end_dt.isoformat()
+
+    elif time_window == TimeWindowType.LAST_24_HOURS:
+        start_dt = now_utc - timedelta(hours=24)
+        end_dt = now_utc
+        return start_dt.isoformat(), end_dt.isoformat()
+
+    elif time_window == TimeWindowType.LAST_7_DAYS:
+        start_dt = now_utc - timedelta(days=7)
+        end_dt = now_utc
+        return start_dt.isoformat(), end_dt.isoformat()
+
+    elif time_window == TimeWindowType.LAST_30_DAYS:
+        start_dt = now_utc - timedelta(days=30)
+        end_dt = now_utc
+        return start_dt.isoformat(), end_dt.isoformat()
+
+    # CUSTOM or manual start/end dates
     if not end_time:
-        end_dt = now
+        end_dt = now_utc
     else:
         try:
             end_dt = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
+            if end_dt.tzinfo is None:
+                end_dt = end_dt.replace(tzinfo=timezone.utc)
         except Exception:
-            end_dt = now
+            end_dt = now_utc
 
     if not start_time:
         if granularity == TimeGranularity.HOUR:
@@ -148,6 +189,8 @@ def normalize_time_range(
     else:
         try:
             start_dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+            if start_dt.tzinfo is None:
+                start_dt = start_dt.replace(tzinfo=timezone.utc)
         except Exception:
             start_dt = end_dt - timedelta(days=7)
 
@@ -169,7 +212,7 @@ def normalize_time_range(
 
 def compute_duration_percentiles(durations: List[float]) -> IncidentDurationMetrics:
     """
-    Computes count, mean, min, max, P50, P90, and P95 from duration seconds.
+    Computes count, mean, min, max, P50 (median), P75, P90, P95, and P99 from duration seconds.
     """
     if not durations:
         return IncidentDurationMetrics(count=0)
@@ -187,12 +230,22 @@ def compute_duration_percentiles(durations: List[float]) -> IncidentDurationMetr
         d1 = sorted_d[int(c)] * (k - f)
         return d0 + d1
 
+    p50 = round(_get_percentile(50.0), 2)
+    p75 = round(_get_percentile(75.0), 2)
+    p90 = round(_get_percentile(90.0), 2)
+    p95 = round(_get_percentile(95.0), 2)
+    p99 = round(_get_percentile(99.0), 2)
+    mean_val = round(sum(sorted_d) / n, 2)
+
     return IncidentDurationMetrics(
         count=n,
-        p50_seconds=round(_get_percentile(50.0), 2),
-        p90_seconds=round(_get_percentile(90.0), 2),
-        p95_seconds=round(_get_percentile(95.0), 2),
-        mean_seconds=round(sum(sorted_d) / n, 2),
+        p50_seconds=p50,
+        median_seconds=p50,
+        p75_seconds=p75,
+        p90_seconds=p90,
+        p95_seconds=p95,
+        p99_seconds=p99,
+        mean_seconds=mean_val,
         min_seconds=round(sorted_d[0], 2),
         max_seconds=round(sorted_d[-1], 2),
     )
@@ -267,7 +320,6 @@ class AggregationEngine:
         if not raw_points:
             return 0.0, 0, [], 0
 
-        # Sort explicitly in memory to guarantee chronological order
         points = []
         for p in raw_points:
             ts_str = p.get("timestamp")
@@ -292,22 +344,17 @@ class AggregationEngine:
 
         prev = points[0]
         for curr in points[1:]:
-            # Accuracy filter
             if curr["acc"] > GPS_MAX_VALID_ACCURACY_METERS:
                 continue
 
             accuracies.append(curr["acc"])
             time_delta_sec = max(0.001, (curr["dt"] - prev["dt"]).total_seconds())
 
-            # Detect tracking gap (> 5 minutes without location)
             if time_delta_sec > 300.0:
                 tracking_gaps_count += 1
 
             dist_m = haversine_distance_meters(prev["lat"], prev["lon"], curr["lat"], curr["lon"])
 
-            # Jump and noise filtering:
-            # - If distance is smaller than GPS noise floor (2m), skip distance increment
-            # - If speed exceeds plausible threshold (70 m/s ~ 252 km/h), treat as GPS jump and do not sum
             if dist_m >= GPS_MIN_MOVEMENT_METERS:
                 speed_mps = dist_m / time_delta_sec
                 if speed_mps <= GPS_MAX_PLAUSIBLE_SPEED_MPS:
@@ -317,7 +364,6 @@ class AggregationEngine:
                 else:
                     logger.debug("Rejected GPS jump: %0.1fm in %0.1fs (%0.1f m/s)", dist_m, time_delta_sec, speed_mps)
             else:
-                # Stationary sample
                 valid_points_count += 1
                 prev = curr
 
@@ -328,17 +374,20 @@ class AggregationEngine:
         metric_type: HeatmapMetricType,
         start_time: str,
         end_time: str,
-        precision: int = 5,  # ~4.9km cells
+        precision: int = 5,
+        jurisdiction_id: Optional[str] = None,
     ) -> HeatmapResponse:
         """
         Aggregates operational events into spatial geohash grid cells with k-anonymity privacy suppression.
         """
         db = self._get_db()
-        cell_data: Dict[str, Dict[str, Any]] = {}  # geohash -> {count, tourists: set(), lat, lon}
+        cell_data: Dict[str, Dict[str, Any]] = {}
 
         if metric_type in (HeatmapMetricType.TOURIST_DENSITY, HeatmapMetricType.RESPONSE_ACTIVITY):
             col = db.location_history if metric_type == HeatmapMetricType.TOURIST_DENSITY else db.responder_locations
-            query = {"timestamp": {"$gte": start_time, "$lte": end_time}}
+            query: Dict[str, Any] = {"timestamp": {"$gte": start_time, "$lte": end_time}}
+            if jurisdiction_id and metric_type == HeatmapMetricType.RESPONSE_ACTIVITY:
+                query["jurisdiction_id"] = jurisdiction_id
             cursor = col.find(query, {"latitude": 1, "longitude": 1, "tourist_id": 1, "responder_id": 1})
             async for doc in cursor:
                 lat = doc.get("latitude")
@@ -351,8 +400,12 @@ class AggregationEngine:
                     cell_data[gh]["count"] += 1
                     cell_data[gh]["entities"].add(uid)
 
-        elif metric_type == HeatmapMetricType.INCIDENTS:
+        elif metric_type in (HeatmapMetricType.INCIDENTS, HeatmapMetricType.SOS_EVENTS):
             query = {"started_at": {"$gte": start_time, "$lte": end_time}}
+            if metric_type == HeatmapMetricType.SOS_EVENTS:
+                query["incident_source"] = {"$in": ["MANUAL_SOS", "SOS", "TOURIST_APP"]}
+            if jurisdiction_id:
+                query["jurisdiction_id"] = jurisdiction_id
             cursor = db.incidents.find(query, {"location_data": 1, "tourist_id": 1})
             async for doc in cursor:
                 loc = doc.get("location_data") or {}
@@ -366,23 +419,10 @@ class AggregationEngine:
                     cell_data[gh]["count"] += 1
                     cell_data[gh]["entities"].add(uid)
 
-        elif metric_type == HeatmapMetricType.SOS_EVENTS:
-            query = {"timestamp": {"$gte": start_time, "$lte": end_time}}
-            cursor = db.sos_events.find(query, {"location": 1, "tourist_id": 1})
-            async for doc in cursor:
-                loc = doc.get("location") or {}
-                lat = loc.get("latitude")
-                lon = loc.get("longitude")
-                uid = doc.get("tourist_id") or "unknown"
-                if lat is not None and lon is not None:
-                    gh = encode_geohash(lat, lon, precision)
-                    if gh not in cell_data:
-                        cell_data[gh] = {"count": 0, "entities": set(), "lat": lat, "lon": lon}
-                    cell_data[gh]["count"] += 1
-                    cell_data[gh]["entities"].add(uid)
-
         elif metric_type == HeatmapMetricType.ANOMALIES:
             query = {"started_at": {"$gte": start_time, "$lte": end_time}}
+            if jurisdiction_id:
+                query["jurisdiction_id"] = jurisdiction_id
             cursor = db.anomaly_events.find(query, {"last_location": 1, "tourist_id": 1})
             async for doc in cursor:
                 loc = doc.get("last_location") or {}
@@ -396,7 +436,23 @@ class AggregationEngine:
                     cell_data[gh]["count"] += 1
                     cell_data[gh]["entities"].add(uid)
 
-        # Build response with privacy suppression
+        elif metric_type == HeatmapMetricType.RISK_EPISODES:
+            query = {"start_time": {"$gte": start_time, "$lte": end_time}}
+            if jurisdiction_id:
+                query["jurisdiction_id"] = jurisdiction_id
+            cursor = db.risk_episodes.find(query, {"location": 1, "tourist_id": 1})
+            async for doc in cursor:
+                loc = doc.get("location") or {}
+                lat = loc.get("latitude")
+                lon = loc.get("longitude")
+                uid = doc.get("tourist_id") or "unknown"
+                if lat is not None and lon is not None:
+                    gh = encode_geohash(lat, lon, precision)
+                    if gh not in cell_data:
+                        cell_data[gh] = {"count": 0, "entities": set(), "lat": lat, "lon": lon}
+                    cell_data[gh]["count"] += 1
+                    cell_data[gh]["entities"].add(uid)
+
         cells: List[HeatmapCell] = []
         suppressed_count = 0
         for gh, val in cell_data.items():

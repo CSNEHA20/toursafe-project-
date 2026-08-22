@@ -395,25 +395,50 @@ export const geofenceApi = {
 };
 
 export const analyticsApi = {
-  getOverview: (params?: { start_time?: string; end_time?: string; granularity?: string; bypass_cache?: boolean }) =>
+  getExecutive: (params?: { start_time?: string; end_time?: string; time_window?: string; timezone?: string; jurisdiction_id?: string; bypass_cache?: boolean }) =>
+    api.get("/analytics/executive", { params }),
+  getOverview: (params?: { start_time?: string; end_time?: string; time_window?: string; granularity?: string; bypass_cache?: boolean }) =>
     api.get("/analytics/overview", { params }),
-  getIncidents: (params?: { start_time?: string; end_time?: string; granularity?: string; severity?: string; incident_source?: string; zone_id?: string; bypass_cache?: boolean }) =>
+  getIncidents: (params?: { start_time?: string; end_time?: string; time_window?: string; granularity?: string; severity?: string; incident_source?: string; incident_type?: string; zone_id?: string; jurisdiction_id?: string; bypass_cache?: boolean }) =>
     api.get("/analytics/incidents", { params }),
-  getZones: (params?: { start_time?: string; end_time?: string; risk_level?: string; bypass_cache?: boolean }) =>
+  getZones: (params?: { start_time?: string; end_time?: string; time_window?: string; risk_level?: string; jurisdiction_id?: string; bypass_cache?: boolean }) =>
     api.get("/analytics/zones", { params }),
-  getZoneDetail: (zoneId: string, params?: { start_time?: string; end_time?: string; granularity?: string; bypass_cache?: boolean }) =>
+  getZoneDetail: (zoneId: string, params?: { start_time?: string; end_time?: string; time_window?: string; granularity?: string; bypass_cache?: boolean }) =>
     api.get(`/analytics/zones/${zoneId}`, { params }),
-  getHeatmaps: (params?: { layer?: string; start_time?: string; end_time?: string; bypass_cache?: boolean }) =>
+  getHeatmaps: (params?: { layer?: string; start_time?: string; end_time?: string; time_window?: string; jurisdiction_id?: string; bypass_cache?: boolean }) =>
     api.get("/analytics/heatmaps", { params }),
-  getAnomalies: (params?: { start_time?: string; end_time?: string; granularity?: string; model_version?: string; zone_id?: string; bypass_cache?: boolean }) =>
+  getHotspots: (params?: { start_time?: string; end_time?: string; time_window?: string; jurisdiction_id?: string; bypass_cache?: boolean }) =>
+    api.get("/analytics/geospatial/hotspots", { params }),
+  getFlow: (params?: { start_time?: string; end_time?: string; time_window?: string; jurisdiction_id?: string }) =>
+    api.get("/analytics/geospatial/flow", { params }),
+  getRoutes: (params?: { start_time?: string; end_time?: string; time_window?: string; jurisdiction_id?: string }) =>
+    api.get("/analytics/geospatial/routes", { params }),
+  getDensityAlerts: (params?: { jurisdiction_id?: string }) =>
+    api.get("/analytics/geospatial/density-alerts", { params }),
+  getAnomalies: (params?: { start_time?: string; end_time?: string; time_window?: string; granularity?: string; model_version?: string; zone_id?: string; jurisdiction_id?: string; bypass_cache?: boolean }) =>
     api.get("/analytics/anomalies", { params }),
-  getSafety: (params?: { start_time?: string; end_time?: string; granularity?: string; bypass_cache?: boolean }) =>
+  getSafety: (params?: { start_time?: string; end_time?: string; time_window?: string; granularity?: string; jurisdiction_id?: string; bypass_cache?: boolean }) =>
     api.get("/analytics/safety", { params }),
-  getResponders: (params?: { start_time?: string; end_time?: string; responder_id?: string; unit_id?: string; bypass_cache?: boolean }) =>
+  getResponders: (params?: { start_time?: string; end_time?: string; time_window?: string; responder_id?: string; unit_id?: string; jurisdiction_id?: string; bypass_cache?: boolean }) =>
     api.get("/analytics/responders", { params }),
-  getNotifications: (params?: { start_time?: string; end_time?: string; bypass_cache?: boolean }) =>
+  getEscalations: (params?: { start_time?: string; end_time?: string; time_window?: string; jurisdiction_id?: string; bypass_cache?: boolean }) =>
+    api.get("/analytics/escalations", { params }),
+  getModelsPerformance: () => api.get("/analytics/models/performance"),
+  getNotifications: (params?: { start_time?: string; end_time?: string; time_window?: string; bypass_cache?: boolean }) =>
     api.get("/analytics/notifications", { params }),
   getDataQuality: () => api.get("/analytics/data-quality"),
+  getSystem: () => api.get("/analytics/system"),
+  getForecasts: (params?: { metric_name?: string; horizon?: string; jurisdiction_id?: string }) =>
+    api.get("/analytics/forecasts", { params }),
+  getRecommendations: (params?: { jurisdiction_id?: string }) =>
+    api.get("/analytics/recommendations", { params }),
+  getAlerts: (params?: { jurisdiction_id?: string }) =>
+    api.get("/analytics/alerts", { params }),
+  acknowledgeAlert: (alertId: string) =>
+    api.post(`/analytics/alerts/${alertId}/acknowledge`),
+  getMetricCatalog: () => api.get("/analytics/metric-catalog"),
+  getAuditLogs: (params?: { jurisdiction_id?: string; limit?: number }) =>
+    api.get("/analytics/audit-logs", { params }),
   getTouristStats: (touristId: string) => api.get(`/analytics/tourists/${touristId}`),
   getMyStats: () => api.get("/analytics/tourist/my-stats"),
   createExport: (data: { export_type: string; format?: string; filters?: any }) =>

@@ -116,6 +116,33 @@ async def init_db_indexes(db=None):
         await db.credential_verification_logs.create_index([("credential_reference", pymongo.ASCENDING), ("timestamp", pymongo.DESCENDING)])
         await db.credential_verification_logs.create_index([("verifier_user_id", pymongo.ASCENDING), ("timestamp", pymongo.DESCENDING)], sparse=True)
 
+        # 6. Advanced Operational Analytics & Intelligence (Prompt 26)
+        await db.incidents.create_index([("jurisdiction_id", pymongo.ASCENDING), ("started_at", pymongo.DESCENDING)], sparse=True)
+        await db.incidents.create_index([("zone_id", pymongo.ASCENDING), ("started_at", pymongo.DESCENDING)], sparse=True)
+        await db.incidents.create_index([("status", pymongo.ASCENDING), ("started_at", pymongo.DESCENDING)])
+        await db.incidents.create_index([("escalation_level", pymongo.ASCENDING), ("started_at", pymongo.DESCENDING)])
+
+        await db.safety_decisions.create_index([("jurisdiction_id", pymongo.ASCENDING), ("timestamp", pymongo.DESCENDING)], sparse=True)
+        await db.safety_decisions.create_index([("state", pymongo.ASCENDING), ("timestamp", pymongo.DESCENDING)])
+
+        await db.anomaly_events.create_index([("jurisdiction_id", pymongo.ASCENDING), ("started_at", pymongo.DESCENDING)], sparse=True)
+        await db.anomaly_events.create_index([("zone_id", pymongo.ASCENDING), ("started_at", pymongo.DESCENDING)], sparse=True)
+
+        await db.risk_episodes.create_index("episode_id", unique=True, sparse=True)
+        await db.risk_episodes.create_index([("jurisdiction_id", pymongo.ASCENDING), ("start_time", pymongo.DESCENDING)], sparse=True)
+        await db.risk_episodes.create_index([("status", pymongo.ASCENDING), ("start_time", pymongo.DESCENDING)])
+
+        await db.responder_assignments.create_index([("jurisdiction_id", pymongo.ASCENDING), ("assigned_at", pymongo.DESCENDING)], sparse=True)
+        await db.responder_assignments.create_index([("responder_id", pymongo.ASCENDING), ("assigned_at", pymongo.DESCENDING)], sparse=True)
+        await db.responder_assignments.create_index([("unit_id", pymongo.ASCENDING), ("assigned_at", pymongo.DESCENDING)], sparse=True)
+
+        await db.analytics_alerts.create_index("alert_id", unique=True, sparse=True)
+        await db.analytics_alerts.create_index([("jurisdiction_id", pymongo.ASCENDING), ("is_active", pymongo.ASCENDING), ("triggered_at", pymongo.DESCENDING)], sparse=True)
+
+        await db.analytics_audit_logs.create_index("id", unique=True, sparse=True)
+        await db.analytics_audit_logs.create_index([("jurisdiction_id", pymongo.ASCENDING), ("timestamp", pymongo.DESCENDING)], sparse=True)
+        await db.analytics_audit_logs.create_index([("action", pymongo.ASCENDING), ("timestamp", pymongo.DESCENDING)])
+
         print("✅ Geospatial and collection indexes successfully initialized.")
     except Exception as e:
         print(f"⚠️ Index initialization warning: {e}")
