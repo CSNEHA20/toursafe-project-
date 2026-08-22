@@ -1,0 +1,24 @@
+name: TourSafe Scheduled Backup & Disaster Recovery Drill
+
+on:
+  schedule:
+    - cron: '0 2 * * 0' # Weekly Sunday at 02:00 UTC
+  workflow_dispatch:
+
+jobs:
+  backup-restore-drill:
+    name: Database Snapshot & Restore Drill
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Execute Automated Backup & Restore Drill
+        run: |
+          echo "Executing TourSafe automated backup verification and recovery drill..."
+          python scripts/backup_restore_drill.py

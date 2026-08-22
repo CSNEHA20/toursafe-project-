@@ -1,0 +1,114 @@
+name: TourSafe Continuous Integration (CI)
+
+on:
+  push:
+    branches: [ main, release/* ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secret-scan:
+    name: Secret Detection (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  lint-and-typecheck:
+    name: Code Quality & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Frontend Type Check
+        working-directory: frontend
+        run: npm run type-check
+
+      - name: Frontend Linting
+        working-directory: frontend
+        run: npm run lint
+
+  backend-test-suite:
+    name: Comprehensive Backend Regression & E2E Tests
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7.2-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Backend Test Dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov httpx
+
+      - name: Run Security Hardening Regression
+        working-directory: backend
+        run: python -m pytest tests/regression/test_security_regression.py -v
+
+      - name: Run Safety & SOS State Machine Regression
+        working-directory: backend
+        run: |
+          python -m pytest tests/regression/test_safety_regression.py -v
+          python -m pytest tests/regression/test_sos_and_idempotency_regression.py -v
+
+      - name: Run Governance & Compliance Regression
+        working-directory: backend
+        run: |
+          python -m pytest tests/regression/test_governance_regression.py -v
+          python -m pytest tests/regression/test_authorization_regression.py -v
+
+      - name: Run Telemetry & Sensor Regression
+        working-directory: backend
+        run: python -m pytest tests/regression/test_telemetry_gps_imu_regression.py -v
+
+      - name: Run Golden Path E2E Lifecycle
+        working-directory: backend
+        run: python -m pytest tests/e2e/test_golden_path_e2e.py -v

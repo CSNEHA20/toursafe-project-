@@ -1,0 +1,36 @@
+# Gitleaks Configuration for TourSafe Repository
+title = "TourSafe Secret Detection Rules"
+
+[extend]
+useDefault = true
+
+[rules]
+[[rules]]
+id = "toursafe-jwt-secret"
+description = "Detected Hardcoded TourSafe JWT Secret Key"
+regex = '''(?i)(jwt_secret|jwt_secret_key)\s*[:=]\s*['"][A-Za-z0-9_\-]{16,}['"]'''
+tags = ["jwt", "authentication", "crypto"]
+
+[[rules]]
+id = "toursafe-mongodb-uri-password"
+description = "Detected MongoDB Connection String with Embedded Credentials"
+regex = '''mongodb(\+srv)?:\/\/[a-zA-Z0-9_\-\.]+:[^@\s]+@[a-zA-Z0-9_\-\.]+'''
+tags = ["mongodb", "database", "credentials"]
+
+[[rules]]
+id = "toursafe-redis-password"
+description = "Detected Redis URL with Auth Password"
+regex = '''redis(s)?:\/\/:[^@\s]+@[a-zA-Z0-9_\-\.]+'''
+tags = ["redis", "database", "credentials"]
+
+[allowlist]
+description = "Allowlisted test fixtures and example files"
+paths = [
+  '''^\.env\.example$''',
+  '''^backend/\.env\.example$''',
+  '''^frontend/\.env\.example$''',
+  '''^infra/docker/.*''',
+  '''^infra/k8s/.*''',
+  '''^docker-compose.*''',
+  '''^backend/tests/fixtures/.*'''
+]

@@ -100,9 +100,10 @@ async def lifespan(app: FastAPI):
         await response_policy_service.init_default_policies()
         await response_orchestrator.reconstruct_timers_on_startup()
         await integration_registry.initialize_defaults()
-        seeded = await seed_initial_zones(db)
-        if seeded > 0:
-            print(f"✅ Successfully seeded {seeded} initial development geospatial zones")
+        if settings.environment.lower() not in ("production", "prod"):
+            seeded = await seed_initial_zones(db)
+            if seeded > 0:
+                print(f"✅ Successfully seeded {seeded} initial development geospatial zones")
     except Exception as e:
         print(f"⚠️  MongoDB startup initialization note: {e}")
 

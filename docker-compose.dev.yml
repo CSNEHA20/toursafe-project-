@@ -1,0 +1,38 @@
+name: toursafe-development
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: toursafe_api_dev
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=True
+      - MONGODB_URI=mongodb://localhost:27017
+      - MONGODB_DATABASE=toursafe
+      - REDIS_URL=redis://localhost:6379/0
+      - JWT_SECRET=toursafe-dev-secret-key-for-local-testing-only-32chars
+      - CORS_ORIGINS=http://localhost:8081,http://127.0.0.1:8081,http://localhost:19006
+    volumes:
+      - ./backend/app:/app/app:ro
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  mongodb:
+    image: mongo:7.0
+    container_name: toursafe_mongodb_dev
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_dev_data:/data/db
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: toursafe_redis_dev
+    ports:
+      - "6379:6379"
+
+volumes:
+  mongo_dev_data:

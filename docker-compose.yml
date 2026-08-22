@@ -1,0 +1,220 @@
+name: toursafe-production
+
+services:
+  reverse_proxy:
+    image: nginx:1.27-alpine
+    container_name: toursafe_gateway
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - nginx_certs:/etc/nginx/certs:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    networks:
+      - public_net
+      - app_net
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile.web
+    container_name: toursafe_frontend
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - app_net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: toursafe_api
+    restart: unless-stopped
+    expose:
+      - "8000"
+    environment:
+      - ENVIRONMENT=production
+      - HOST=0.0.0.0
+      - PORT=8000
+      - MONGODB_URI=mongodb://toursafe_app:toursafe_secure_prod_password_2026@mongodb:27017/toursafe?authSource=toursafe
+      - MONGODB_DATABASE=toursafe
+      - REDIS_URL=redis://:toursafe_redis_secure_pass_2026@redis:6379/0
+      - JWT_SECRET=toursafe-production-jwt-secret-key-high-entropy-256bit-min-32chars
+      - JWT_ACCESS_EXPIRE_MINUTES=30
+      - JWT_REFRESH_EXPIRE_DAYS=7
+      - CORS_ORIGINS=https://app.toursafe.internal,https://admin.toursafe.internal
+      - TELEMETRY_RETENTION_DAYS=30
+      - ML_MODEL_VERSION=v1.0.0
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app_net
+      - data_net
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1536M
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.worker
+    container_name: toursafe_worker
+    restart: unless-stopped
+    environment:
+      - ENVIRONMENT=production
+      - MONGODB_URI=mongodb://toursafe_app:toursafe_secure_prod_password_2026@mongodb:27017/toursafe?authSource=toursafe
+      - MONGODB_DATABASE=toursafe
+      - REDIS_URL=redis://:toursafe_redis_secure_pass_2026@redis:6379/0
+      - WORKER_ROLE=telemetry_and_decay
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - data_net
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+  ml_service:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.ml
+    container_name: toursafe_ml
+    restart: unless-stopped
+    environment:
+      - ENVIRONMENT=production
+      - MONGODB_URI=mongodb://toursafe_app:toursafe_secure_prod_password_2026@mongodb:27017/toursafe?authSource=toursafe
+      - REDIS_URL=redis://:toursafe_redis_secure_pass_2026@redis:6379/0
+      - ML_MODEL_VERSION=v1.0.0
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - data_net
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2048M
+
+  mongodb:
+    image: mongo:7.0
+    container_name: toursafe_mongodb
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=toursafe_admin
+      - MONGO_INITDB_ROOT_PASSWORD=toursafe_admin_secure_pass_2026
+      - MONGO_INITDB_DATABASE=toursafe
+      - MONGO_APP_USER=toursafe_app
+      - MONGO_APP_PASSWORD=toursafe_secure_prod_password_2026
+    volumes:
+      - mongodb_data:/data/db
+      - ./infra/docker/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ./infra/docker/mongod.conf:/etc/mongo/mongod.conf:ro
+    command: ["--config", "/etc/mongo/mongod.conf"]
+    networks:
+      - data_net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2048M
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: toursafe_redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+      - ./infra/docker/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    networks:
+      - data_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "toursafe_redis_secure_pass_2026", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: toursafe_prometheus
+    restart: unless-stopped
+    volumes:
+      - ./infra/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+    networks:
+      - app_net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+networks:
+  public_net:
+    driver: bridge
+  app_net:
+    driver: bridge
+  data_net:
+    driver: bridge
+    internal: true  # Completely isolated private network, zero external internet routing
+
+volumes:
+  mongodb_data:
+  redis_data:
+  prometheus_data:
+  nginx_logs:
+  nginx_certs:

@@ -2,7 +2,12 @@ import pymongo
 from motor.motor_asyncio import AsyncIOMotorClient
 from .config import settings
 
-client = AsyncIOMotorClient(settings.mongodb_uri)
+client = AsyncIOMotorClient(
+    settings.mongodb_uri,
+    serverSelectionTimeoutMS=settings.mongodb_timeout_ms,
+    maxPoolSize=settings.mongodb_max_pool_size,
+    minPoolSize=settings.mongodb_min_pool_size,
+)
 database = client[settings.mongodb_database]
 
 

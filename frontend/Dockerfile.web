@@ -1,0 +1,68 @@
+# Multi-stage production Dockerfile for TourSafe Web & Authority Command Center
+# Stage 1: Build Web Bundle
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY frontend/package*.json ./
+RUN npm ci --prefer-offline --no-audit
+
+COPY frontend/ .
+
+# Production environment build flags
+ENV NODE_ENV=production \
+    EXPO_PUBLIC_DEV_BYPASS=false \
+    EXPO_PUBLIC_USE_MOCK=false
+
+# Export static web bundle
+RUN npx expo export --platform web
+
+# Stage 2: Minimal Production Web Server (Hardened Nginx Alpine)
+FROM nginx:1.27-alpine AS runtime
+
+# Remove default nginx static assets
+RUN rm -rf /usr/share/nginx/html/*
+
+# Copy exported web bundle
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy custom minimal nginx configuration for SPA routing
+COPY <<'EOF' /etc/nginx/conf.d/default.conf
+server {
+    listen 80;
+    server_name localhost;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Security Headers
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https: wss: ws:;" always;
+
+    # Caching for immutable static assets
+    location ~* \.(?:ico|css|js|gif|jpe?g|png|woff2?|eot|ttf|svg)$ {
+        expires 1y;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # SPA routing fallback
+    location / {
+        try_files $uri $uri/ /index.html;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+    }
+
+    error_page 500 502 503 504 /50x.html;
+    location = /50x.html {
+        root /usr/share/nginx/html;
+    }
+}
+EOF
+
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]

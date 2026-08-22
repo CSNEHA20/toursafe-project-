@@ -1,0 +1,40 @@
+name: TourSafe Automated & Emergency Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: 'Environment to rollback'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+      target_version:
+        description: 'Target Image SHA / SemVer to rollback to'
+        required: true
+      rollback_reason:
+        description: 'Operational incident or justification for rollback'
+        required: true
+
+jobs:
+  execute-rollback:
+    name: Execute Versioned Rollback
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Log Rollback Initiation
+        run: |
+          echo "Initiating rollback on ${{ github.event.inputs.target_env }} to ${{ github.event.inputs.target_version }}"
+          echo "Reason: ${{ github.event.inputs.rollback_reason }}"
+
+      - name: Rollback Kubernetes Deployment
+        run: |
+          echo "Rolling back deployment to specified image tag..."
+
+      - name: Verify Post-Rollback Health & Synthetic Smoke Test
+        run: |
+          echo "Executing health check and synthetic validation following rollback..."

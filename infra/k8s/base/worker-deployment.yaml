@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: toursafe-worker
+  namespace: toursafe
+  labels:
+    app.kubernetes.io/name: toursafe-worker
+    app.kubernetes.io/component: async-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: toursafe-worker
+  template:
+    metadata:
+      labels:
+        app: toursafe-worker
+        tier: worker
+    spec:
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+      containers:
+        - name: toursafe-worker
+          image: toursafe/worker:1.0.0
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: toursafe-config
+            - secretRef:
+                name: toursafe-secrets
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "512Mi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: toursafe-ml
+  namespace: toursafe
+  labels:
+    app.kubernetes.io/name: toursafe-ml
+    app.kubernetes.io/component: ml-inference
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: toursafe-ml
+  template:
+    metadata:
+      labels:
+        app: toursafe-ml
+        tier: ml
+    spec:
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+      containers:
+        - name: toursafe-ml
+          image: toursafe/ml-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: toursafe-config
+            - secretRef:
+                name: toursafe-secrets
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1024Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2048Mi"

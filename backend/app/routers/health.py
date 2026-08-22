@@ -96,7 +96,12 @@ async def general_health_check():
         "status": overall,
         "mode": degradation_manager.current_mode.value,
         "services": {
-            "backend": {"status": "healthy", "version": "1.0.0"},
+            "backend": {
+                "status": "healthy",
+                "version": settings.app_version,
+                "build_sha": settings.build_sha,
+                "environment": settings.environment,
+            },
             "mongodb": mongo_health,
             "redis": redis_health,
             "realtime": {
