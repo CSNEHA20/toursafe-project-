@@ -914,5 +914,147 @@ export * from "./safety";
 export * from "./anomaly";
 export * from "./realtime";
 
+// ---------------------------------------------------------------------------
+// Incident Communication & Multi-Party Coordination Types (Prompt 22)
+// ---------------------------------------------------------------------------
+
+export type ChannelStatus = "ACTIVE" | "RESTRICTED" | "CLOSED";
+export type ParticipantRole = "TOURIST" | "AUTHORITY" | "RESPONDER" | "SUPERVISOR" | "SYSTEM";
+export type ParticipantStatus = "ACTIVE" | "RESTRICTED" | "REMOVED";
+export type ResponderAssignmentRole = "PRIMARY" | "SECONDARY" | "SPECIALIST" | "SUPPORT" | "NONE";
+export type MessagePriority = "NORMAL" | "IMPORTANT" | "CRITICAL";
+export type MessageType = "TEXT" | "SYSTEM" | "OPERATIONAL" | "LOCATION" | "STATUS" | "ATTACHMENT_REFERENCE";
+export type MessageDeliveryStatus = "QUEUED" | "SENT" | "DELIVERED" | "FAILED";
+export type ParticipantPresenceStatus = "ONLINE" | "OFFLINE" | "RECONNECTING";
+
+export interface StructuredLocationData {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  altitude?: number;
+  speed?: number;
+  heading?: number;
+  label?: string;
+  expires_at?: string;
+}
+
+export interface AttachmentMetadataRecord {
+  attachment_id: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  url: string;
+  sha256_hash?: string;
+  is_formal_evidence: boolean;
+  uploaded_by: string;
+  uploaded_at: string;
+}
+
+export interface MessageAcknowledgementRecord {
+  actor_id: string;
+  actor_role: string;
+  actor_name?: string;
+  acknowledged_at: string;
+  notes?: string;
+}
+
+export interface IncidentMessageRecord {
+  message_id: string;
+  channel_id: string;
+  incident_id: string;
+  sender_id: string;
+  sender_role: ParticipantRole;
+  sender_name?: string;
+  message_type: MessageType;
+  priority: MessagePriority;
+  content: string;
+  location_data?: StructuredLocationData;
+  attachment_data?: AttachmentMetadataRecord;
+  client_message_id?: string;
+  server_sequence: number;
+  delivery_status: MessageDeliveryStatus;
+  requires_acknowledgement: boolean;
+  read_by: Record<string, string>;
+  acknowledged_by: MessageAcknowledgementRecord[];
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+}
+
+export interface ChannelParticipantRecord {
+  participant_id: string;
+  channel_id: string;
+  incident_id: string;
+  user_id: string;
+  display_name: string;
+  role: ParticipantRole;
+  responder_role: ResponderAssignmentRole;
+  status: ParticipantStatus;
+  presence: ParticipantPresenceStatus;
+  last_seen_at?: string;
+  last_read_sequence: number;
+  last_read_at?: string;
+  joined_at: string;
+  left_at?: string;
+  permissions: string[];
+}
+
+export interface IncidentChannelRecord {
+  channel_id: string;
+  incident_id: string;
+  status: ChannelStatus;
+  sequence_counter: number;
+  version: number;
+  created_at: string;
+  closed_at?: string;
+  updated_at: string;
+}
+
+export interface ChannelSnapshotResponse {
+  channel: IncidentChannelRecord;
+  participants: ChannelParticipantRecord[];
+  messages: IncidentMessageRecord[];
+  last_sequence: number;
+  unread_count: number;
+  pending_acknowledgements_count: number;
+}
+
+export interface MessageGapRecoveryResponse {
+  channel_id: string;
+  incident_id: string;
+  since_sequence: number;
+  current_sequence: number;
+  messages: IncidentMessageRecord[];
+}
+
+export interface AttachmentUploadRequest {
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  is_formal_evidence?: boolean;
+  sha256_hash?: string;
+}
+
+export interface AttachmentUploadResponse {
+  attachment: AttachmentMetadataRecord;
+  upload_url: string;
+  download_token: string;
+}
+
+export interface MultiResponderAssignRequest {
+  responder_id: string;
+  assignment_role: ResponderAssignmentRole;
+  unit_id?: string;
+  notes?: string;
+}
+
+export interface MessageSearchResponse {
+  incident_id: string;
+  query: string;
+  total: number;
+  messages: IncidentMessageRecord[];
+}
+
+
 
 

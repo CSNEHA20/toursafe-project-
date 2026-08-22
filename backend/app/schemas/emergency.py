@@ -514,3 +514,226 @@ class IncidentMetricsResponse(BaseModel):
     false_alarm_rate: float = 0.0
     notification_stats: Dict[str, int] = Field(default_factory=dict)
 
+
+# ---------------------------------------------------------------------------
+# Incident Communication & Multi-Party Coordination Schemas (Prompt 22)
+# ---------------------------------------------------------------------------
+
+class ChannelStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    RESTRICTED = "RESTRICTED"
+    CLOSED = "CLOSED"
+
+
+class ParticipantRole(str, Enum):
+    TOURIST = "TOURIST"
+    AUTHORITY = "AUTHORITY"
+    RESPONDER = "RESPONDER"
+    SUPERVISOR = "SUPERVISOR"
+    SYSTEM = "SYSTEM"
+
+
+class ParticipantStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    RESTRICTED = "RESTRICTED"
+    REMOVED = "REMOVED"
+
+
+class ResponderAssignmentRole(str, Enum):
+    PRIMARY = "PRIMARY"
+    SECONDARY = "SECONDARY"
+    SPECIALIST = "SPECIALIST"
+    SUPPORT = "SUPPORT"
+    NONE = "NONE"
+
+
+class MessagePriority(str, Enum):
+    NORMAL = "NORMAL"
+    IMPORTANT = "IMPORTANT"
+    CRITICAL = "CRITICAL"
+
+
+class MessageType(str, Enum):
+    TEXT = "TEXT"
+    SYSTEM = "SYSTEM"
+    OPERATIONAL = "OPERATIONAL"
+    LOCATION = "LOCATION"
+    STATUS = "STATUS"
+    ATTACHMENT_REFERENCE = "ATTACHMENT_REFERENCE"
+
+
+class MessageDeliveryStatus(str, Enum):
+    QUEUED = "QUEUED"
+    SENT = "SENT"
+    DELIVERED = "DELIVERED"
+    FAILED = "FAILED"
+
+
+class ParticipantPresenceStatus(str, Enum):
+    ONLINE = "ONLINE"
+    OFFLINE = "OFFLINE"
+    RECONNECTING = "RECONNECTING"
+
+
+class StructuredLocationData(BaseModel):
+    latitude: float
+    longitude: float
+    accuracy: Optional[float] = None
+    altitude: Optional[float] = None
+    speed: Optional[float] = None
+    heading: Optional[float] = None
+    label: Optional[str] = None
+    expires_at: Optional[str] = None
+
+
+class AttachmentMetadataRecord(BaseModel):
+    attachment_id: str = Field(default_factory=lambda: f"att_{uuid.uuid4().hex[:12]}")
+    file_name: str
+    mime_type: str
+    size_bytes: int
+    url: str
+    sha256_hash: Optional[str] = None
+    is_formal_evidence: bool = False
+    uploaded_by: str
+    uploaded_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
+class MessageAcknowledgementRecord(BaseModel):
+    actor_id: str
+    actor_role: str
+    actor_name: Optional[str] = None
+    acknowledged_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    notes: Optional[str] = None
+
+
+class IncidentMessageRecord(BaseModel):
+    message_id: str = Field(default_factory=lambda: f"msg_{uuid.uuid4().hex[:12]}")
+    channel_id: str
+    incident_id: str
+    sender_id: str
+    sender_role: ParticipantRole
+    sender_name: Optional[str] = None
+    message_type: MessageType = MessageType.TEXT
+    priority: MessagePriority = MessagePriority.NORMAL
+    content: str
+    location_data: Optional[StructuredLocationData] = None
+    attachment_data: Optional[AttachmentMetadataRecord] = None
+    client_message_id: Optional[str] = None
+    server_sequence: int = 0
+    delivery_status: MessageDeliveryStatus = MessageDeliveryStatus.DELIVERED
+    requires_acknowledgement: bool = False
+    read_by: Dict[str, str] = Field(default_factory=dict)  # user_id -> read_at iso
+    acknowledged_by: List[MessageAcknowledgementRecord] = Field(default_factory=list)
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    deleted_at: Optional[str] = None
+
+
+class ChannelParticipantRecord(BaseModel):
+    participant_id: str = Field(default_factory=lambda: f"prt_{uuid.uuid4().hex[:10]}")
+    channel_id: str
+    incident_id: str
+    user_id: str
+    display_name: str
+    role: ParticipantRole
+    responder_role: ResponderAssignmentRole = ResponderAssignmentRole.NONE
+    status: ParticipantStatus = ParticipantStatus.ACTIVE
+    presence: ParticipantPresenceStatus = ParticipantPresenceStatus.OFFLINE
+    last_seen_at: Optional[str] = None
+    last_read_sequence: int = 0
+    last_read_at: Optional[str] = None
+    joined_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    left_at: Optional[str] = None
+    permissions: List[str] = Field(default_factory=lambda: [
+        "SEND_MESSAGE",
+        "SEND_OPERATIONAL",
+        "SEND_LOCATION",
+        "SEND_ATTACHMENT",
+        "ACKNOWLEDGE_MESSAGES",
+    ])
+
+
+class IncidentChannelRecord(BaseModel):
+    channel_id: str = Field(default_factory=lambda: f"chn_{uuid.uuid4().hex[:12]}")
+    incident_id: str
+    status: ChannelStatus = ChannelStatus.ACTIVE
+    sequence_counter: int = 0
+    version: int = 1
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    closed_at: Optional[str] = None
+    updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
+class MessageSendRequest(BaseModel):
+    content: str = Field(..., min_length=1, max_length=2000)
+    client_message_id: Optional[str] = None
+    message_type: MessageType = MessageType.TEXT
+    priority: MessagePriority = MessagePriority.NORMAL
+    requires_acknowledgement: bool = False
+    location_data: Optional[StructuredLocationData] = None
+    attachment_data: Optional[AttachmentMetadataRecord] = None
+
+
+class MessageAckRequest(BaseModel):
+    notes: Optional[str] = None
+
+
+class ChannelParticipantAddRequest(BaseModel):
+    user_id: str
+    display_name: str
+    role: ParticipantRole
+    responder_role: ResponderAssignmentRole = ResponderAssignmentRole.NONE
+    permissions: Optional[List[str]] = None
+
+
+class ChannelParticipantUpdateRequest(BaseModel):
+    status: Optional[ParticipantStatus] = None
+    responder_role: Optional[ResponderAssignmentRole] = None
+    permissions: Optional[List[str]] = None
+
+
+class ChannelSnapshotResponse(BaseModel):
+    channel: IncidentChannelRecord
+    participants: List[ChannelParticipantRecord]
+    messages: List[IncidentMessageRecord]
+    last_sequence: int
+    unread_count: int = 0
+    pending_acknowledgements_count: int = 0
+
+
+class MessageGapRecoveryResponse(BaseModel):
+    channel_id: str
+    incident_id: str
+    since_sequence: int
+    current_sequence: int
+    messages: List[IncidentMessageRecord]
+
+
+class AttachmentUploadRequest(BaseModel):
+    file_name: str
+    mime_type: str
+    size_bytes: int
+    is_formal_evidence: bool = False
+    sha256_hash: Optional[str] = None
+
+
+class AttachmentUploadResponse(BaseModel):
+    attachment: AttachmentMetadataRecord
+    upload_url: str
+    download_token: str
+
+
+class MultiResponderAssignRequest(BaseModel):
+    responder_id: str
+    assignment_role: ResponderAssignmentRole = ResponderAssignmentRole.SECONDARY
+    unit_id: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class MessageSearchResponse(BaseModel):
+    incident_id: str
+    query: str
+    total: int
+    messages: List[IncidentMessageRecord]
+
+

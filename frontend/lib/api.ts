@@ -477,6 +477,45 @@ export const commandCenterApi = {
   search: (q: string, type?: string) => api.get<any>("/authority/command-center/search", { params: { q, type } }),
 };
 
+export const incidentCommunicationApi = {
+  getSnapshot: (incidentId: string) => api.get<any>(`/incidents/${incidentId}/channel`),
+  getMessages: (incidentId: string, params?: { limit?: number; skip?: number; since_sequence?: number }) =>
+    api.get<any[]>(`/incidents/${incidentId}/messages`, { params }),
+  sendMessage: (incidentId: string, data: {
+    content: string;
+    client_message_id?: string;
+    message_type?: string;
+    priority?: string;
+    requires_acknowledgement?: boolean;
+    location_data?: any;
+    attachment_data?: any;
+  }) => api.post<any>(`/incidents/${incidentId}/messages`, data),
+  markRead: (incidentId: string, messageId: string, upToSequence?: number) =>
+    api.post(`/incidents/${incidentId}/messages/${messageId}/read`, null, { params: { up_to_sequence: upToSequence } }),
+  acknowledgeMessage: (incidentId: string, messageId: string, notes?: string) =>
+    api.post<any>(`/incidents/${incidentId}/messages/${messageId}/acknowledge`, { notes }),
+  recoverGaps: (incidentId: string, sinceSequence: number, limit?: number) =>
+    api.post<any>(`/incidents/${incidentId}/gap-recovery`, null, { params: { since_sequence: sinceSequence, limit } }),
+  search: (incidentId: string, q: string, limit?: number) =>
+    api.get<any>(`/incidents/${incidentId}/messages/search`, { params: { q, limit } }),
+  getParticipants: (incidentId: string, includeRemoved?: boolean) =>
+    api.get<any[]>(`/incidents/${incidentId}/participants`, { params: { include_removed: includeRemoved } }),
+  addParticipant: (incidentId: string, data: any) =>
+    api.post<any>(`/incidents/${incidentId}/participants`, data),
+  updateParticipant: (incidentId: string, targetUserId: string, data: any) =>
+    api.patch<any>(`/incidents/${incidentId}/participants/${targetUserId}`, data),
+  removeParticipant: (incidentId: string, targetUserId: string, reason?: string) =>
+    api.delete<any>(`/incidents/${incidentId}/participants/${targetUserId}`, { params: { reason } }),
+  updatePresence: (incidentId: string, presence: string) =>
+    api.post(`/incidents/${incidentId}/presence`, null, { params: { presence } }),
+  multiAssign: (incidentId: string, data: any) =>
+    api.post(`/incidents/${incidentId}/multi-assign`, data),
+  uploadAttachment: (incidentId: string, data: any) =>
+    api.post<any>(`/incidents/${incidentId}/attachments`, data),
+  getAttachment: (incidentId: string, attachmentId: string) =>
+    api.get<any>(`/incidents/${incidentId}/attachments/${attachmentId}`),
+};
+
 // ─── Mock data override ──────────────────────────────────────────────────────
 // When EXPO_PUBLIC_USE_MOCK=true all API objects return static mock data so the
 // app works without a running backend or Supabase session.

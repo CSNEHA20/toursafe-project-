@@ -98,6 +98,23 @@ class RealtimeEventType(str, Enum):
     EFIR_UPDATED = "efir.updated"
     EFIR_DISPATCHED = "efir.dispatched"
 
+    # Incident Channel & Communication events
+    MESSAGE_CREATED = "message.created"
+    MESSAGE_DELIVERED = "message.delivered"
+    MESSAGE_READ = "message.read"
+    MESSAGE_ACKNOWLEDGED = "message.acknowledged"
+    PARTICIPANT_ADDED = "participant.added"
+    PARTICIPANT_REMOVED = "participant.removed"
+    PARTICIPANT_UPDATED = "participant.updated"
+    PARTICIPANT_PRESENCE = "participant.presence"
+    CHANNEL_UPDATED = "channel.updated"
+    DISPATCH_CREATED = "dispatch.created"
+    DISPATCH_ACCEPTED = "dispatch.accepted"
+    DISPATCH_DECLINED = "dispatch.declined"
+    DISPATCH_REASSIGNED = "dispatch.reassigned"
+    HANDOVER_REQUESTED = "handover.requested"
+    HANDOVER_COMPLETED = "handover.completed"
+
 
 ALL_REGISTERED_EVENT_TYPES = {e.value for e in RealtimeEventType}
 

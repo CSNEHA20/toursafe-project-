@@ -21,13 +21,17 @@ from ...schemas.emergency import (
     AssignmentRecord,
     AssignmentRejectRequest,
     AssignmentStatus,
+    ChannelParticipantUpdateRequest,
     FieldNotesBatchSyncRequest,
     FieldNotesBatchSyncResponse,
     HandoverReason,
     IncidentNoteRecord,
     IncidentStatus,
     NotificationChannel,
+    ParticipantRole,
+    ParticipantStatus,
     RejectionReason,
+    ResponderAssignmentRole,
     ResponderRecord,
     ResponderStatus,
     SceneAssessmentRequest,
@@ -35,6 +39,8 @@ from ...schemas.emergency import (
 )
 from ...schemas.realtime import RealtimeEventEnvelope, RealtimeEventType
 from ...services.realtime_bus import realtime_bus
+from .incident_channel_service import incident_channel_service
+from .messaging_service import messaging_service
 from .notifications import notification_service
 from .responder_service import haversine_distance_meters, responder_service
 
@@ -86,9 +92,11 @@ class AssignmentService:
         assigned_by: str,
         unit_id: Optional[str] = None,
         notes: Optional[str] = None,
+        assignment_role: ResponderAssignmentRole = ResponderAssignmentRole.PRIMARY,
     ) -> AssignmentRecord:
         """
-        Creates an assignment record, locks the responder atomically, and updates incident state.
+        Creates an assignment record, locks the responder atomically, updates incident state,
+        registers the responder as an active channel participant, and broadcasts system message.
         """
         db = get_database()
         now_iso = datetime.now(timezone.utc).isoformat()
@@ -149,8 +157,9 @@ class AssignmentService:
                 "responder_name": responder.name,
                 "responder_type": responder.type.value if hasattr(responder.type, "value") else str(responder.type),
                 "unit_id": assignment.unit_id,
+                "assignment_role": assignment_role.value if hasattr(assignment_role, "value") else str(assignment_role),
             },
-            reason=notes or f"Assigned to responder {responder.name}",
+            reason=notes or f"Assigned to responder {responder.name} as {assignment_role.value if hasattr(assignment_role, 'value') else str(assignment_role)}",
         )
 
         await db.incidents.update_one(
@@ -168,7 +177,26 @@ class AssignmentService:
             },
         )
 
-        # 7. Broadcast realtime event
+        # 7. Add Responder to Incident Channel Participants
+        try:
+            target_user_id = responder.user_id or responder_id
+            await incident_channel_service.add_participant(
+                incident_id=incident_id,
+                user_id=target_user_id,
+                display_name=responder.name,
+                role=ParticipantRole.RESPONDER,
+                responder_role=assignment_role,
+            )
+            # Authoritative System Message
+            role_label = assignment_role.value if hasattr(assignment_role, "value") else str(assignment_role)
+            await messaging_service.send_system_message(
+                incident_id=incident_id,
+                content=f"Responder '{responder.name}' assigned ({role_label}).",
+            )
+        except Exception as chan_err:
+            logger.warning("Channel participant addition note: %s", chan_err)
+
+        # 8. Broadcast realtime event
         await realtime_bus.publish_event(
             event_type=RealtimeEventType.RESPONDER_ASSIGNED.value,
             payload={
@@ -177,12 +205,13 @@ class AssignmentService:
                 "responder_id": responder_id,
                 "assigned_by": assigned_by,
                 "unit_id": assignment.unit_id,
+                "assignment_role": assignment_role.value if hasattr(assignment_role, "value") else str(assignment_role),
                 "timestamp": now_iso,
             },
             target_role="authority",
         )
 
-        # 8. Notify responder through channel
+        # 9. Notify responder through channel
         await notification_service.send_notification(
             recipient=responder.contact_channel or responder_id,
             channel=NotificationChannel.PUSH,
@@ -257,6 +286,18 @@ class AssignmentService:
             },
             target_role="authority",
         )
+
+        # Broadcast authoritative system message in channel
+        try:
+            responder = await responder_service.get_responder(responder_id)
+            resp_name = responder.name if responder else responder_id
+            await messaging_service.send_system_message(
+                incident_id=incident_id,
+                content=f"Responder '{resp_name}' accepted the assignment.",
+            )
+        except Exception as e:
+            logger.warning("Failed to send accept system message: %s", e)
+
         return assignment
 
     async def reject_assignment(
@@ -683,6 +724,24 @@ class AssignmentService:
             },
             target_role="authority",
         )
+
+        # Update participant status and send system message in channel
+        try:
+            responder = await responder_service.get_responder(responder_id)
+            resp_name = responder.name if responder else responder_id
+            target_uid = responder.user_id if responder and responder.user_id else responder_id
+            await incident_channel_service.update_participant(
+                incident_id=incident_id,
+                user_id=target_uid,
+                req=ChannelParticipantUpdateRequest(status=ParticipantStatus.RESTRICTED),
+            )
+            await messaging_service.send_system_message(
+                incident_id=incident_id,
+                content=f"Responder '{resp_name}' requested handover ({req.reason.value}). Awaiting reassignment.",
+            )
+        except Exception as e:
+            logger.warning("Handover channel update note: %s", e)
+
         return assignment
 
     async def submit_scene_assessment(

@@ -28,6 +28,8 @@ from ...schemas.emergency import (
 )
 from ...schemas.safety import IncidentRecord
 from ..safety.events import safety_event_publisher
+from .incident_channel_service import incident_channel_service
+from .messaging_service import messaging_service
 from .notifications import notification_service
 from .responder_service import responder_service
 
@@ -499,6 +501,18 @@ class IncidentCommandService:
         await safety_event_publisher.publish_incident_escalated(incident)
         if new_severity.value != prev_severity:
             await safety_event_publisher.publish_incident_severity_changed(incident, prev_severity)
+
+        # Broadcast authoritative system message in incident channel
+        try:
+            from ...schemas.emergency import MessagePriority
+            await messaging_service.send_system_message(
+                incident_id=incident_id,
+                content=f"Incident escalated to {new_severity.value}. Reason: {reason}",
+                priority=MessagePriority.CRITICAL,
+            )
+        except Exception as e:
+            logger.warning("Failed to send escalation system message: %s", e)
+
         return incident
 
     async def add_incident_note(
@@ -726,6 +740,17 @@ class IncidentCommandService:
         db = get_database()
         await db.incidents.replace_one({"incident_id": incident_id}, incident.model_dump())
         await safety_event_publisher.publish_incident_closed(incident)
+
+        # Close incident communication channel and emit system event
+        try:
+            await incident_channel_service.close_channel(incident_id)
+            await messaging_service.send_system_message(
+                incident_id=incident_id,
+                content="Incident formally closed and archived. Channel restricted to read-only.",
+            )
+        except Exception as e:
+            logger.warning("Failed to close incident channel on incident close: %s", e)
+
         return incident
 
     async def list_incidents(

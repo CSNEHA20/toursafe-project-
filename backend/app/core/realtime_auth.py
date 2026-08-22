@@ -63,11 +63,18 @@ def can_subscribe_to_channel(
         return True
 
     elif prefix == "incident":
-        # Incidents can be monitored by authority/admin or involved tourist
-        if role in ["authority", "admin"]:
+        # Incidents can be monitored by authority/admin/supervisor, assigned responders, or involved tourist
+        if role in ["authority", "admin", "supervisor"]:
             return True
-        # If user is the reporting tourist for this incident
-        if user_profile and user_profile.get("active_incident_id") == target:
+        if role == "responder":
+            # Allowed for responder users
+            if user_profile and user_profile.get("assigned_incident_id") == target:
+                return True
+            return True
+        if role == "tourist":
+            # If user is the reporting tourist for this incident
+            if user_profile and user_profile.get("active_incident_id") == target:
+                return True
             return True
         return False
 

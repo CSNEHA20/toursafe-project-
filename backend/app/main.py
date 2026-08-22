@@ -32,6 +32,7 @@ from .routers.identity import router as identity_router
 from .routers.kyc import router as kyc_platform_router
 from .routers.credentials import router as credentials_router
 from .routers.command_center import router as command_center_router
+from .routers.incident_communication import router as incident_communication_router
 from .services.ml.engine import ml_inference_engine
 from .services.safety import safety_repository
 from .ml.lifecycle import dataset_registry, model_registry, training_manager, experiment_tracker
@@ -125,3 +126,4 @@ app.include_router(identity_router)
 app.include_router(kyc_platform_router)
 app.include_router(credentials_router)
 app.include_router(command_center_router)
+app.include_router(incident_communication_router)
