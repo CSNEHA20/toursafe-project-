@@ -27,8 +27,10 @@ from .routers.emergency import router as emergency_router
 from .routers.responders import router as responders_router
 from .routers.notifications import router as notifications_router
 from .routers.analytics import router as analytics_router
+from .routers.ml_lifecycle import router as ml_lifecycle_router
 from .services.ml.engine import ml_inference_engine
 from .services.safety import safety_repository
+from .ml.lifecycle import dataset_registry, model_registry, training_manager, experiment_tracker
 
 
 @asynccontextmanager
@@ -40,6 +42,10 @@ async def lifespan(app: FastAPI):
         print("✅ MongoDB connection verified on startup")
         await db_core.init_db_indexes(db)
         await safety_repository.init_indexes()
+        await dataset_registry.init_indexes()
+        await model_registry.init_indexes()
+        await training_manager.init_indexes()
+        await experiment_tracker.init_indexes()
         seeded = await seed_initial_zones(db)
         if seeded > 0:
             print(f"✅ Successfully seeded {seeded} initial development geospatial zones")
@@ -110,3 +116,4 @@ app.include_router(responders_router)
 app.include_router(safety_router)
 app.include_router(notifications_router)
 app.include_router(analytics_router)
+app.include_router(ml_lifecycle_router)

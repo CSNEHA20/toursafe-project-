@@ -36,6 +36,7 @@ from .preprocessor import inference_preprocessor
 from .redis_state import anomaly_redis_state
 from .state_machine import anomaly_state_machine
 from ..safety import safety_orchestrator, SafetySignalFactory
+from ...ml.lifecycle.shadow_engine import shadow_engine
 
 logger = logging.getLogger("toursafe.ml.engine")
 
@@ -248,6 +249,17 @@ class RealtimeInferenceEngine:
 
         if cleared_evt:
             asyncio.create_task(self._broadcast_anomaly_cleared(cleared_evt))
+
+        # Asynchronously evaluate candidate model in Shadow mode if enabled
+        if shadow_engine.active_shadow_version:
+            asyncio.create_task(
+                shadow_engine.evaluate_shadow_window(
+                    window=window,
+                    production_score=score,
+                    production_state=new_state.value,
+                    production_version=model_ver,
+                )
+            )
 
         # Ingest Anomaly signal to Safety Orchestration Engine (Prompt 11)
         try:
