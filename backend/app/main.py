@@ -41,6 +41,8 @@ from .core.security_middleware import SecurityHeadersAndCorrelationMiddleware
 from .core.reliability.tracing import TracingMiddleware
 from .routers.security_governance import router as security_governance_router
 from .routers.reliability import router as reliability_router
+from .routers.compliance import router as compliance_router
+from .routers.privacy import router as privacy_router
 from .services.security.security_events import security_event_service
 from .services.integrations import integration_registry
 from .services.ml.engine import ml_inference_engine
@@ -51,6 +53,15 @@ from .services.governance import (
     audit_service,
     jurisdiction_service,
     config_governance_service,
+)
+from .services.compliance import (
+    retention_service,
+    legal_hold_service,
+    consent_service,
+    privacy_request_service,
+    vendor_governance_service,
+    access_governance_service,
+    compliance_registry_service,
 )
 from .services.copilot.copilot_service import copilot_service
 from .ml.lifecycle import dataset_registry, model_registry, training_manager, experiment_tracker
@@ -74,8 +85,18 @@ async def lifespan(app: FastAPI):
         await config_governance_service.init_indexes()
         await copilot_service.init_indexes()
         await security_event_service.init_indexes()
+        await retention_service.init_indexes()
+        await legal_hold_service.init_indexes()
+        await consent_service.init_indexes()
+        await privacy_request_service.init_indexes()
+        await vendor_governance_service.init_indexes()
+        await access_governance_service.init_indexes()
+        await compliance_registry_service.init_indexes()
         await jurisdiction_service.seed_defaults()
         await config_governance_service.seed_defaults()
+        await retention_service.seed_defaults()
+        await vendor_governance_service.seed_defaults()
+        await compliance_registry_service.seed_defaults()
         await response_policy_service.init_default_policies()
         await response_orchestrator.reconstruct_timers_on_startup()
         await integration_registry.initialize_defaults()
@@ -165,3 +186,5 @@ app.include_router(admin_governance_router)
 app.include_router(copilot_router)
 app.include_router(integrations_router)
 app.include_router(security_governance_router)
+app.include_router(compliance_router)
+app.include_router(privacy_router)

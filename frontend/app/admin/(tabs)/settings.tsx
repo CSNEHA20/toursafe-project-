@@ -30,6 +30,7 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { useGovernanceStore } from '@/store/governanceStore';
 import { ReliabilityDashboard } from '@/components/admin/ReliabilityDashboard';
+import { ComplianceGovernanceDashboard } from '@/components/admin/ComplianceGovernanceDashboard';
 import Toast from 'react-native-toast-message';
 
 export default function AdminSettings() {
@@ -57,7 +58,7 @@ export default function AdminSettings() {
     runSafetySimulation,
   } = useGovernanceStore();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'configs' | 'jurisdictions' | 'simulation' | 'health' | 'audit'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'configs' | 'jurisdictions' | 'simulation' | 'health' | 'compliance' | 'audit'>('overview');
   const [selectedConfig, setSelectedConfig] = useState<any>(null);
   const [approvalModalVisible, setApprovalModalVisible] = useState(false);
   const [actionReason, setActionReason] = useState('');
@@ -132,6 +133,7 @@ export default function AdminSettings() {
           <TabButton active={activeTab === 'jurisdictions'} label="Jurisdictions & Orgs" icon={<Building2 size={16} />} onPress={() => setActiveTab('jurisdictions')} />
           <TabButton active={activeTab === 'simulation'} label="Simulation Sandbox" icon={<PlayCircle size={16} />} onPress={() => setActiveTab('simulation')} />
           <TabButton active={activeTab === 'health'} label="System Health" icon={<Cpu size={16} />} onPress={() => setActiveTab('health')} />
+          <TabButton active={activeTab === 'compliance'} label="Compliance & Privacy" icon={<ShieldCheck size={16} />} onPress={() => setActiveTab('compliance')} />
           <TabButton active={activeTab === 'audit'} label="Immutable Audit Logs" icon={<History size={16} />} onPress={() => setActiveTab('audit')} />
         </ScrollView>
       </View>
@@ -331,7 +333,14 @@ export default function AdminSettings() {
           </View>
         )}
 
-        {/* Tab 6: Immutable Audit Logs */}
+        {/* Tab 6: Compliance & Regulatory Governance */}
+        {activeTab === 'compliance' && (
+          <View style={styles.tabBody}>
+            <ComplianceGovernanceDashboard />
+          </View>
+        )}
+
+        {/* Tab 7: Immutable Audit Logs */}
         {activeTab === 'audit' && (
           <View style={styles.tabBody}>
             <View style={styles.rowBetween}>

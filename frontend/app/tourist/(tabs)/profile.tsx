@@ -56,6 +56,7 @@ import {
 } from "lucide-react-native";
 import Toast from "react-native-toast-message";
 import type { EmergencyContact, DeviceHealthStatus } from "@/types";
+import { PrivacyConsentCenterModal } from "@/components/tourist/PrivacyConsentCenterModal";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -70,6 +71,7 @@ export default function ProfileScreen() {
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [contactModalVisible, setContactModalVisible] = useState(false);
   const [diagnosticsModalVisible, setDiagnosticsModalVisible] = useState(false);
+  const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
 
   // Add Contact Form State
   const [contactName, setContactName] = useState("");
@@ -296,6 +298,30 @@ export default function ProfileScreen() {
               thumbColor="#FFFFFF"
             />
           </View>
+
+          <TouchableOpacity
+            style={{
+              marginTop: 12,
+              paddingVertical: 10,
+              paddingHorizontal: 14,
+              backgroundColor: '#0f172a',
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: '#14b8a6',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+            onPress={() => setPrivacyModalVisible(true)}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Lock size={16} color="#14b8a6" />
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#f8fafc' }}>
+                Advanced Privacy, DSR & Portability Center
+              </Text>
+            </View>
+            <ChevronRight size={16} color="#94a3b8" />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -458,6 +484,12 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ADVANCED PRIVACY & DSR CENTER MODAL */}
+      <PrivacyConsentCenterModal
+        visible={privacyModalVisible}
+        onClose={() => setPrivacyModalVisible(false)}
+      />
     </ScrollView>
   );
 }
