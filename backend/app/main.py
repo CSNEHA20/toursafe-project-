@@ -22,7 +22,9 @@ from .routers.location import router as location_router
 from .routers.imu import router as imu_router
 from .routers.telemetry import router as telemetry_router
 from .routers.ml import router as ml_router
+from .routers.safety import router as safety_router
 from .services.ml.engine import ml_inference_engine
+from .services.safety import safety_repository
 
 
 @asynccontextmanager
@@ -33,6 +35,7 @@ async def lifespan(app: FastAPI):
         await db.command("ping")
         print("✅ MongoDB connection verified on startup")
         await db_core.init_db_indexes(db)
+        await safety_repository.init_indexes()
         seeded = await seed_initial_zones(db)
         if seeded > 0:
             print(f"✅ Successfully seeded {seeded} initial development geospatial zones")
@@ -98,3 +101,4 @@ app.include_router(itineraries_router)
 app.include_router(geofence_router)
 app.include_router(zones_router)
 app.include_router(authority_zones_router)
+app.include_router(safety_router)

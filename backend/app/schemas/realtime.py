@@ -55,6 +55,12 @@ class RealtimeEventType(str, Enum):
     ANOMALY_CONFIRMED = "anomaly.confirmed"
     ANOMALY_CLEARED = "anomaly.cleared"
 
+    # Safety & Incident events
+    SAFETY_STATE_CHANGED = "safety.state.changed"
+    INCIDENT_CREATED = "incident.created"
+    INCIDENT_UPDATED = "incident.updated"
+    INCIDENT_RESOLVED = "incident.resolved"
+
     # Emergency events
     EMERGENCY_CREATED = "emergency.created"
     EMERGENCY_UPDATED = "emergency.updated"

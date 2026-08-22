@@ -25,6 +25,7 @@ from .session import telemetry_session_manager
 from .validation import TelemetryValidationException, telemetry_validator
 from .windowing import telemetry_window_engine
 from ..ml.engine import ml_inference_engine
+from ..safety import safety_orchestrator, SafetySignalFactory
 
 logger = logging.getLogger("toursafe.telemetry.ingestion")
 
@@ -271,6 +272,21 @@ class TelemetryIngestionService:
             await realtime_bus.publish_to_channel("authority:operations", envelope)
         except Exception as pe:
             logger.debug("Operational telemetry event broadcast note: %s", pe)
+
+        # Ingest Telemetry quality signal to Safety Orchestration Engine (Prompt 11)
+        try:
+            tel_sig = SafetySignalFactory.create_telemetry_signal(
+                tourist_id=tourist_id,
+                session_id=session_state.session_id,
+                overall_quality=quality.overall_quality.value,
+                observed_frequency_hz=quality.observed_imu_frequency_hz or 50.0,
+                completeness_ratio=1.0 - (quality.out_of_order_ratio or 0.0),
+                network_status="online",
+                timestamp=session_state.last_packet_timestamp,
+            )
+            asyncio.create_task(safety_orchestrator.ingest_signal(tel_sig))
+        except Exception as se_err:
+            logger.debug("Safety engine telemetry ingest note: %s", se_err)
 
 
 telemetry_service = TelemetryIngestionService()

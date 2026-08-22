@@ -33,6 +33,7 @@ from .types import (
     ZoneMembershipState,
     ZoneTransitionRecord,
 )
+from ..safety import safety_orchestrator, SafetySignalFactory
 
 logger = logging.getLogger("toursafe.geofencing.engine")
 
@@ -280,6 +281,32 @@ class GeofenceEngine:
             last_gps_timestamp=ts,
             total_active_zones=len(active_list),
         )
+
+        # Ingest Geofence signals to Safety Orchestration Engine (Prompt 11)
+        try:
+            if active_list:
+                for m in active_list:
+                    dwell_dur = None
+                    if m.entered_at:
+                        t_ent = GeofenceStateMachine.parse_iso_timestamp(m.entered_at)
+                        t_curr = GeofenceStateMachine.parse_iso_timestamp(ts)
+                        dwell_dur = max(0.0, (t_curr - t_ent).total_seconds())
+
+                    geo_sig = SafetySignalFactory.create_geofence_signal(
+                        tourist_id=tourist_id,
+                        session_id=session_id,
+                        zone_id=m.zone_id,
+                        zone_name=m.name,
+                        zone_type=m.zone_type,
+                        risk_level=m.risk_level,
+                        membership_state=m.state.value if hasattr(m.state, "value") else str(m.state),
+                        dwell_duration_seconds=dwell_dur,
+                        confidence_score=1.0 if m.confidence == MembershipConfidence.HIGH else 0.7,
+                        timestamp=ts,
+                    )
+                    await safety_orchestrator.ingest_signal(geo_sig, user_id=user_id)
+        except Exception as se_err:
+            logger.error("Safety engine geofence ingest error for tourist %s: %s", tourist_id, se_err)
 
         # 8. Record Diagnostics
         elapsed_ms = (time.perf_counter() - start_time) * 1000.0

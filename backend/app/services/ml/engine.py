@@ -35,6 +35,7 @@ from .persistence import anomaly_persistence
 from .preprocessor import inference_preprocessor
 from .redis_state import anomaly_redis_state
 from .state_machine import anomaly_state_machine
+from ..safety import safety_orchestrator, SafetySignalFactory
 
 logger = logging.getLogger("toursafe.ml.engine")
 
@@ -247,6 +248,24 @@ class RealtimeInferenceEngine:
 
         if cleared_evt:
             asyncio.create_task(self._broadcast_anomaly_cleared(cleared_evt))
+
+        # Ingest Anomaly signal to Safety Orchestration Engine (Prompt 11)
+        try:
+            consec = episode.consecutive_windows if episode else (1 if new_state != AnomalyState.NORMAL else 0)
+            anom_sig = SafetySignalFactory.create_anomaly_signal(
+                tourist_id=window.tourist_id,
+                session_id=window.session_id,
+                state=new_state.value,
+                score=score,
+                threshold=thresh,
+                consecutive_windows=consec,
+                quality=quality_info.overall_quality,
+                model_version=model_ver,
+                timestamp=datetime.now(timezone.utc).isoformat(),
+            )
+            asyncio.create_task(safety_orchestrator.ingest_signal(anom_sig))
+        except Exception as se_err:
+            logger.error(f"Safety orchestrator anomaly ingest error: {se_err}")
 
         # 8. Record Metrics
         latency_breakdown = ml_metrics_tracker.record_success(

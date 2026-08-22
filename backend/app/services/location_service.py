@@ -18,6 +18,7 @@ from ..schemas.location import (
 from ..schemas.realtime import RealtimeEventEnvelope, RealtimeEventType
 from ..services.realtime_bus import realtime_bus
 from ..services.geofencing import geofence_engine
+from ..services.safety import safety_orchestrator, SafetySignalFactory
 
 logger = logging.getLogger("toursafe.location")
 
@@ -226,6 +227,22 @@ class LocationService:
             )
         except Exception as ge_err:
             logger.error("Geofencing engine processing error for tourist %s: %s", tourist_id, ge_err)
+
+        # 8. Ingest GPS signal to Safety Orchestration Engine (Prompt 11)
+        try:
+            gps_signal = SafetySignalFactory.create_gps_signal(
+                tourist_id=tourist_id,
+                session_id=sample.session_id,
+                latitude=sample.latitude,
+                longitude=sample.longitude,
+                accuracy=sample.accuracy,
+                staleness_state="live",
+                speed=sample.speed,
+                timestamp=sample.timestamp,
+            )
+            await safety_orchestrator.ingest_signal(gps_signal, user_id=user_id)
+        except Exception as se_err:
+            logger.error("Safety engine GPS ingest error for tourist %s: %s", tourist_id, se_err)
 
         return LocationSampleResponse(
             location_id=mongo_doc.location_id,
@@ -496,6 +513,18 @@ class LocationService:
 
         await db.tracking_sessions.insert_one(session_record.model_dump())
 
+        # Ingest tracking active signal to Safety Engine
+        try:
+            trk_sig = SafetySignalFactory.create_tracking_signal(
+                tourist_id=tourist_id,
+                session_id=session_id,
+                tracking_status="active",
+                timestamp=now_utc,
+            )
+            await safety_orchestrator.ingest_signal(trk_sig, user_id=user_id)
+        except Exception as te_err:
+            logger.debug("Safety tracking signal note: %s", te_err)
+
         return TrackingSessionResponse(
             session_id=session_id,
             tourist_id=tourist_id,
@@ -538,6 +567,18 @@ class LocationService:
             except Exception:
                 pass
         _memory_live_store.pop(tourist_id, None)
+
+        # Ingest tracking stopped signal to Safety Engine
+        try:
+            trk_sig = SafetySignalFactory.create_tracking_signal(
+                tourist_id=tourist_id,
+                session_id=session_id,
+                tracking_status="stopped",
+                timestamp=now_utc,
+            )
+            await safety_orchestrator.ingest_signal(trk_sig, user_id=user_id)
+        except Exception as te_err:
+            logger.debug("Safety tracking signal note: %s", te_err)
 
         if doc:
             return TrackingSessionResponse(
