@@ -29,6 +29,7 @@ from ..models.tourist import Tourist
 from ..models.authority import Authority
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -44,6 +45,16 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     user_id = payload["user_id"]
     role = payload.get("role", "tourist")
     return user_id, role
+
+
+def get_optional_current_user(token: str = Depends(optional_oauth2_scheme)):
+    """Optional dependency to extract user if valid token present, else None."""
+    if not token:
+        return None
+    payload = decode_token(token)
+    if payload and "user_id" in payload:
+        return payload["user_id"], payload.get("role", "tourist")
+    return None
 
 
 def require_role(*allowed_roles):

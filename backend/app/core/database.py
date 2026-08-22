@@ -89,6 +89,33 @@ async def init_db_indexes(db=None):
         await db.export_jobs.create_index([("requested_by", pymongo.ASCENDING), ("created_at", pymongo.DESCENDING)])
         await db.export_jobs.create_index([("status", pymongo.ASCENDING)])
 
+        # 5. Identity & KYC Platform (Prompt 18)
+        await db.tourist_identity_profiles.create_index("id", unique=True, sparse=True)
+        await db.tourist_identity_profiles.create_index("user_id", unique=True, sparse=True)
+        await db.tourist_identity_profiles.create_index([("identity_status", pymongo.ASCENDING)])
+
+        await db.kyc_documents.create_index("id", unique=True, sparse=True)
+        await db.kyc_documents.create_index([("tourist_id", pymongo.ASCENDING), ("submitted_at", pymongo.DESCENDING)])
+        await db.kyc_documents.create_index([("identity_profile_id", pymongo.ASCENDING)])
+        await db.kyc_documents.create_index([("verification_status", pymongo.ASCENDING)])
+        await db.kyc_documents.create_index([("reviewer_id", pymongo.ASCENDING)], sparse=True)
+
+        await db.kyc_verification_history.create_index("id", unique=True, sparse=True)
+        await db.kyc_verification_history.create_index([("tourist_id", pymongo.ASCENDING), ("timestamp", pymongo.DESCENDING)])
+        await db.kyc_verification_history.create_index([("identity_profile_id", pymongo.ASCENDING), ("timestamp", pymongo.DESCENDING)])
+
+        await db.digital_tourist_credentials.create_index("id", unique=True, sparse=True)
+        await db.digital_tourist_credentials.create_index("credential_reference", unique=True, sparse=True)
+        await db.digital_tourist_credentials.create_index([("user_id", pymongo.ASCENDING), ("status", pymongo.ASCENDING)])
+        await db.digital_tourist_credentials.create_index([("expires_at", pymongo.ASCENDING)])
+
+        await db.user_consents.create_index("id", unique=True, sparse=True)
+        await db.user_consents.create_index([("user_id", pymongo.ASCENDING), ("consent_type", pymongo.ASCENDING)])
+
+        await db.credential_verification_logs.create_index("id", unique=True, sparse=True)
+        await db.credential_verification_logs.create_index([("credential_reference", pymongo.ASCENDING), ("timestamp", pymongo.DESCENDING)])
+        await db.credential_verification_logs.create_index([("verifier_user_id", pymongo.ASCENDING), ("timestamp", pymongo.DESCENDING)], sparse=True)
+
         print("✅ Geospatial and collection indexes successfully initialized.")
     except Exception as e:
         print(f"⚠️ Index initialization warning: {e}")
