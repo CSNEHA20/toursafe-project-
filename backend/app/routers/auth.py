@@ -1,15 +1,22 @@
+import uuid
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from typing import Optional
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status, Body
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import JSONResponse
 
 from ..core.database import get_database
+from ..core.input_security import sanitize_nosql_input
+from ..core.rate_limiter import auth_rate_limiter, registration_rate_limiter, get_client_ip
 from ..core.security import (
     hash_password,
     verify_password,
     create_access_token,
     create_refresh_token,
     decode_token,
+    revoke_token,
+    validate_password_strength,
+    validate_refresh_token_rotation,
 )
 from ..schemas.user import (
     UserRegister,
@@ -27,6 +34,7 @@ from ..schemas.user import (
 from ..models.user import User
 from ..models.tourist import Tourist
 from ..models.authority import Authority
+from ..services.security.security_events import security_event_service
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
@@ -73,18 +81,36 @@ def require_role(*allowed_roles):
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(payload: dict = Body(...)):
-    """Register a new user."""
+async def register(request: Request, payload: dict = Body(...)):
+    """Register a new user with input sanitization and rate limiting."""
+    client_ip = get_client_ip(request)
+    registration_rate_limiter.enforce(client_ip)
+
+    # Sanitize NoSQL injection attempts
+    clean_payload = sanitize_nosql_input(payload)
+
+    email = clean_payload.get("email")
+    password = clean_payload.get("password")
+    full_name = clean_payload.get("full_name")
+    role = clean_payload.get("role", "tourist")
+
+    if not email or not password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email and password are required.",
+        )
+
+    # Password policy check
+    valid_pwd, reason = validate_password_strength(password)
+    if not valid_pwd:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=reason,
+        )
+
     db = get_database()
     users = db["users"]
 
-    # Extract fields from payload
-    email = payload.get("email")
-    password = payload.get("password")
-    full_name = payload.get("full_name")
-    role = payload.get("role", "tourist")
-
-    # Check for duplicate email
     existing = await users.find_one({"email": email})
     if existing:
         raise HTTPException(
@@ -92,7 +118,6 @@ async def register(payload: dict = Body(...)):
             detail="Email already registered",
         )
 
-    # Create user with hashed password
     password_hash = hash_password(password)
     user = User(
         email=email,
@@ -101,7 +126,6 @@ async def register(payload: dict = Body(...)):
         full_name=full_name,
     )
 
-    # Insert user document directly
     await users.insert_one(user.to_dict())
 
     return UserResponse(
@@ -113,22 +137,26 @@ async def register(payload: dict = Body(...)):
 
 
 @router.post("/login", response_model=dict)
-async def login(payload: dict = Body(...)):
-    """Login user and return JWT tokens."""
+async def login(request: Request, payload: dict = Body(...)):
+    """Login user and return JWT tokens with brute force protection."""
+    client_ip = get_client_ip(request)
+    auth_rate_limiter.enforce(client_ip)
+
+    clean_payload = sanitize_nosql_input(payload)
+    email = clean_payload.get("email")
+    password = clean_payload.get("password")
+
     db = get_database()
     users = db["users"]
 
-    email = payload.get("email")
-    password = payload.get("password")
-
     user = await users.find_one({"email": email})
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
+    if not user or not verify_password(password, user.get("password_hash", "")):
+        await security_event_service.record_event(
+            event_type="auth.login.failed",
+            severity="MEDIUM",
+            client_ip=client_ip,
+            details={"email": email[:3] + "***@" if email and "@" in email else "anonymous"},
         )
-
-    if not verify_password(password, user["password_hash"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
@@ -140,8 +168,9 @@ async def login(payload: dict = Body(...)):
             detail="Account is disabled",
         )
 
-    access_token = create_access_token(user_id=user["id"], role=user["role"])
-    refresh_token = create_refresh_token(user_id=user["id"])
+    session_id = f"sess_{uuid.uuid4().hex[:12]}"
+    access_token = create_access_token(user_id=user["id"], role=user["role"], session_id=session_id)
+    refresh_token = create_refresh_token(user_id=user["id"], session_id=session_id)
 
     # Update last_login
     user_filter = {"_id": user["_id"]} if "_id" in user else {"email": user["email"]}
@@ -164,9 +193,10 @@ async def login(payload: dict = Body(...)):
 
 
 @router.post("/refresh", response_model=dict)
-async def refresh(payload: dict = Body(...)):
-    """Refresh access token using refresh token."""
-    refresh_token = payload.get("refresh_token")
+async def refresh(request: Request, payload: dict = Body(...)):
+    """Refresh access token using refresh token with Refresh Token Rotation (RTR)."""
+    clean_payload = sanitize_nosql_input(payload)
+    refresh_token = clean_payload.get("refresh_token")
 
     if not refresh_token:
         raise HTTPException(
@@ -182,8 +212,26 @@ async def refresh(payload: dict = Body(...)):
             detail="Invalid refresh token",
         )
 
+    # Validate Refresh Token Rotation & Detect Token Reuse
+    is_valid_rtr, rtr_error = validate_refresh_token_rotation(payload_data)
+    if not is_valid_rtr:
+        client_ip = get_client_ip(request)
+        await security_event_service.record_event(
+            event_type="auth.token.reuse_detected",
+            severity="CRITICAL",
+            actor_id=payload_data.get("user_id"),
+            client_ip=client_ip,
+            details={"reason": rtr_error},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=rtr_error or "Token reuse detected.",
+        )
+
     user_id = payload_data["user_id"]
     role = payload_data.get("role", "tourist")
+    family_id = payload_data.get("family_id")
+    session_id = payload_data.get("session_id")
 
     # Verify user still exists and is active
     db = get_database()
@@ -195,8 +243,8 @@ async def refresh(payload: dict = Body(...)):
             detail="User not found or inactive",
         )
 
-    new_access = create_access_token(user_id=user_id, role=role)
-    new_refresh = create_refresh_token(user_id=user_id)
+    new_access = create_access_token(user_id=user_id, role=role, session_id=session_id)
+    new_refresh = create_refresh_token(user_id=user_id, family_id=family_id, session_id=session_id)
 
     return {
         "access_token": new_access,
@@ -206,9 +254,24 @@ async def refresh(payload: dict = Body(...)):
 
 
 @router.post("/logout")
-async def logout():
-    """Logout user."""
-    return JSONResponse(content={"detail": "Logged out"}, status_code=200)
+async def logout(
+    authorization: Optional[str] = Header(None),
+    payload: Optional[dict] = Body(None),
+):
+    """Logout user and revoke active session / token."""
+    # Revoke from Bearer token
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization[7:]
+        revoke_token(token)
+
+    # Revoke from body payload if provided
+    if payload:
+        if "access_token" in payload:
+            revoke_token(payload["access_token"])
+        if "refresh_token" in payload:
+            revoke_token(payload["refresh_token"])
+
+    return JSONResponse(content={"detail": "Logged out and tokens invalidated"}, status_code=200)
 
 
 @router.get("/me")

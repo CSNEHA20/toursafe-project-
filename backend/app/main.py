@@ -37,6 +37,9 @@ from .routers.emergency_orchestration import router as emergency_orchestration_r
 from .routers.admin_governance import router as admin_governance_router
 from .routers.copilot import router as copilot_router
 from .routers.integrations import router as integrations_router
+from .core.security_middleware import SecurityHeadersAndCorrelationMiddleware
+from .routers.security_governance import router as security_governance_router
+from .services.security.security_events import security_event_service
 from .services.integrations import integration_registry
 from .services.ml.engine import ml_inference_engine
 from .services.safety import safety_repository
@@ -68,6 +71,7 @@ async def lifespan(app: FastAPI):
         await jurisdiction_service.init_indexes()
         await config_governance_service.init_indexes()
         await copilot_service.init_indexes()
+        await security_event_service.init_indexes()
         await jurisdiction_service.seed_defaults()
         await config_governance_service.seed_defaults()
         await response_policy_service.init_default_policies()
@@ -110,6 +114,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Defense-in-Depth Security & Correlation Middleware
+app.add_middleware(SecurityHeadersAndCorrelationMiddleware)
+
 # CORS configuration - environment-based allowed origins
 allowed_origins = settings.cors_origins if settings.cors_origins else []
 
@@ -118,7 +125,7 @@ app.add_middleware(
     allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Set-Cookie", "Accept"],
+    allow_headers=["Authorization", "Content-Type", "Set-Cookie", "Accept", "X-Correlation-ID"],
 )
 
 app.include_router(health_router)
@@ -153,3 +160,4 @@ app.include_router(emergency_orchestration_router)
 app.include_router(admin_governance_router)
 app.include_router(copilot_router)
 app.include_router(integrations_router)
+app.include_router(security_governance_router)

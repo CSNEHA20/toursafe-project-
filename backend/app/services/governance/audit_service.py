@@ -2,6 +2,7 @@
 TourSafe Immutable Audit Logging Service.
 Guarantees append-only, tamper-evident audit logging for all administrative,
 governance, policy configuration, responder assignment, and manual override actions.
+Implements SHA-256 cryptographic hash chaining across sequential audit entries.
 """
 
 import json
@@ -10,7 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from fastapi import HTTPException, status
 from pymongo import ASCENDING, DESCENDING, IndexModel
 
-from ...core.database import get_database
+from ...core import database as db_core
 from ...models.governance import AuditAction, ImmutableAuditRecord
 from ...schemas.governance import AuditPaginatedResponse, AuditQueryFilter, AuditRecordResponse
 
@@ -20,7 +21,7 @@ class AuditService:
         self.collection_name = "governance_audit_logs"
 
     def _get_collection(self):
-        db = get_database()
+        db = db_core.get_database()
         return db[self.collection_name]
 
     async def init_indexes(self):
@@ -56,8 +57,17 @@ class AuditService:
     ) -> ImmutableAuditRecord:
         """
         Appends an immutable audit record to the governance audit log.
-        Computes a cryptographic SHA-256 checksum across canonical payload attributes.
+        Fetches the previous entry's integrity hash and chains it cryptographically.
         """
+        coll = self._get_collection()
+        previous_hash = "GENESIS_HASH"
+        try:
+            latest = await coll.find_one({}, sort=[("timestamp", DESCENDING), ("_id", DESCENDING)])
+            if latest and latest.get("integrity_hash"):
+                previous_hash = latest["integrity_hash"]
+        except Exception:
+            pass
+
         record = ImmutableAuditRecord(
             actor_id=actor_id,
             actor_name=actor_name,
@@ -71,14 +81,88 @@ class AuditService:
             change_reason=change_reason,
             ip_address=ip_address,
             user_agent=user_agent,
+            previous_hash=previous_hash,
             timestamp=datetime.now(timezone.utc),
         )
         record.integrity_hash = record.compute_integrity_hash()
 
-        coll = self._get_collection()
         doc = record.to_dict()
         await coll.insert_one(doc)
         return record
+
+    async def verify_audit_chain(self, limit: int = 100) -> Dict[str, Any]:
+        """
+        Traverses audit log records in chronological order to verify cryptographic hash chaining
+        and integrity. Detects tampered, modified, or omitted records.
+        """
+        coll = self._get_collection()
+        cursor = coll.find().sort("timestamp", ASCENDING).limit(limit)
+        records = await cursor.to_list(length=limit)
+
+        if not records:
+            return {"valid": True, "records_checked": 0, "status": "EMPTY_LOG"}
+
+        expected_prev_hash = "GENESIS_HASH"
+        for idx, doc in enumerate(records):
+            # Check previous hash continuity
+            prev_hash = doc.get("previous_hash", "GENESIS_HASH")
+            if idx == 0:
+                expected_prev_hash = prev_hash
+
+            if prev_hash != expected_prev_hash:
+                return {
+                    "valid": False,
+                    "records_checked": idx + 1,
+                    "tampered_audit_id": doc.get("audit_id"),
+                    "error": f"Chain broken at record {idx+1}: expected previous_hash {expected_prev_hash}, got {prev_hash}",
+                }
+
+            # Recompute hash for the record with tamper exception safety
+            try:
+                record_obj = ImmutableAuditRecord(
+                    audit_id=doc.get("audit_id"),
+                    timestamp=datetime.fromisoformat(doc.get("timestamp")) if isinstance(doc.get("timestamp"), str) else doc.get("timestamp"),
+                    actor_id=doc.get("actor_id"),
+                    actor_name=doc.get("actor_name"),
+                    actor_role=doc.get("actor_role"),
+                    action=doc.get("action"),
+                    resource_type=doc.get("resource_type"),
+                    resource_id=doc.get("resource_id"),
+                    jurisdiction_id=doc.get("jurisdiction_id"),
+                    before_state=doc.get("before_state"),
+                    after_state=doc.get("after_state"),
+                    change_reason=doc.get("change_reason"),
+                    ip_address=doc.get("ip_address"),
+                    user_agent=doc.get("user_agent"),
+                    previous_hash=prev_hash,
+                )
+                recomputed = record_obj.compute_integrity_hash()
+            except Exception as e:
+                return {
+                    "valid": False,
+                    "records_checked": idx + 1,
+                    "tampered_audit_id": doc.get("audit_id"),
+                    "error": f"Tamper detected (payload schema corruption): {e}",
+                }
+
+            stored_hash = doc.get("integrity_hash")
+
+            if recomputed != stored_hash:
+                return {
+                    "valid": False,
+                    "records_checked": idx + 1,
+                    "tampered_audit_id": doc.get("audit_id"),
+                    "error": f"Tamper detected: stored integrity hash {stored_hash} does not match computed {recomputed}",
+                }
+
+            expected_prev_hash = stored_hash
+
+        return {
+            "valid": True,
+            "records_checked": len(records),
+            "latest_chain_hash": expected_prev_hash,
+            "status": "SECURE",
+        }
 
     async def query_logs(
         self,
@@ -135,7 +219,6 @@ class AuditService:
         cursor = coll.find(query).sort("timestamp", DESCENDING).skip(skip).limit(filter_params.limit)
         items = []
         async for doc in cursor:
-            # Map doc to response
             items.append(
                 AuditRecordResponse(
                     audit_id=doc.get("audit_id", ""),
@@ -151,6 +234,7 @@ class AuditService:
                     after_state=doc.get("after_state"),
                     change_reason=doc.get("change_reason"),
                     ip_address=doc.get("ip_address"),
+                    previous_hash=doc.get("previous_hash"),
                     integrity_hash=doc.get("integrity_hash"),
                 )
             )

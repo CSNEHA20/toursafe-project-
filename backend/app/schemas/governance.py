@@ -397,6 +397,7 @@ class AuditRecordResponse(BaseModel):
     after_state: Optional[Dict[str, Any]] = None
     change_reason: Optional[str] = None
     ip_address: Optional[str] = None
+    previous_hash: Optional[str] = None
     integrity_hash: Optional[str] = None
 
 

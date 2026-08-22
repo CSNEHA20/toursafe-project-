@@ -71,6 +71,9 @@ class ConfigurationLifecycleStatus(str, Enum):
 class AuditAction(str, Enum):
     CREATE = "CREATE"
     EDIT = "EDIT"
+    UPDATE = "UPDATE"
+    DELETE = "DELETE"
+    REVOKE = "REVOKE"
     VALIDATE = "VALIDATE"
     APPROVE = "APPROVE"
     REJECT = "REJECT"
@@ -85,6 +88,7 @@ class AuditAction(str, Enum):
     BULK_OPERATION = "BULK_OPERATION"
     IMPORT = "IMPORT"
     EXPORT = "EXPORT"
+    SECURITY_ALERT = "SECURITY_ALERT"
 
 
 # ---------------------------------------------------------------------------
@@ -250,12 +254,13 @@ class ImmutableAuditRecord(BaseModel):
     change_reason: Optional[str] = None
     ip_address: Optional[str] = None
     user_agent: Optional[str] = None
+    previous_hash: Optional[str] = "GENESIS_HASH"
     integrity_hash: Optional[str] = None
 
     model_config = {"use_enum_values": True, "populate_by_name": True, "arbitrary_types_allowed": True}
 
     def compute_integrity_hash(self) -> str:
-        """Computes a SHA-256 integrity hash over canonical record attributes."""
+        """Computes a SHA-256 integrity hash over canonical record attributes including previous hash."""
         payload = {
             "audit_id": self.audit_id,
             "timestamp": self.timestamp.isoformat() if isinstance(self.timestamp, datetime) else str(self.timestamp),
@@ -268,6 +273,7 @@ class ImmutableAuditRecord(BaseModel):
             "change_reason": self.change_reason or "",
             "before_state": self.before_state,
             "after_state": self.after_state,
+            "previous_hash": self.previous_hash or "GENESIS_HASH",
         }
         serialized = json.dumps(payload, sort_keys=True, default=str)
         return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
@@ -290,5 +296,6 @@ class ImmutableAuditRecord(BaseModel):
             "change_reason": self.change_reason,
             "ip_address": self.ip_address,
             "user_agent": self.user_agent,
+            "previous_hash": self.previous_hash or "GENESIS_HASH",
             "integrity_hash": self.integrity_hash,
         }

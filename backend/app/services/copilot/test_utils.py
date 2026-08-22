@@ -7,8 +7,7 @@ indexes, and atomic updates.
 import copy
 import re
 from typing import Any, Dict, List, Optional
-import pytest
-from ...core import database as d_mod
+from app.core import database as d_mod
 
 
 class MockCollection:
