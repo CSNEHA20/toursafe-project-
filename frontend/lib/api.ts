@@ -205,11 +205,54 @@ export const alertApi = {
 };
 
 export const sosApi = {
-  trigger: (data: { tourist_id?: string; latitude: number; longitude: number; description?: string }) =>
-    api.post("/sos/trigger", data),
+  trigger: (data: { client_request_id?: string; latitude?: number; longitude?: number; accuracy?: number; reason?: string; description?: string }) =>
+    api.post("/tourists/me/sos", {
+      client_request_id: data.client_request_id || `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      accuracy: data.accuracy,
+      reason: data.reason || data.description || "Manual SOS from app",
+    }),
+  cancel: (sos_id: string, reason: string) =>
+    api.post(`/tourists/me/sos/${sos_id}/cancel`, { reason }),
+  getActive: () => api.get("/tourists/me/sos/active"),
   getStatus: (incident_id: string) => api.get(`/sos/${incident_id}/status`),
   update: (incident_id: string, status: string) =>
     api.patch(`/sos/${incident_id}`, { status }),
+};
+
+export const incidentApi = {
+  getAll: (params?: { status?: string; severity?: string; tourist_id?: string; page?: number; limit?: number }) =>
+    api.get("/authority/incidents", { params }),
+  getById: (id: string) => api.get(`/authority/incidents/${id}`),
+  getTimeline: (id: string) => api.get(`/authority/incidents/${id}/timeline`),
+  getMetrics: () => api.get("/authority/incidents/metrics"),
+  acknowledge: (id: string, data?: { notes?: string; version?: number }) =>
+    api.post(`/authority/incidents/${id}/acknowledge`, data || {}),
+  assess: (id: string, data: { severity?: string; notes?: string; version?: number }) =>
+    api.post(`/authority/incidents/${id}/assess`, data),
+  assign: (id: string, data: { responder_id: string; unit_id?: string; notes?: string; version?: number }) =>
+    api.post(`/authority/incidents/${id}/assign`, data),
+  startResponse: (id: string, data?: { notes?: string; estimated_arrival_minutes?: number; version?: number }) =>
+    api.post(`/authority/incidents/${id}/response-start`, data || {}),
+  escalate: (id: string, data: { reason: string; target_severity?: string; notes?: string; version?: number }) =>
+    api.post(`/authority/incidents/${id}/escalate`, data),
+  addNote: (id: string, content: string) =>
+    api.post(`/authority/incidents/${id}/notes`, { content }),
+  resolve: (id: string, data: { resolution_reason: string; resolution_category?: string; notes?: string; version?: number }) =>
+    api.post(`/authority/incidents/${id}/resolve`, data),
+  cancel: (id: string, data: { cancellation_reason: string; is_false_alarm?: boolean; notes?: string; version?: number }) =>
+    api.post(`/authority/incidents/${id}/cancel`, data),
+  close: (id: string, data?: { notes?: string; version?: number }) =>
+    api.post(`/authority/incidents/${id}/close`, data || {}),
+};
+
+export const responderApi = {
+  getAll: (params?: { status?: string; type?: string; active_only?: boolean; limit?: number; skip?: number }) =>
+    api.get("/authority/responders", { params }),
+  getById: (id: string) => api.get(`/authority/responders/${id}`),
+  create: (data: any) => api.post("/authority/responders", data),
+  update: (id: string, data: any) => api.patch(`/authority/responders/${id}`, data),
 };
 
 export const zoneApi = {

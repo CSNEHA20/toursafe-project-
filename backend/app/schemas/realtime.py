@@ -59,7 +59,17 @@ class RealtimeEventType(str, Enum):
     SAFETY_STATE_CHANGED = "safety.state.changed"
     INCIDENT_CREATED = "incident.created"
     INCIDENT_UPDATED = "incident.updated"
+    INCIDENT_ACKNOWLEDGED = "incident.acknowledged"
+    INCIDENT_ASSESSING = "incident.assessing"
+    INCIDENT_ASSIGNED = "incident.assigned"
+    INCIDENT_RESPONSE_STARTED = "incident.response.started"
+    INCIDENT_ESCALATED = "incident.escalated"
+    INCIDENT_NOTE_ADDED = "incident.note.added"
+    INCIDENT_LOCATION_UPDATED = "incident.location.updated"
+    INCIDENT_SEVERITY_CHANGED = "incident.severity.changed"
     INCIDENT_RESOLVED = "incident.resolved"
+    INCIDENT_CANCELLED = "incident.cancelled"
+    INCIDENT_CLOSED = "incident.closed"
 
     # Emergency events
     EMERGENCY_CREATED = "emergency.created"

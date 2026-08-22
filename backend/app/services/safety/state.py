@@ -18,6 +18,7 @@ from typing import Dict, List, Optional, Set, Tuple
 from ...schemas.safety import (
     IncidentRecord,
     IncidentSeverity,
+    IncidentSource,
     IncidentStatus,
     SafetyDecision,
     SafetyState,
@@ -228,16 +229,33 @@ class IncidentLifecycleManager:
             return existing_incident
 
         # Create brand new incident
+        inc_id = f"inc_{datetime.now(timezone.utc).strftime('%Y%m%d')}_{tourist_id[:6]}"
+        tle = {
+            "event_id": f"tle_{datetime.now(timezone.utc).timestamp()}",
+            "incident_id": inc_id,
+            "timestamp": now_iso,
+            "actor_type": "SYSTEM",
+            "actor_id": "safety_engine",
+            "action": "incident.created",
+            "previous_state": None,
+            "new_state": IncidentStatus.OPEN.value,
+            "metadata": {"severity": severity.value, "rule_version": decision.rule_version},
+            "reason": "; ".join(decision.reasons),
+        }
         return IncidentRecord(
+            incident_id=inc_id,
             tourist_id=tourist_id,
             session_id=session_id,
             started_at=now_iso,
             status=IncidentStatus.OPEN,
             severity=severity,
+            source=IncidentSource.SAFETY_ENGINE,
             decision_id=decision.decision_id,
             rule_version=decision.rule_version,
             reasons=decision.reasons,
             signal_summary=decision.signals,
+            timeline=[tle],
+            version=1,
             created_at=now_iso,
             updated_at=now_iso,
         )

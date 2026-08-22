@@ -125,18 +125,207 @@ class SafetyEventPublisher:
         except Exception as e:
             logger.warning("Failed to broadcast incident.updated: %s", e)
 
-    async def publish_incident_resolved(self, incident: IncidentRecord) -> None:
-        """Broadcasts incident.resolved to authority operations channel."""
+    async def publish_sos_created(self, sos_dict: Dict[str, Any], tourist_id: str) -> None:
+        """Broadcasts sos.created to authority operations and tourist channel."""
         envelope = RealtimeEventEnvelope(
-            event_type=RealtimeEventType.INCIDENT_RESOLVED.value,
-            source="safety_orchestrator",
+            event_type=RealtimeEventType.SOS_CREATED.value,
+            source="sos_service",
+            payload=sos_dict,
+        )
+        try:
+            await realtime_bus.publish_to_channel("authority:operations", envelope)
+            await realtime_bus.publish_to_channel(f"tourist:{tourist_id}", envelope)
+        except Exception as e:
+            logger.warning("Failed to broadcast sos.created: %s", e)
+
+    async def publish_incident_acknowledged(self, incident: IncidentRecord) -> None:
+        """Broadcasts incident.acknowledged to authority operations and tourist channels."""
+        envelope = RealtimeEventEnvelope(
+            event_type=RealtimeEventType.INCIDENT_ACKNOWLEDGED.value,
+            source="emergency_service",
             payload=incident.model_dump(),
         )
         try:
             await realtime_bus.publish_to_channel("authority:operations", envelope)
+            await realtime_bus.publish_to_channel(
+                f"tourist:{incident.tourist_id}",
+                RealtimeEventEnvelope(
+                    event_type=RealtimeEventType.INCIDENT_ACKNOWLEDGED.value,
+                    source="emergency_service",
+                    payload={
+                        "incident_id": incident.incident_id,
+                        "status": "ACKNOWLEDGED",
+                        "acknowledged_at": incident.acknowledged_at,
+                        "message": "TourSafe command center has acknowledged your incident. Assistance is in progress.",
+                    },
+                ),
+            )
+        except Exception as e:
+            logger.warning("Failed to broadcast incident.acknowledged: %s", e)
+
+    async def publish_incident_assessing(self, incident: IncidentRecord) -> None:
+        envelope = RealtimeEventEnvelope(
+            event_type=RealtimeEventType.INCIDENT_ASSESSING.value,
+            source="emergency_service",
+            payload=incident.model_dump(),
+        )
+        try:
+            await realtime_bus.publish_to_channel("authority:operations", envelope)
+        except Exception as e:
+            logger.warning("Failed to broadcast incident.assessing: %s", e)
+
+    async def publish_incident_assigned(self, incident: IncidentRecord) -> None:
+        envelope = RealtimeEventEnvelope(
+            event_type=RealtimeEventType.INCIDENT_ASSIGNED.value,
+            source="emergency_service",
+            payload=incident.model_dump(),
+        )
+        try:
+            await realtime_bus.publish_to_channel("authority:operations", envelope)
+            await realtime_bus.publish_to_channel(
+                f"tourist:{incident.tourist_id}",
+                RealtimeEventEnvelope(
+                    event_type=RealtimeEventType.INCIDENT_ASSIGNED.value,
+                    source="emergency_service",
+                    payload={
+                        "incident_id": incident.incident_id,
+                        "status": "ASSIGNED",
+                        "responder_type": incident.responder_type,
+                        "message": "A responder team has been assigned to your location.",
+                    },
+                ),
+            )
+        except Exception as e:
+            logger.warning("Failed to broadcast incident.assigned: %s", e)
+
+    async def publish_incident_response_started(self, incident: IncidentRecord) -> None:
+        envelope = RealtimeEventEnvelope(
+            event_type=RealtimeEventType.INCIDENT_RESPONSE_STARTED.value,
+            source="emergency_service",
+            payload=incident.model_dump(),
+        )
+        try:
+            await realtime_bus.publish_to_channel("authority:operations", envelope)
+            await realtime_bus.publish_to_channel(
+                f"tourist:{incident.tourist_id}",
+                RealtimeEventEnvelope(
+                    event_type=RealtimeEventType.INCIDENT_RESPONSE_STARTED.value,
+                    source="emergency_service",
+                    payload={
+                        "incident_id": incident.incident_id,
+                        "status": "RESPONDING",
+                        "message": "Assistance team is actively responding.",
+                    },
+                ),
+            )
+        except Exception as e:
+            logger.warning("Failed to broadcast incident.response.started: %s", e)
+
+    async def publish_incident_escalated(self, incident: IncidentRecord) -> None:
+        envelope = RealtimeEventEnvelope(
+            event_type=RealtimeEventType.INCIDENT_ESCALATED.value,
+            source="emergency_service",
+            payload=incident.model_dump(),
+        )
+        try:
+            await realtime_bus.publish_to_channel("authority:operations", envelope)
+        except Exception as e:
+            logger.warning("Failed to broadcast incident.escalated: %s", e)
+
+    async def publish_incident_note_added(self, incident_id: str, note_dict: Dict[str, Any]) -> None:
+        envelope = RealtimeEventEnvelope(
+            event_type=RealtimeEventType.INCIDENT_NOTE_ADDED.value,
+            source="emergency_service",
+            payload={"incident_id": incident_id, "note": note_dict},
+        )
+        try:
+            await realtime_bus.publish_to_channel("authority:operations", envelope)
+        except Exception as e:
+            logger.warning("Failed to broadcast incident.note.added: %s", e)
+
+    async def publish_incident_location_updated(self, incident_id: str, location_dict: Dict[str, Any]) -> None:
+        envelope = RealtimeEventEnvelope(
+            event_type=RealtimeEventType.INCIDENT_LOCATION_UPDATED.value,
+            source="emergency_service",
+            payload={"incident_id": incident_id, "location": location_dict},
+        )
+        try:
+            await realtime_bus.publish_to_channel("authority:operations", envelope)
+        except Exception as e:
+            logger.warning("Failed to broadcast incident.location.updated: %s", e)
+
+    async def publish_incident_severity_changed(self, incident: IncidentRecord, prev_severity: str) -> None:
+        envelope = RealtimeEventEnvelope(
+            event_type=RealtimeEventType.INCIDENT_SEVERITY_CHANGED.value,
+            source="emergency_service",
+            payload={"incident_id": incident.incident_id, "severity": incident.severity.value, "previous_severity": prev_severity},
+        )
+        try:
+            await realtime_bus.publish_to_channel("authority:operations", envelope)
+        except Exception as e:
+            logger.warning("Failed to broadcast incident.severity.changed: %s", e)
+
+    async def publish_incident_resolved(self, incident: IncidentRecord) -> None:
+        """Broadcasts incident.resolved to authority operations and tourist channels."""
+        envelope = RealtimeEventEnvelope(
+            event_type=RealtimeEventType.INCIDENT_RESOLVED.value,
+            source="emergency_service",
+            payload=incident.model_dump(),
+        )
+        try:
+            await realtime_bus.publish_to_channel("authority:operations", envelope)
+            await realtime_bus.publish_to_channel(
+                f"tourist:{incident.tourist_id}",
+                RealtimeEventEnvelope(
+                    event_type=RealtimeEventType.INCIDENT_RESOLVED.value,
+                    source="emergency_service",
+                    payload={
+                        "incident_id": incident.incident_id,
+                        "status": "RESOLVED",
+                        "resolved_at": incident.resolved_at,
+                        "message": "Your emergency incident has been resolved. You are marked safe.",
+                    },
+                ),
+            )
             logger.info("Broadcasted incident.resolved [%s] for tourist %s", incident.incident_id, incident.tourist_id)
         except Exception as e:
             logger.warning("Failed to broadcast incident.resolved: %s", e)
+
+    async def publish_incident_cancelled(self, incident: IncidentRecord) -> None:
+        """Broadcasts incident.cancelled to authority operations and tourist channels."""
+        envelope = RealtimeEventEnvelope(
+            event_type=RealtimeEventType.INCIDENT_CANCELLED.value,
+            source="emergency_service",
+            payload=incident.model_dump(),
+        )
+        try:
+            await realtime_bus.publish_to_channel("authority:operations", envelope)
+            await realtime_bus.publish_to_channel(
+                f"tourist:{incident.tourist_id}",
+                RealtimeEventEnvelope(
+                    event_type=RealtimeEventType.INCIDENT_CANCELLED.value,
+                    source="emergency_service",
+                    payload={
+                        "incident_id": incident.incident_id,
+                        "status": "CANCELLED",
+                        "message": "Your incident request has been cancelled.",
+                    },
+                ),
+            )
+        except Exception as e:
+            logger.warning("Failed to broadcast incident.cancelled: %s", e)
+
+    async def publish_incident_closed(self, incident: IncidentRecord) -> None:
+        """Broadcasts incident.closed to authority operations channel."""
+        envelope = RealtimeEventEnvelope(
+            event_type=RealtimeEventType.INCIDENT_CLOSED.value,
+            source="emergency_service",
+            payload=incident.model_dump(),
+        )
+        try:
+            await realtime_bus.publish_to_channel("authority:operations", envelope)
+        except Exception as e:
+            logger.warning("Failed to broadcast incident.closed: %s", e)
 
 
 safety_event_publisher = SafetyEventPublisher()

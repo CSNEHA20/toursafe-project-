@@ -23,6 +23,7 @@ from .routers.imu import router as imu_router
 from .routers.telemetry import router as telemetry_router
 from .routers.ml import router as ml_router
 from .routers.safety import router as safety_router
+from .routers.emergency import router as emergency_router
 from .services.ml.engine import ml_inference_engine
 from .services.safety import safety_repository
 
@@ -101,4 +102,5 @@ app.include_router(itineraries_router)
 app.include_router(geofence_router)
 app.include_router(zones_router)
 app.include_router(authority_zones_router)
+app.include_router(emergency_router)
 app.include_router(safety_router)

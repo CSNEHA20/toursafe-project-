@@ -82,6 +82,17 @@ class MockMongoCollection:
                     raise StopAsyncIteration
         return Cursor(matched)
 
+    async def replace_one(self, filter_dict, new_doc, upsert=False, *args, **kwargs):
+        for i, doc in enumerate(self.docs):
+            if self._matches(doc, filter_dict):
+                doc_copy = copy.deepcopy(new_doc)
+                self.docs[i] = doc_copy
+                return type("Obj", (), {"modified_count": 1, "matched_count": 1})()
+        if upsert:
+            self.docs.append(copy.deepcopy(new_doc))
+            return type("Obj", (), {"modified_count": 0, "matched_count": 0, "upserted_id": new_doc.get("id", "new")})()
+        return type("Obj", (), {"modified_count": 0, "matched_count": 0})()
+
     async def update_one(self, filter_dict, update_dict, upsert=False, *args, **kwargs):
         for doc in self.docs:
             if self._matches(doc, filter_dict):

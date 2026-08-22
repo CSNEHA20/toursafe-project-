@@ -443,5 +443,141 @@ export interface SafetyCheck {
   created_at: string;
 }
 
+// ─── Emergency Command & SOS Types (Prompt 12) ────────────────────────────────
+
+export type IncidentStatusType =
+  | "OPEN"
+  | "ACKNOWLEDGED"
+  | "ASSESSING"
+  | "ASSIGNED"
+  | "RESPONDING"
+  | "MONITORING"
+  | "ESCALATED"
+  | "RESOLVED"
+  | "CANCELLED"
+  | "CLOSED";
+
+export type IncidentSeverityType = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+export type IncidentSourceType = "MANUAL_SOS" | "SAFETY_ENGINE" | "AUTHORITY_CREATED";
+
+export interface TimelineEvent {
+  event_id: string;
+  incident_id: string;
+  timestamp: string;
+  actor_type: string;
+  actor_id: string;
+  action: string;
+  previous_state?: string;
+  new_state?: string;
+  metadata?: Record<string, any>;
+  reason?: string;
+}
+
+export interface IncidentNote {
+  note_id: string;
+  incident_id: string;
+  author_id: string;
+  author_role: string;
+  author_name?: string;
+  timestamp: string;
+  content: string;
+}
+
+export interface Responder {
+  responder_id: string;
+  name: string;
+  type: "AUTHORITY_OPERATOR" | "FIELD_RESPONDER" | "POLICE" | "MEDICAL" | "FIRE" | "SEARCH_AND_RESCUE";
+  unit_id?: string;
+  status: "AVAILABLE" | "ASSIGNED" | "RESPONDING" | "UNAVAILABLE" | "OFFLINE";
+  capabilities: string[];
+  current_location?: { latitude: number; longitude: number };
+  contact_channel?: string;
+  active: boolean;
+  assigned_incident_id?: string;
+}
+
+export interface IncidentRecord {
+  incident_id: string;
+  tourist_id: string;
+  session_id?: string;
+  started_at: string;
+  resolved_at?: string;
+  acknowledged_at?: string;
+  acknowledged_by?: string;
+  status: IncidentStatusType;
+  severity: IncidentSeverityType;
+  source: IncidentSourceType;
+  decision_id: string;
+  rule_version: string;
+  reasons: string[];
+  signal_summary: Record<string, any>;
+  notes?: string;
+  notes_list: IncidentNote[];
+  timeline: TimelineEvent[];
+  location_data?: {
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+    location_status?: string;
+    zone_name?: string;
+    zone_risk?: string;
+  };
+  assigned_to?: string;
+  assigned_unit?: string;
+  responder_type?: string;
+  escalation_stage: number;
+  escalation_history: Array<Record<string, any>>;
+  notifications_sent: Array<Record<string, any>>;
+  resolution_category?: string;
+  resolution_reason?: string;
+  cancellation_reason?: string;
+  closed_at?: string;
+  closed_by?: string;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SOSPayload {
+  client_request_id: string;
+  session_id?: string;
+  latitude?: number;
+  longitude?: number;
+  accuracy?: number;
+  reason?: string;
+  category?: string;
+  timestamp?: string;
+}
+
+export interface SOSResponse {
+  sos_id: string;
+  incident_id: string;
+  status: string;
+  created_at: string;
+  tourist_id: string;
+  location_status: string;
+  location?: any;
+  acknowledged: boolean;
+  message: string;
+}
+
+export interface IncidentMetrics {
+  total_incidents: number;
+  open_incidents: number;
+  acknowledged_incidents: number;
+  responding_incidents: number;
+  escalated_incidents: number;
+  resolved_incidents: number;
+  closed_incidents: number;
+  cancelled_incidents: number;
+  avg_time_to_acknowledge_seconds?: number;
+  avg_time_to_assign_seconds?: number;
+  avg_time_to_resolve_seconds?: number;
+  escalation_count: number;
+  false_alarm_rate: number;
+  notification_stats: Record<string, number>;
+}
+
 export * from "./geofence";
 

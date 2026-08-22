@@ -9,7 +9,13 @@ Provides immutable audit persistence and indexed retrieval for:
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
-from ...core.database import get_database
+from ...core import database as db_core
+
+
+def get_database():
+    return db_core.get_database()
+
+
 from ...schemas.safety import IncidentRecord, IncidentStatus, SafetyDecision
 
 logger = logging.getLogger("toursafe.safety.repository")
@@ -30,32 +36,40 @@ class SafetyRepository:
             await db.safety_decisions.create_index([("state", 1), ("timestamp", -1)])
 
             # Index for incidents
-            await db.safety_incidents.create_index([("incident_id", 1)], unique=True)
-            await db.safety_incidents.create_index([("tourist_id", 1), ("status", 1)])
-            await db.safety_incidents.create_index([("status", 1), ("started_at", -1)])
+            await db.incidents.create_index([("incident_id", 1)], unique=True)
+            await db.incidents.create_index([("tourist_id", 1), ("status", 1)])
+            await db.incidents.create_index([("status", 1), ("started_at", -1)])
             logger.info("✅ Safety MongoDB indexes initialized successfully")
         except Exception as e:
             logger.warning("Safety MongoDB index initialization note: %s", e)
 
     async def record_decision(self, decision: SafetyDecision) -> None:
-        """Appends an immutable safety decision record to MongoDB."""
+        """Appends an immutable safety decision to the audit trail."""
         try:
             db = get_database()
             doc = decision.model_dump()
             await db.safety_decisions.insert_one(doc)
         except Exception as e:
-            logger.error("Failed to insert safety decision to MongoDB: %s", e)
+            logger.error("Failed to record safety decision to MongoDB: %s", e)
 
     async def upsert_incident(self, incident: IncidentRecord) -> None:
-        """Upserts an incident record into MongoDB."""
+        """Deduplicates or updates the active incident document in MongoDB."""
         try:
             db = get_database()
             doc = incident.model_dump()
-            await db.safety_incidents.update_one(
-                {"incident_id": incident.incident_id},
-                {"$set": doc},
-                upsert=True,
-            )
+            col = db.incidents if hasattr(db, "incidents") else db.safety_incidents
+            if hasattr(col, "replace_one"):
+                await col.replace_one(
+                    {"incident_id": incident.incident_id},
+                    doc,
+                    upsert=True,
+                )
+            else:
+                await col.update_one(
+                    {"incident_id": incident.incident_id},
+                    {"$set": doc},
+                    upsert=True,
+                )
         except Exception as e:
             logger.error("Failed to upsert incident record to MongoDB: %s", e)
 
@@ -63,13 +77,29 @@ class SafetyRepository:
         """Finds any non-terminal incident for the tourist."""
         try:
             db = get_database()
-            doc = await db.safety_incidents.find_one(
+            doc = await db.incidents.find_one(
                 {
                     "tourist_id": tourist_id,
-                    "status": {"$in": [IncidentStatus.OPEN.value, IncidentStatus.ACKNOWLEDGED.value, IncidentStatus.MONITORING.value]},
+                    "status": {"$in": [
+                        IncidentStatus.OPEN.value,
+                        IncidentStatus.ACKNOWLEDGED.value,
+                        IncidentStatus.ASSESSING.value,
+                        IncidentStatus.ASSIGNED.value,
+                        IncidentStatus.RESPONDING.value,
+                        IncidentStatus.MONITORING.value,
+                        IncidentStatus.ESCALATED.value,
+                    ]},
                 },
                 sort=[("started_at", -1)],
             )
+            if not doc:
+                doc = await db.safety_incidents.find_one(
+                    {
+                        "tourist_id": tourist_id,
+                        "status": {"$in": [IncidentStatus.OPEN.value, IncidentStatus.ACKNOWLEDGED.value, IncidentStatus.MONITORING.value]},
+                    },
+                    sort=[("started_at", -1)],
+                )
             if doc:
                 doc.pop("_id", None)
                 return IncidentRecord(**doc)
@@ -81,7 +111,9 @@ class SafetyRepository:
         """Finds an incident by its unique ID."""
         try:
             db = get_database()
-            doc = await db.safety_incidents.find_one({"incident_id": incident_id})
+            doc = await db.incidents.find_one({"incident_id": incident_id})
+            if not doc:
+                doc = await db.safety_incidents.find_one({"incident_id": incident_id})
             if doc:
                 doc.pop("_id", None)
                 return IncidentRecord(**doc)
@@ -109,8 +141,14 @@ class SafetyRepository:
         try:
             db = get_database()
             skip = max(0, (page - 1) * limit)
-            total = await db.safety_incidents.count_documents(query)
-            cursor = db.safety_incidents.find(query).sort("started_at", -1).skip(skip).limit(limit)
+            col = db.incidents if hasattr(db, "incidents") else getattr(db, "safety_incidents", None)
+            if col is None:
+                return [], 0
+            total = await col.count_documents(query)
+            if total == 0 and hasattr(db, "safety_incidents"):
+                col = db.safety_incidents
+                total = await col.count_documents(query)
+            cursor = col.find(query).sort("started_at", -1).skip(skip).limit(limit)
 
             items = []
             async for doc in cursor:

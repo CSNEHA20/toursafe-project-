@@ -1,0 +1,59 @@
+# TourSafe Emergency Escalation Policy
+# Version: emergency-escalation-v1
+policy_version: "emergency-escalation-v1"
+description: "Tiered operational escalation policy for safety incidents and SOS events"
+
+thresholds:
+  # Maximum seconds before unacknowledged OPEN incident escalates
+  acknowledgement_timeout_seconds: 120
+  # Maximum seconds before acknowledged incident is assigned
+  assignment_timeout_seconds: 300
+  # Maximum seconds before assigned incident responder marks arrival/action
+  response_timeout_seconds: 600
+
+stages:
+  - stage: 1
+    trigger: "UNACKNOWLEDGED_TIMEOUT"
+    name: "Tier 1 Urgent Alert"
+    escalate_severity_to: "HIGH"
+    notify_roles:
+      - "authority"
+      - "lead_operator"
+    channels:
+      - "PUSH"
+      - "EMAIL"
+    description: "Incident remained unacknowledged past timeout threshold. Urgency raised to HIGH."
+
+  - stage: 2
+    trigger: "UNASSIGNED_TIMEOUT"
+    name: "Tier 2 Supervisor Escalation"
+    escalate_severity_to: "CRITICAL"
+    notify_roles:
+      - "authority_supervisor"
+      - "district_commander"
+    channels:
+      - "PUSH"
+      - "SMS"
+      - "EMAIL"
+    description: "Incident acknowledged but unassigned. Urgency raised to CRITICAL and supervisors notified."
+
+  - stage: 3
+    trigger: "RESPONSE_DELAY_TIMEOUT"
+    name: "Tier 3 Regional Command Escalation"
+    escalate_severity_to: "CRITICAL"
+    notify_roles:
+      - "regional_director"
+      - "emergency_coordinator"
+    channels:
+      - "PUSH"
+      - "SMS"
+      - "VOICE"
+    description: "Responder assigned but response inactive. Regional command alerted for tactical intervention."
+
+emergency_contacts:
+  # Minimum severity required to dispatch notifications to tourist emergency contacts
+  min_severity_for_dispatch: "HIGH"
+  require_authority_verification: false
+  allowed_channels:
+    - "SMS"
+    - "EMAIL"

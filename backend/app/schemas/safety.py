@@ -52,9 +52,14 @@ class ConfidenceClass(str, Enum):
 class IncidentStatus(str, Enum):
     OPEN = "OPEN"
     ACKNOWLEDGED = "ACKNOWLEDGED"
+    ASSESSING = "ASSESSING"
+    ASSIGNED = "ASSIGNED"
+    RESPONDING = "RESPONDING"
     MONITORING = "MONITORING"
+    ESCALATED = "ESCALATED"
     RESOLVED = "RESOLVED"
     CANCELLED = "CANCELLED"
+    CLOSED = "CLOSED"
 
 
 class IncidentSeverity(str, Enum):
@@ -62,6 +67,12 @@ class IncidentSeverity(str, Enum):
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
     CRITICAL = "CRITICAL"
+
+
+class IncidentSource(str, Enum):
+    MANUAL_SOS = "MANUAL_SOS"
+    SAFETY_ENGINE = "SAFETY_ENGINE"
+    AUTHORITY_CREATED = "AUTHORITY_CREATED"
 
 
 class SafetySignal(BaseModel):
@@ -145,11 +156,27 @@ class IncidentRecord(BaseModel):
     acknowledged_by: Optional[str] = None
     status: IncidentStatus = IncidentStatus.OPEN
     severity: IncidentSeverity = IncidentSeverity.HIGH
-    decision_id: str
-    rule_version: str
+    source: IncidentSource = IncidentSource.SAFETY_ENGINE
+    decision_id: str = "none"
+    rule_version: str = "safety-rules-v1"
     reasons: List[str] = Field(default_factory=list)
     signal_summary: Dict[str, Any] = Field(default_factory=dict)
     notes: Optional[str] = None
+    notes_list: List[Dict[str, Any]] = Field(default_factory=list)
+    timeline: List[Dict[str, Any]] = Field(default_factory=list)
+    location_data: Optional[Dict[str, Any]] = None
+    assigned_to: Optional[str] = None  # responder_id or authority operator
+    assigned_unit: Optional[str] = None
+    responder_type: Optional[str] = None
+    escalation_stage: int = 0
+    escalation_history: List[Dict[str, Any]] = Field(default_factory=list)
+    notifications_sent: List[Dict[str, Any]] = Field(default_factory=list)
+    resolution_category: Optional[str] = None
+    resolution_reason: Optional[str] = None
+    cancellation_reason: Optional[str] = None
+    closed_at: Optional[str] = None
+    closed_by: Optional[str] = None
+    version: int = 1  # Optimistic concurrency locking
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
