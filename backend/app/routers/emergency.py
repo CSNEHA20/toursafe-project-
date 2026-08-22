@@ -35,6 +35,11 @@ def get_database():
     return db_core.get_database()
 from ..routers.auth import get_current_user
 from ..schemas.emergency import (
+    AssignmentAcceptRequest,
+    AssignmentArrivedRequest,
+    AssignmentCompleteRequest,
+    AssignmentRecord,
+    AssignmentRejectRequest,
     IncidentAcknowledgeRequest,
     IncidentAssessRequest,
     IncidentAssignRequest,
@@ -46,6 +51,8 @@ from ..schemas.emergency import (
     IncidentNoteRecord,
     IncidentResolveRequest,
     IncidentResponseStartRequest,
+    OperationalMessageCreateRequest,
+    OperationalMessageRecord,
     ResolutionCategory,
     ResponderCreateRequest,
     ResponderRecord,
@@ -59,7 +66,9 @@ from ..schemas.emergency import (
 )
 from ..schemas.safety import IncidentRecord
 from ..services.emergency import (
+    assignment_service,
     incident_service,
+    messaging_service,
     responder_service,
     sos_service,
 )
@@ -555,3 +564,261 @@ async def update_responder_status(
     if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Responder '{responder_id}' not found")
     return updated
+
+
+# ---------------------------------------------------------------------------
+# Incident Assignment & Operations Workflow Endpoints
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/api/v1/authority/incidents/{incident_id}/assignments",
+    response_model=AssignmentRecord,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create responder assignment for incident with optimistic concurrency lock",
+)
+async def create_incident_assignment(
+    incident_id: str,
+    payload: IncidentAssignRequest,
+    user_id_role: tuple = Depends(get_current_user),
+):
+    user_id, role = user_id_role
+    if role not in ("authority", "admin"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Authority access required")
+
+    try:
+        return await assignment_service.create_assignment(
+            incident_id=incident_id,
+            responder_id=payload.responder_id,
+            assigned_by=user_id,
+            unit_id=payload.unit_id,
+            notes=payload.notes,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+
+@router.get(
+    "/api/v1/authority/incidents/{incident_id}/assignments",
+    response_model=List[AssignmentRecord],
+    summary="List all assignments for an incident",
+)
+async def list_incident_assignments(
+    incident_id: str,
+    user_id_role: tuple = Depends(get_current_user),
+):
+    user_id, role = user_id_role
+    if role not in ("authority", "admin", "responder"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Authority or responder access required")
+
+    return await assignment_service.list_assignments_for_incident(incident_id)
+
+
+@router.post(
+    "/api/v1/authority/incidents/{incident_id}/assignments/{assignment_id}/accept",
+    response_model=AssignmentRecord,
+    summary="Responder accepts pending incident assignment",
+)
+async def accept_assignment(
+    incident_id: str,
+    assignment_id: str,
+    payload: AssignmentAcceptRequest,
+    user_id_role: tuple = Depends(get_current_user),
+):
+    user_id, role = user_id_role
+    if role not in ("responder", "authority", "admin"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Responder access required")
+
+    # Resolve responder ID
+    resp = await responder_service.get_responder_by_user_id(user_id)
+    responder_id = resp.responder_id if resp else user_id
+
+    try:
+        return await assignment_service.accept_assignment(
+            incident_id=incident_id,
+            assignment_id=assignment_id,
+            responder_id=responder_id,
+            notes=payload.notes,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+
+@router.post(
+    "/api/v1/authority/incidents/{incident_id}/assignments/{assignment_id}/reject",
+    response_model=AssignmentRecord,
+    summary="Responder rejects pending incident assignment with mandatory reason",
+)
+async def reject_assignment(
+    incident_id: str,
+    assignment_id: str,
+    payload: AssignmentRejectRequest,
+    user_id_role: tuple = Depends(get_current_user),
+):
+    user_id, role = user_id_role
+    if role not in ("responder", "authority", "admin"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Responder access required")
+
+    resp = await responder_service.get_responder_by_user_id(user_id)
+    responder_id = resp.responder_id if resp else user_id
+
+    try:
+        return await assignment_service.reject_assignment(
+            incident_id=incident_id,
+            assignment_id=assignment_id,
+            responder_id=responder_id,
+            reason=payload.reason,
+            details=payload.details,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+
+@router.post(
+    "/api/v1/authority/incidents/{incident_id}/assignments/{assignment_id}/start",
+    response_model=AssignmentRecord,
+    summary="Responder starts travel / active response",
+)
+async def start_assignment_response(
+    incident_id: str,
+    assignment_id: str,
+    payload: IncidentResponseStartRequest,
+    user_id_role: tuple = Depends(get_current_user),
+):
+    user_id, role = user_id_role
+    if role not in ("responder", "authority", "admin"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Responder access required")
+
+    resp = await responder_service.get_responder_by_user_id(user_id)
+    responder_id = resp.responder_id if resp else user_id
+
+    try:
+        return await assignment_service.start_response(
+            incident_id=incident_id,
+            assignment_id=assignment_id,
+            responder_id=responder_id,
+            notes=payload.notes,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+
+@router.post(
+    "/api/v1/authority/incidents/{incident_id}/assignments/{assignment_id}/arrived",
+    response_model=AssignmentRecord,
+    summary="Responder marks arrived on scene with proximity validation",
+)
+async def arrive_assignment(
+    incident_id: str,
+    assignment_id: str,
+    payload: AssignmentArrivedRequest,
+    user_id_role: tuple = Depends(get_current_user),
+):
+    user_id, role = user_id_role
+    if role not in ("responder", "authority", "admin"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Responder access required")
+
+    resp = await responder_service.get_responder_by_user_id(user_id)
+    responder_id = resp.responder_id if resp else user_id
+
+    try:
+        return await assignment_service.mark_arrived(
+            incident_id=incident_id,
+            assignment_id=assignment_id,
+            responder_id=responder_id,
+            req=payload,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+
+@router.post(
+    "/api/v1/authority/incidents/{incident_id}/assignments/{assignment_id}/complete",
+    response_model=AssignmentRecord,
+    summary="Responder completes response operations with resolution note",
+)
+async def complete_assignment(
+    incident_id: str,
+    assignment_id: str,
+    payload: AssignmentCompleteRequest,
+    user_id_role: tuple = Depends(get_current_user),
+):
+    user_id, role = user_id_role
+    if role not in ("responder", "authority", "admin"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Responder access required")
+
+    resp = await responder_service.get_responder_by_user_id(user_id)
+    responder_id = resp.responder_id if resp else user_id
+
+    try:
+        return await assignment_service.complete_response(
+            incident_id=incident_id,
+            assignment_id=assignment_id,
+            responder_id=responder_id,
+            req=payload,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+
+# ---------------------------------------------------------------------------
+# Incident Operational Messaging Endpoints
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/api/v1/authority/incidents/{incident_id}/messages",
+    response_model=OperationalMessageRecord,
+    status_code=status.HTTP_201_CREATED,
+    summary="Send operational incident chat message",
+)
+async def send_incident_message(
+    incident_id: str,
+    payload: OperationalMessageCreateRequest,
+    user_id_role: tuple = Depends(get_current_user),
+):
+    user_id, role = user_id_role
+    if role not in ("authority", "admin", "responder"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access required")
+
+    sender_type = "RESPONDER" if role == "responder" else "AUTHORITY"
+    sender_name = None
+    try:
+        db = get_database()
+        u = await db.users.find_one({"id": user_id})
+        if u:
+            sender_name = u.get("full_name")
+    except Exception:
+        pass
+
+    try:
+        return await messaging_service.send_message(
+            incident_id=incident_id,
+            sender_id=user_id,
+            sender_type=sender_type,
+            sender_name=sender_name,
+            req=payload,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+
+@router.get(
+    "/api/v1/authority/incidents/{incident_id}/messages",
+    response_model=List[OperationalMessageRecord],
+    summary="Get operational messages for an incident",
+)
+async def get_incident_messages(
+    incident_id: str,
+    limit: int = Query(50, ge=1, le=100),
+    skip: int = Query(0, ge=0),
+    user_id_role: tuple = Depends(get_current_user),
+):
+    user_id, role = user_id_role
+    if role not in ("authority", "admin", "responder"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access required")
+
+    return await messaging_service.get_messages(
+        incident_id=incident_id,
+        limit=limit,
+        skip=skip,
+    )
+

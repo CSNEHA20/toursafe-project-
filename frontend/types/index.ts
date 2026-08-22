@@ -487,14 +487,27 @@ export interface IncidentNote {
 export interface Responder {
   responder_id: string;
   name: string;
-  type: "AUTHORITY_OPERATOR" | "FIELD_RESPONDER" | "POLICE" | "MEDICAL" | "FIRE" | "SEARCH_AND_RESCUE";
+  type: ResponderType;
   unit_id?: string;
-  status: "AVAILABLE" | "ASSIGNED" | "RESPONDING" | "UNAVAILABLE" | "OFFLINE";
+  status: ResponderStatus;
   capabilities: string[];
-  current_location?: { latitude: number; longitude: number };
+  current_location?: {
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+    heading?: number;
+    speed?: number;
+    timestamp?: string;
+    quality?: string;
+  };
   contact_channel?: string;
+  contact_phone?: string;
   active: boolean;
   assigned_incident_id?: string;
+  active_assignment_id?: string;
+  tracking_session_id?: string;
+  tracking_active?: boolean;
+  last_location_timestamp?: string;
 }
 
 export interface IncidentRecord {
@@ -579,5 +592,136 @@ export interface IncidentMetrics {
   notification_stats: Record<string, number>;
 }
 
+// ─── Responder Operations Platform Types (Prompt 13) ──────────────────────────
+
+export type ResponderType =
+  | "POLICE"
+  | "MEDICAL"
+  | "FIRE"
+  | "SEARCH_AND_RESCUE"
+  | "SECURITY"
+  | "FIELD_RESPONDER"
+  | "AUTHORITY_OPERATOR";
+
+export type ResponderStatus =
+  | "OFFLINE"
+  | "AVAILABLE"
+  | "ASSIGNED"
+  | "RESPONDING"
+  | "ON_SCENE"
+  | "UNAVAILABLE";
+
+export type UnitStatus = "ACTIVE" | "STANDBY" | "DISPATCHED" | "OUT_OF_SERVICE";
+
+export type AssignmentStatus =
+  | "PENDING"
+  | "ACCEPTED"
+  | "REJECTED"
+  | "ACTIVE"
+  | "ON_SCENE"
+  | "COMPLETED"
+  | "CANCELLED";
+
+export type RejectionReason =
+  | "UNREACHABLE_OR_OFFLINE"
+  | "INSUFFICIENT_CAPABILITY"
+  | "EQUIPMENT_MALFUNCTION"
+  | "GEOGRAPHIC_BARRIER"
+  | "SAFETY_HAZARD"
+  | "CONCURRENT_ACTIVE_RESPONSE"
+  | "OTHER";
+
+export interface ResponderLocationLive {
+  responder_id: string;
+  latitude: number;
+  longitude: number;
+  altitude?: number;
+  accuracy: number;
+  heading?: number;
+  speed?: number;
+  timestamp: string;
+  tracking_session_id?: string;
+  is_low_accuracy: boolean;
+  quality: "HIGH_ACCURACY" | "LOW_ACCURACY";
+}
+
+export interface ResponderUnitRecord {
+  unit_id: string;
+  callsign: string;
+  unit_type: ResponderType;
+  department?: string;
+  jurisdiction_zone_ids: string[];
+  members: string[];
+  vehicle_type?: string;
+  equipment_capabilities: string[];
+  status: UnitStatus;
+  lead_responder_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssignmentRecord {
+  assignment_id: string;
+  incident_id: string;
+  responder_id: string;
+  unit_id?: string;
+  assigned_by: string;
+  assigned_at: string;
+  accepted_at?: string;
+  rejected_at?: string;
+  rejection_reason?: string;
+  started_at?: string;
+  arrived_at?: string;
+  arrival_location?: {
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+    proximity_verified: boolean;
+    distance_to_incident_meters?: number;
+  };
+  arrival_accuracy?: number;
+  completed_at?: string;
+  completion_reason?: string;
+  completion_notes?: string;
+  cancelled_at?: string;
+  cancellation_reason?: string;
+  status: AssignmentStatus;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OperationalMessageRecord {
+  message_id: string;
+  incident_id: string;
+  assignment_id?: string;
+  sender_id: string;
+  sender_type: "AUTHORITY" | "RESPONDER" | "SYSTEM";
+  sender_name?: string;
+  timestamp: string;
+  content: string;
+  delivery_status: string;
+  read_at?: string;
+}
+
+export interface ResponderRecommendationItem {
+  responder: Responder;
+  score: number;
+  distance_meters: number;
+  distance_text: string;
+  staleness_status: "LIVE" | "RECENT" | "STALE" | "OFFLINE";
+  reasons: string[];
+}
+
+export interface ResponderSelfProfile {
+  responder: Responder;
+  active_unit?: ResponderUnitRecord;
+  active_assignment?: AssignmentRecord;
+  active_incident?: IncidentRecord;
+  live_location?: ResponderLocationLive;
+  tracking_session?: Record<string, any>;
+}
+
 export * from "./geofence";
+
 

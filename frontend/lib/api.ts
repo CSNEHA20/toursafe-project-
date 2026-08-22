@@ -253,6 +253,47 @@ export const responderApi = {
   getById: (id: string) => api.get(`/authority/responders/${id}`),
   create: (data: any) => api.post("/authority/responders", data),
   update: (id: string, data: any) => api.patch(`/authority/responders/${id}`, data),
+  // Prompt 13 endpoints
+  getMe: () => api.get<import("@/types").ResponderSelfProfile>("/responders/me"),
+  updateStatus: (status: string, reason?: string) =>
+    api.post("/responders/me/status", { status, reason }),
+  updateLocation: (data: { latitude: number; longitude: number; altitude?: number; accuracy?: number; heading?: number; speed?: number; tracking_session_id?: string; timestamp?: string }) =>
+    api.post("/responders/me/location", data),
+  startTracking: (device_battery_pct?: number) =>
+    api.post("/responders/me/tracking/start", null, { params: { device_battery_pct } }),
+  stopTracking: (device_battery_pct?: number) =>
+    api.post("/responders/me/tracking/stop", null, { params: { device_battery_pct } }),
+  getRecommendations: (params: { incident_id: string; required_type?: string; max_distance_km?: number; limit?: number }) =>
+    api.get<import("@/types").ResponderRecommendationItem[]>("/responders/recommendations", { params }),
+  getLiveMap: (active_only = true) =>
+    api.get("/responders/map/live", { params: { active_only } }),
+  listUnits: (params?: { unit_type?: string; status?: string; limit?: number; skip?: number }) =>
+    api.get<import("@/types").ResponderUnitRecord[]>("/responders/units", { params }),
+  createUnit: (data: any) => api.post<import("@/types").ResponderUnitRecord>("/responders/units", data),
+  updateUnit: (unit_id: string, data: any) => api.patch<import("@/types").ResponderUnitRecord>(`/responders/units/${unit_id}`, data),
+};
+
+export const incidentAssignmentApi = {
+  getAssignments: (incident_id: string) =>
+    api.get<import("@/types").AssignmentRecord[]>(`/authority/incidents/${incident_id}/assignments`),
+  createAssignment: (incident_id: string, data: { responder_id: string; unit_id?: string; notes?: string }) =>
+    api.post<import("@/types").AssignmentRecord>(`/authority/incidents/${incident_id}/assignments`, data),
+  acceptAssignment: (incident_id: string, assignment_id: string, notes?: string) =>
+    api.post<import("@/types").AssignmentRecord>(`/authority/incidents/${incident_id}/assignments/${assignment_id}/accept`, { notes }),
+  rejectAssignment: (incident_id: string, assignment_id: string, data: { reason: string; details?: string }) =>
+    api.post<import("@/types").AssignmentRecord>(`/authority/incidents/${incident_id}/assignments/${assignment_id}/reject`, data),
+  startResponse: (incident_id: string, assignment_id: string, notes?: string) =>
+    api.post<import("@/types").AssignmentRecord>(`/authority/incidents/${incident_id}/assignments/${assignment_id}/start`, { notes }),
+  markArrived: (incident_id: string, assignment_id: string, data: { latitude?: number; longitude?: number; accuracy?: number; force_override?: boolean; notes?: string }) =>
+    api.post<import("@/types").AssignmentRecord>(`/authority/incidents/${incident_id}/assignments/${assignment_id}/arrived`, data),
+  completeResponse: (incident_id: string, assignment_id: string, data: { completion_reason: string; resolution_notes?: string }) =>
+    api.post<import("@/types").AssignmentRecord>(`/authority/incidents/${incident_id}/assignments/${assignment_id}/complete`, data),
+  getMessages: (incident_id: string, limit = 50, skip = 0) =>
+    api.get<import("@/types").OperationalMessageRecord[]>(`/authority/incidents/${incident_id}/messages`, { params: { limit, skip } }),
+  sendMessage: (incident_id: string, data: { content: string; assignment_id?: string }) =>
+    api.post<import("@/types").OperationalMessageRecord>(`/authority/incidents/${incident_id}/messages`, data),
+  markMessagesRead: (incident_id: string) =>
+    api.post(`/authority/incidents/${incident_id}/messages/read`),
 };
 
 export const zoneApi = {

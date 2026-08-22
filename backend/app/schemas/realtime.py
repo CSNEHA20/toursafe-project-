@@ -76,6 +76,18 @@ class RealtimeEventType(str, Enum):
     EMERGENCY_UPDATED = "emergency.updated"
     EMERGENCY_DISPATCHED = "emergency.dispatched"
 
+    # Responder events
+    RESPONDER_STATUS_UPDATED = "responder.status.updated"
+    RESPONDER_LOCATION_UPDATED = "responder.location.updated"
+    RESPONDER_ASSIGNED = "responder.assigned"
+    RESPONDER_ACCEPTED = "responder.accepted"
+    RESPONDER_REJECTED = "responder.rejected"
+    RESPONDER_RESPONSE_STARTED = "responder.response.started"
+    RESPONDER_ARRIVED = "responder.arrived"
+    RESPONDER_COMPLETED = "responder.completed"
+    RESPONDER_MESSAGE_SENT = "responder.message.sent"
+    RESPONDER_MESSAGE_RECEIVED = "responder.message.received"
+
     # Identity events
     IDENTITY_VERIFIED = "identity.verified"
     IDENTITY_ACCESS_GRANTED = "identity.access_granted"

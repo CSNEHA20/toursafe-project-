@@ -197,6 +197,11 @@ class MockDatabase:
         self.incidents = MockCollection("incidents")
         self.sos_events = MockCollection("sos_events")
         self.responders = MockCollection("responders")
+        self.responder_units = MockCollection("responder_units")
+        self.incident_assignments = MockCollection("incident_assignments")
+        self.incident_messages = MockCollection("incident_messages")
+        self.responder_tracking_sessions = MockCollection("responder_tracking_sessions")
+        self.responder_location_history = MockCollection("responder_location_history")
         self.notifications = MockCollection("notifications")
         self.tourists = MockCollection("tourists")
         self.users = MockCollection("users")
@@ -207,6 +212,13 @@ class MockDatabase:
         if not hasattr(self, name):
             setattr(self, name, MockCollection(name))
         return getattr(self, name)
+
+    def __getattr__(self, name):
+        if name.startswith("__") and name.endswith("__"):
+            raise AttributeError(name)
+        new_col = MockCollection(name)
+        setattr(self, name, new_col)
+        return new_col
 
 
 @pytest.fixture(autouse=True)
