@@ -420,6 +420,12 @@ export const safetyCheckApi = {
   escalate: (checkId: string) => api.post(`/safety-check/${checkId}/escalate`),
 };
 
+export const commandCenterApi = {
+  getSnapshot: () => api.get<any>("/authority/command-center/snapshot"),
+  getSystemStatus: () => api.get<any>("/authority/command-center/system-status"),
+  search: (q: string, type?: string) => api.get<any>("/authority/command-center/search", { params: { q, type } }),
+};
+
 // ─── Mock data override ──────────────────────────────────────────────────────
 // When EXPO_PUBLIC_USE_MOCK=true all API objects return static mock data so the
 // app works without a running backend or Supabase session.
@@ -980,4 +986,170 @@ if (process.env.EXPO_PUBLIC_USE_MOCK === "true") {
   // ── safetyCheckApi ───────────────────────────────────────────────────────────
   safetyCheckApi.getMine = () => okd({ items: [], total: 0 });
   safetyCheckApi.getPending = () => okd({ items: [], total: 0 });
+
+  // ── commandCenterApi ────────────────────────────────────────────────────────
+  commandCenterApi.getSnapshot = () => {
+    const liveTourists = MOCK_TOURISTS.map((t: any) => ({
+      tourist_id: t.id,
+      user_id: t.user_id,
+      full_name: t.full_name,
+      phone: t.phone_e164,
+      nationality: t.nationality,
+      safety_state: t.status === "sos" ? "INCIDENT" : t.status === "warning" ? "ELEVATED" : "NORMAL",
+      tracking_status: "active",
+      latitude: t.current_lat,
+      longitude: t.current_lng,
+      altitude: 12.5,
+      accuracy_m: 4.8,
+      speed_mps: 1.2,
+      heading_deg: 180,
+      battery_pct: t.battery_pct || 85,
+      current_zone_id: t.current_zone_id,
+      current_zone_name: "Zone",
+      last_updated_at: new Date().toISOString(),
+      staleness: "LIVE",
+      verification_status: "verified",
+      credential_status: "active",
+    }));
+
+    const liveIncidents = MOCK_INCIDENTS.map((inc: any) => ({
+      incident_id: inc.incident_id || inc.id,
+      tourist_id: inc.tourist_id || "tourist_1",
+      tourist_name: inc.tourist_name || "Tourist",
+      source: inc.source || "SAFETY_ENGINE",
+      severity: inc.severity || "HIGH",
+      status: inc.status || "OPEN",
+      started_at: inc.created_at || new Date().toISOString(),
+      created_at: inc.created_at || new Date().toISOString(),
+      updated_at: inc.updated_at || new Date().toISOString(),
+      age_seconds: 180,
+      assigned_responder_id: inc.assigned_responder_id,
+      latitude: inc.latitude || 15.4989,
+      longitude: inc.longitude || 73.8278,
+      reasons: inc.reasons || ["Safety alert triggered"],
+      signal_summary: inc.signals || {},
+      timeline_summary: inc.timeline || [],
+      version: 1,
+      is_sos: inc.is_sos || inc.severity === "CRITICAL",
+    }));
+
+    const liveResponders = [
+      {
+        responder_id: "resp_01",
+        full_name: "Patrol Unit North 1",
+        unit_id: "unit_north_1",
+        unit_name: "North Beach Patrol",
+        unit_type: "POLICE",
+        status: "AVAILABLE",
+        latitude: 15.5500,
+        longitude: 73.7600,
+        battery_pct: 94,
+        capabilities: ["FIRST_AID", "WATER_RESCUE", "PATROL"],
+        last_location_time: new Date().toISOString(),
+        staleness: "LIVE",
+      },
+      {
+        responder_id: "resp_02",
+        full_name: "Medical Unit 2",
+        unit_id: "unit_med_2",
+        unit_name: "Emergency Medical Unit",
+        unit_type: "PARAMEDIC",
+        status: "ASSIGNED",
+        latitude: 15.5200,
+        longitude: 73.8200,
+        battery_pct: 88,
+        capabilities: ["PARAMEDIC", "AMBULANCE"],
+        last_location_time: new Date().toISOString(),
+        staleness: "LIVE",
+      },
+    ];
+
+    const liveZones = MOCK_ZONES.map((z: any) => ({
+      zone_id: z.id,
+      name: z.name,
+      description: z.description,
+      zone_type: z.zone_type,
+      risk_level: z.risk_level || "critical",
+      status: "active",
+      is_active: true,
+      center_lat: z.center_lat,
+      center_lng: z.center_lng,
+      boundary: z.boundary,
+      center: { type: "Point", coordinates: [z.center_lng, z.center_lat] },
+      active_tourists_count: z.tourist_count || 3,
+      active_incidents_count: z.active_alerts || 0,
+      recent_events_count: z.active_alerts || 0,
+    }));
+
+    return okd({
+      snapshot_id: `snap_${Date.now()}`,
+      server_time: new Date().toISOString(),
+      authority_scope: {
+        authority_id: "auth_goa_01",
+        user_id: "user_auth_1",
+        full_name: "Operations Chief",
+        organization_name: "Goa Police Tourism Dept",
+        designation: "Commanding Officer",
+        role: "authority",
+        jurisdiction_code: "IN-GOA-NORTH",
+        permissions: ["view_snapshot", "acknowledge_incident", "assess_incident", "assign_responder", "escalate_incident", "resolve_incident", "close_incident"],
+      },
+      kpis: {
+        active_tourists: liveTourists.length,
+        open_incidents: liveIncidents.length,
+        sos_incidents: liveIncidents.filter((i: any) => i.is_sos).length,
+        active_responders: liveResponders.length,
+        unassigned_incidents: liveIncidents.filter((i: any) => !i.assigned_responder_id).length,
+        elevated_safety_states: liveTourists.filter((t: any) => t.safety_state !== "NORMAL").length,
+        stale_tracking_tourists: 0,
+      },
+      system_health: {
+        realtime: "HEALTHY",
+        telemetry: "HEALTHY",
+        ml: "HEALTHY",
+        notifications: "HEALTHY",
+        map: "HEALTHY",
+        backend: "HEALTHY",
+        details: { mode: "MOCK_OPERATIONAL_MODE" },
+        checked_at: new Date().toISOString(),
+      },
+      active_incidents: liveIncidents,
+      sos_queue: liveIncidents.filter((i: any) => i.is_sos),
+      tourists: liveTourists,
+      responders: liveResponders,
+      zones: liveZones,
+      freshness: { is_cached: false, generated_at: new Date().toISOString() },
+    });
+  };
+
+  commandCenterApi.getSystemStatus = () =>
+    okd({
+      realtime: "HEALTHY",
+      telemetry: "HEALTHY",
+      ml: "HEALTHY",
+      notifications: "HEALTHY",
+      map: "HEALTHY",
+      backend: "HEALTHY",
+      details: { mode: "MOCK_OPERATIONAL_MODE" },
+      checked_at: new Date().toISOString(),
+    });
+
+  commandCenterApi.search = (q: string) =>
+    okd({
+      query: q,
+      results: [
+        {
+          id: "tourist_1",
+          entity_type: "tourist",
+          title: "Alice Smith",
+          subtitle: "UK • Safety: NORMAL",
+          badge: "NORMAL",
+          status: "active",
+          latitude: 15.4989,
+          longitude: 73.8278,
+          metadata: {},
+        },
+      ],
+      total_count: 1,
+    });
 }

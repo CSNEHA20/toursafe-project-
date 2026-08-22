@@ -8,7 +8,16 @@ export type ZonePolygonProp = {
   risk_level?: string;
 };
 
-type RealMapProps = {
+export type MapMarkerProp = {
+  latitude: number;
+  longitude: number;
+  title: string;
+  color?: string;
+  icon?: string;
+  subtitle?: string;
+};
+
+export type RealMapProps = {
   region: {
     latitude: number;
     longitude: number;
@@ -16,17 +25,13 @@ type RealMapProps = {
     longitudeDelta?: number;
     zoom?: number;
   };
-  markers?: Array<{
-    latitude: number;
-    longitude: number;
-    title: string;
-    color?: string;
-  }>;
+  markers?: MapMarkerProp[];
   route?: Array<{ latitude: number; longitude: number }>;
   polygon?: Array<{ latitude: number; longitude: number }>;
   polygons?: ZonePolygonProp[];
   overlayTitle?: string;
   overlayText?: string;
+  height?: number | string;
 };
 
 export default function RealMap(props: RealMapProps) {

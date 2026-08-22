@@ -3,16 +3,34 @@ import { useAlertStore } from "@/store/alertStore";
 import { useMapStore } from "@/store/mapStore";
 import { useSOSStore } from "@/store/sosStore";
 import { useAnomalyStore } from "@/store/anomalyStore";
+import { useCommandCenterStore } from "@/store/commandCenterStore";
 import type { Alert, GeoZone, SOSEvent } from "@/types";
 import type { AnomalyDetectedPayload, AnomalyClearedPayload } from "@/types/anomaly";
 
 let isInitialized = false;
 let unsubscribers: (() => void)[] = [];
 
-
 export function initRealtimeEventDispatcher() {
   if (isInitialized) return;
   isInitialized = true;
+
+  // Track realtime connection status into CommandCenterStore
+  const unsubState = realtimeClient.onStateChange((state) => {
+    useCommandCenterStore.getState().setConnectionState(state);
+    if (state === "connected") {
+      useCommandCenterStore.getState().reconcileSnapshot();
+    }
+  });
+
+  // Global operational router for Command Center
+  const unsubCommandCenterWildcard = realtimeClient.onEvent(
+    "*",
+    (payload, envelope) => {
+      if (envelope) {
+        useCommandCenterStore.getState().applyRealtimeEvent(envelope);
+      }
+    }
+  );
 
   // 1. Zone Events
   const unsubZoneCreated = realtimeClient.onEvent<GeoZone>(
@@ -145,6 +163,8 @@ export function initRealtimeEventDispatcher() {
   );
 
   unsubscribers = [
+    unsubState,
+    unsubCommandCenterWildcard,
     unsubZoneCreated,
     unsubZoneUpdated,
     unsubZoneStatus,
@@ -158,7 +178,7 @@ export function initRealtimeEventDispatcher() {
     unsubAnomalyCleared,
   ];
 
-  console.log("[EventDispatcher] Realtime event subscriptions initialized.");
+  console.log("[EventDispatcher] Realtime event subscriptions & Command Center router initialized.");
 }
 
 export function cleanupRealtimeEventDispatcher() {
