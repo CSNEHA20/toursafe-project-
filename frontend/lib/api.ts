@@ -344,14 +344,38 @@ export const geofenceApi = {
 };
 
 export const analyticsApi = {
-  getKPIs: () => api.get("/analytics/kpis"),
-  getResponseTimes: (days = 30) =>
-    api.get("/analytics/response-times", { params: { days } }),
-  getIncidentTrends: (days = 30) =>
-    api.get("/analytics/incident-trends", { params: { days } }),
-  getZoneStats: () => api.get("/analytics/zone-stats"),
-  getHeatmapData: () => api.get("/analytics/heatmap"),
-  getAlertDistribution: () => api.get("/analytics/alert-distribution"),
+  getOverview: (params?: { start_time?: string; end_time?: string; granularity?: string; bypass_cache?: boolean }) =>
+    api.get("/analytics/overview", { params }),
+  getIncidents: (params?: { start_time?: string; end_time?: string; granularity?: string; severity?: string; incident_source?: string; zone_id?: string; bypass_cache?: boolean }) =>
+    api.get("/analytics/incidents", { params }),
+  getZones: (params?: { start_time?: string; end_time?: string; risk_level?: string; bypass_cache?: boolean }) =>
+    api.get("/analytics/zones", { params }),
+  getZoneDetail: (zoneId: string, params?: { start_time?: string; end_time?: string; granularity?: string; bypass_cache?: boolean }) =>
+    api.get(`/analytics/zones/${zoneId}`, { params }),
+  getHeatmaps: (params?: { layer?: string; start_time?: string; end_time?: string; bypass_cache?: boolean }) =>
+    api.get("/analytics/heatmaps", { params }),
+  getAnomalies: (params?: { start_time?: string; end_time?: string; granularity?: string; model_version?: string; zone_id?: string; bypass_cache?: boolean }) =>
+    api.get("/analytics/anomalies", { params }),
+  getSafety: (params?: { start_time?: string; end_time?: string; granularity?: string; bypass_cache?: boolean }) =>
+    api.get("/analytics/safety", { params }),
+  getResponders: (params?: { start_time?: string; end_time?: string; responder_id?: string; unit_id?: string; bypass_cache?: boolean }) =>
+    api.get("/analytics/responders", { params }),
+  getNotifications: (params?: { start_time?: string; end_time?: string; bypass_cache?: boolean }) =>
+    api.get("/analytics/notifications", { params }),
+  getDataQuality: () => api.get("/analytics/data-quality"),
+  getTouristStats: (touristId: string) => api.get(`/analytics/tourists/${touristId}`),
+  getMyStats: () => api.get("/analytics/tourist/my-stats"),
+  createExport: (data: { export_type: string; format?: string; filters?: any }) =>
+    api.post("/analytics/export", data),
+  getExportStatus: (jobId: string) => api.get(`/analytics/export/${jobId}`),
+  getDownloadUrl: (jobId: string) => `${API_BASE}/api/v1/analytics/export/${jobId}/download`,
+  // Backward compatibility aliases
+  getKPIs: () => api.get("/analytics/overview"),
+  getResponseTimes: (days = 30) => api.get("/analytics/incidents", { params: { days } }),
+  getIncidentTrends: (days = 30) => api.get("/analytics/overview", { params: { days } }),
+  getZoneStats: () => api.get("/analytics/zones"),
+  getHeatmapData: () => api.get("/analytics/heatmaps"),
+  getAlertDistribution: () => api.get("/analytics/safety"),
 };
 
 export const efirApi = {
@@ -423,6 +447,281 @@ if (process.env.EXPO_PUBLIC_USE_MOCK === "true") {
   const okd = async (data: unknown, ms = 350) => { await delay(ms); return ok(data); };
 
   // ── analyticsApi ────────────────────────────────────────────────────────────
+  analyticsApi.getOverview = () =>
+    okd({
+      active_tourists: MOCK_KPI.total_active,
+      active_tracking_sessions: MOCK_KPI.total_active,
+      tourists_in_elevated_safety: 2,
+      tourists_in_zones: 15,
+      open_incidents: MOCK_KPI.alerts_today,
+      responding_incidents: 1,
+      sos_events_today: MOCK_KPI.status_breakdown.sos,
+      total_incidents_in_period: 12,
+      total_anomalies_in_period: 8,
+      median_response_time_seconds: 420.0,
+      p90_response_time_seconds: 780.0,
+      tracking_coverage_percentage: 95.4,
+      gps_availability_percentage: 99.1,
+      freshness: { is_cached: false, data_status: "REAL_DATA" },
+      incident_trend: [
+        { timestamp: "2026-08-16T00:00:00Z", count: 2, value: 2 },
+        { timestamp: "2026-08-17T00:00:00Z", count: 1, value: 1 },
+        { timestamp: "2026-08-18T00:00:00Z", count: 4, value: 4 },
+        { timestamp: "2026-08-19T00:00:00Z", count: 2, value: 2 },
+        { timestamp: "2026-08-20T00:00:00Z", count: 3, value: 3 },
+      ],
+      safety_state_distribution: { NORMAL: 42, WATCH: 3, ELEVATED: 1, INCIDENT: 1 },
+    });
+
+  analyticsApi.getIncidents = () =>
+    okd({
+      total_incidents: 12,
+      open_incidents: 2,
+      resolved_incidents: 9,
+      closed_incidents: 8,
+      cancelled_incidents: 1,
+      escalated_incidents: 2,
+      false_alarms: 1,
+      false_alarm_rate: 0.083,
+      by_source: { MANUAL_SOS: 5, SAFETY_ENGINE: 6, AUTHORITY_CREATED: 1 },
+      by_severity: { LOW: 3, MEDIUM: 5, HIGH: 3, CRITICAL: 1 },
+      by_zone: { "zone-1": 4, "zone-2": 3 },
+      time_to_acknowledge: { count: 12, p50_seconds: 180.0, p90_seconds: 360.0, mean_seconds: 210.0 },
+      time_to_assign: { count: 12, p50_seconds: 240.0, p90_seconds: 480.0, mean_seconds: 270.0 },
+      time_to_response: { count: 12, p50_seconds: 420.0, p90_seconds: 780.0, mean_seconds: 450.0 },
+      time_to_arrival: { count: 10, p50_seconds: 600.0, p90_seconds: 960.0, mean_seconds: 640.0 },
+      time_to_resolution: { count: 9, p50_seconds: 900.0, p90_seconds: 1400.0, mean_seconds: 950.0 },
+      sla_threshold_seconds: 900.0,
+      within_sla_count: 8,
+      outside_sla_count: 1,
+      sla_compliance_rate: 88.9,
+      time_series: [],
+      freshness: { is_cached: false },
+    });
+
+  analyticsApi.getZones = () =>
+    okd({
+      zones: MOCK_ZONE_SUMMARY.map((z: any) => ({
+        zone_id: z.id,
+        name: z.name,
+        risk_level: z.risk_level || "medium",
+        zone_type: z.zone_type || "safe",
+        unique_tourists: z.tourist_count,
+        total_entries: z.tourist_count * 2,
+        total_exits: z.tourist_count * 2 - 1,
+        total_dwell_events: z.tourist_count,
+        avg_dwell_seconds: 1200.0,
+        max_dwell_seconds: 3600.0,
+        incident_count: z.active_alerts,
+        anomaly_count: 1,
+        sos_count: 0,
+        active_tourists_now: z.tourist_count,
+      })),
+      total_zones: MOCK_ZONE_SUMMARY.length,
+      freshness: { is_cached: false },
+    });
+
+  analyticsApi.getZoneDetail = (zoneId: string) =>
+    okd({
+      zone_id: zoneId,
+      name: "Zone Detail",
+      risk_level: "low",
+      zone_type: "safe",
+      unique_tourists: 15,
+      entries_count: 30,
+      exits_count: 28,
+      dwell_count: 15,
+      average_dwell_seconds: 1200.0,
+      maximum_dwell_seconds: 3600.0,
+      incidents_count: 1,
+      sos_count: 0,
+      anomalies_count: 1,
+      hourly_entry_distribution: {},
+      time_series: [],
+      freshness: { is_cached: false },
+    });
+
+  analyticsApi.getHeatmaps = () =>
+    okd({
+      layer_type: "tourist_density",
+      cells: MOCK_HEATMAP_POINTS.map((pt: any, idx: number) => ({
+        geohash: `gh_${idx}`,
+        latitude: pt.latitude,
+        longitude: pt.longitude,
+        weight: pt.weight,
+        sample_count: pt.weight,
+        is_suppressed: false,
+      })),
+      total_cells: MOCK_HEATMAP_POINTS.length,
+      suppressed_cells_count: 0,
+      privacy_threshold_k: 3,
+      freshness: { is_cached: false },
+    });
+
+  analyticsApi.getAnomalies = () =>
+    okd({
+      total_anomalies: 8,
+      active_anomalies: 1,
+      cleared_anomalies: 7,
+      by_model_version: { "v1.0.0": 8 },
+      by_zone: { "zone-1": 3 },
+      score_distribution: { "0.0-0.5": 1, "0.5-0.7": 3, "0.7-0.9": 3, "0.9-1.0": 1, ">1.0": 0 },
+      mean_duration_seconds: 42.0,
+      median_duration_seconds: 38.0,
+      incident_conversion_count: 2,
+      cleared_without_incident_count: 6,
+      operational_conversion_rate: 0.25,
+      inference_latency_avg_ms: 18.4,
+      time_series: [],
+      freshness: { is_cached: false },
+    });
+
+  analyticsApi.getSafety = () =>
+    okd({
+      total_decisions: 150,
+      state_counts: { NORMAL: 135, WATCH: 10, ELEVATED: 3, INCIDENT: 2 },
+      transition_frequencies: { "NORMAL->WATCH": 10, "WATCH->ELEVATED": 3 },
+      unknown_state_causes: { "GPS unavailable": 2 },
+      time_series: [],
+      freshness: { is_cached: false },
+    });
+
+  analyticsApi.getResponders = () =>
+    okd({
+      total_responders: 8,
+      active_responders: 6,
+      available_responders: 4,
+      assigned_responders: 2,
+      offline_responders: 2,
+      total_assignments: 14,
+      completed_assignments: 12,
+      rejected_assignments: 1,
+      rejection_rate: 0.071,
+      acceptance_rate: 0.929,
+      p50_response_time_seconds: 120.0,
+      p90_response_time_seconds: 240.0,
+      p50_arrival_time_seconds: 480.0,
+      p90_arrival_time_seconds: 720.0,
+      assignments_by_responder_type: { POLICE: 8, MEDICAL: 4, FIRE: 2 },
+      unit_performance: [{ unit_id: "u-1", unit_name: "Central Police Unit", total_assignments: 8, completed: 7, active_responders: 4 }],
+      freshness: { is_cached: false },
+    });
+
+  analyticsApi.getNotifications = () =>
+    okd({
+      total_created: 45,
+      total_sent: 43,
+      total_delivered: 41,
+      total_failed: 2,
+      delivery_success_rate: 95.3,
+      channel_distribution: { PUSH: 30, SMS: 10, EMAIL: 5 },
+      category_distribution: { EMERGENCY: 15, SYSTEM: 30 },
+      provider_health: { FIREBASE: { sent: 30, delivered: 29, failed: 1 }, TWILIO: { sent: 10, delivered: 9, failed: 1 } },
+      dead_letter_count: 0,
+      mean_delivery_latency_ms: 320.0,
+      freshness: { is_cached: false },
+    });
+
+  analyticsApi.getDataQuality = () =>
+    okd({
+      overall_health: "GOOD",
+      gps_quality: { domain: "GPS Telemetry", status: "GOOD", score: 98.5, details: { evaluated_samples: 450 } },
+      telemetry_quality: { domain: "IMU Telemetry Pipeline", status: "GOOD", score: 99.1, details: { samples_last_24h: 1200 } },
+      ml_inference_quality: { domain: "LSTM Anomaly Inference", status: "GOOD", score: 99.4, details: { inference_latency_avg_ms: 18.4 } },
+      zone_geometry_validity: { domain: "Zone Geometry Validity", status: "GOOD", score: 100.0, details: { active_zones: 4 } },
+      incident_completeness: { domain: "Incident Audit Trail", status: "GOOD", score: 100.0, details: { incidents_last_24h: 3 } },
+      notification_delivery_health: { domain: "Notification Delivery", status: "GOOD", score: 95.3, details: { providers_online: 3 } },
+      freshness: { is_cached: false },
+    });
+
+  analyticsApi.getTouristStats = (touristId: string) =>
+    okd({
+      tourist_id: touristId,
+      total_trips: 3,
+      completed_trips: 2,
+      total_distance_km: 18.4,
+      total_duration_hours: 6.2,
+      unique_zones_visited: 4,
+      trips: [],
+      freshness: { is_cached: false },
+    });
+
+  analyticsApi.getMyStats = () =>
+    okd({
+      tourist_id: MOCK_LOGGED_IN_TOURIST.id,
+      total_trips: 3,
+      completed_trips: 2,
+      total_distance_km: 18.4,
+      total_duration_hours: 6.2,
+      unique_zones_visited: 4,
+      trips: [
+        {
+          trip_id: "trip-01",
+          title: "Taj Mahal Heritage Walk",
+          status: "completed",
+          started_at: "2026-08-20T09:00:00Z",
+          ended_at: "2026-08-20T12:30:00Z",
+          distance_km: 7.8,
+          zones_visited_count: 2,
+          zones_visited_names: ["Taj East Gate Zone", "Heritage Corridor"],
+          total_dwell_seconds: 4200.0,
+          gps_accuracy_avg_meters: 8.2,
+          safety_events_count: 0,
+          incidents_count: 0,
+          sos_count: 0,
+          tracking_gaps_count: 0,
+        },
+        {
+          trip_id: "trip-02",
+          title: "Fatehpur Sikri Excursion",
+          status: "completed",
+          started_at: "2026-08-21T10:00:00Z",
+          ended_at: "2026-08-21T15:00:00Z",
+          distance_km: 10.6,
+          zones_visited_count: 1,
+          zones_visited_names: ["Monument Safety Perimeter"],
+          total_dwell_seconds: 5400.0,
+          gps_accuracy_avg_meters: 10.5,
+          safety_events_count: 0,
+          incidents_count: 0,
+          sos_count: 0,
+          tracking_gaps_count: 0,
+        },
+      ],
+      freshness: { is_cached: false },
+    });
+
+  analyticsApi.createExport = (data: any) =>
+    okd({
+      job_id: `exp_${Date.now()}`,
+      requested_by: "authority_admin",
+      export_type: data.export_type || "incidents",
+      format: data.format || "csv",
+      status: "completed",
+      created_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+      file_reference: `export_${data.export_type || "incidents"}.${data.format || "csv"}`,
+      record_count: 12,
+      file_size_bytes: 4096,
+      download_url: `/api/v1/analytics/export/exp_mock/download`,
+    }, 600);
+
+  analyticsApi.getExportStatus = (jobId: string) =>
+    okd({
+      job_id: jobId,
+      requested_by: "authority_admin",
+      export_type: "incidents",
+      format: "csv",
+      status: "completed",
+      created_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+      file_reference: `export_${jobId}.csv`,
+      record_count: 12,
+      file_size_bytes: 4096,
+      download_url: `/api/v1/analytics/export/${jobId}/download`,
+    });
+
+  // Backward compatibility mock handlers
   analyticsApi.getKPIs = () =>
     okd({
       active_tourists: MOCK_KPI.total_active,

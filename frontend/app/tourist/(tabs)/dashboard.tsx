@@ -20,6 +20,7 @@ import {
   Radio,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import TouristTripAnalytics from '@/components/tourist/TouristTripAnalytics';
 
 export default function TouristDashboard() {
   const router = useRouter();
@@ -197,6 +198,9 @@ export default function TouristDashboard() {
           </View>
         )}
       </View>
+
+      {/* Travel & Safety Analytics */}
+      <TouristTripAnalytics />
 
       {/* Emergency contacts */}
       <View style={styles.card}>

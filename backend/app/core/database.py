@@ -84,6 +84,11 @@ async def init_db_indexes(db=None):
         await db.telemetry_sessions.create_index([("tourist_id", pymongo.ASCENDING), ("started_at", pymongo.DESCENDING)])
         await db.telemetry_sessions.create_index([("status", pymongo.ASCENDING)])
 
+        # 4. Export Jobs (Prompt 15 Analytics Foundation)
+        await db.export_jobs.create_index("job_id", unique=True, sparse=True)
+        await db.export_jobs.create_index([("requested_by", pymongo.ASCENDING), ("created_at", pymongo.DESCENDING)])
+        await db.export_jobs.create_index([("status", pymongo.ASCENDING)])
+
         print("✅ Geospatial and collection indexes successfully initialized.")
     except Exception as e:
         print(f"⚠️ Index initialization warning: {e}")
