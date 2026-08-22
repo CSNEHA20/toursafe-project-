@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { BellRing, Gauge, MapPinned, Users, ShieldAlert, FileText, Activity, AlertTriangle, CheckCircle, ShieldCheck, Clock, Eye } from 'lucide-react-native';
 import RoleSwitch from '@/components/RoleSwitch';
+import { NotificationBellButton } from '@/components/NotificationBellButton';
+import { ConnectionStatusBadge } from '@/components/ConnectionStatusBadge';
 import { demoTourists, demoZones, demoActivityFeed } from '@/lib/demoContent';
 import { useAnomalyStore } from '@/store/anomalyStore';
 import { useSafetyStore } from '@/store/safetyStore';
@@ -63,7 +65,13 @@ export default function AdminDashboard() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <RoleSwitch currentRole="authority" />
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <RoleSwitch currentRole="authority" />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <ConnectionStatusBadge />
+          <NotificationBellButton />
+        </View>
+      </View>
 
       <View style={styles.hero}>
         <View style={{ flex: 1 }}>

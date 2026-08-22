@@ -25,6 +25,7 @@ from .routers.ml import router as ml_router
 from .routers.safety import router as safety_router
 from .routers.emergency import router as emergency_router
 from .routers.responders import router as responders_router
+from .routers.notifications import router as notifications_router
 from .services.ml.engine import ml_inference_engine
 from .services.safety import safety_repository
 
@@ -106,3 +107,4 @@ app.include_router(authority_zones_router)
 app.include_router(emergency_router)
 app.include_router(responders_router)
 app.include_router(safety_router)
+app.include_router(notifications_router)

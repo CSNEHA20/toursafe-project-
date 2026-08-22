@@ -5,6 +5,7 @@ Strict Scope Enforcement:
 - Does NOT claim external live police/ambulance/fire dispatch.
 - Uses honest provider statuses (NOT_CONFIGURED, DEVELOPMENT, QUEUED, SENT, FAILED).
 - Pluggable architecture allowing future real SMS/Voice/FCM gateways without modifying incident workflows.
+- Bridges seamlessly with the central TourSafe notification infrastructure (Prompt 14).
 """
 
 from abc import ABC, abstractmethod
@@ -15,22 +16,23 @@ from typing import Any, Dict, List, Optional
 import uuid
 
 from ...core import database as db_core
-
-
-def get_database():
-    return db_core.get_database()
 from ...schemas.emergency import (
     NotificationChannel,
     NotificationRecord,
     NotificationStatus,
 )
+from ..notifications import notification_center, provider_registry
 
 logger = logging.getLogger("toursafe.emergency.notifications")
 
 
+def get_database():
+    return db_core.get_database()
+
+
 class NotificationProvider(ABC):
     """
-    Abstract base class for all notification channel providers.
+    Abstract base class for emergency notification channel providers.
     """
 
     def __init__(self, name: str, channel: NotificationChannel):
@@ -57,10 +59,6 @@ class NotificationProvider(ABC):
 
 
 class PushNotificationProvider(NotificationProvider):
-    """
-    Push notification provider stub (e.g., FCM / APNs).
-    """
-
     def __init__(self):
         super().__init__(name="TourSafePushProvider", channel=NotificationChannel.PUSH)
         self.fcm_key = os.getenv("FCM_SERVER_KEY")
@@ -83,7 +81,6 @@ class PushNotificationProvider(NotificationProvider):
                 "detail": "Push provider operating in development mode (no external FCM key configured)",
             }
 
-        # Future live FCM integration point
         return {
             "status": NotificationStatus.SENT,
             "provider": self.name,
@@ -92,10 +89,6 @@ class PushNotificationProvider(NotificationProvider):
 
 
 class SMSNotificationProvider(NotificationProvider):
-    """
-    SMS notification provider stub (e.g., Twilio / AWS SNS / Fast2SMS).
-    """
-
     def __init__(self):
         super().__init__(name="TourSafeSMSProvider", channel=NotificationChannel.SMS)
         self.twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
@@ -126,10 +119,6 @@ class SMSNotificationProvider(NotificationProvider):
 
 
 class EmailNotificationProvider(NotificationProvider):
-    """
-    Email notification provider stub (e.g., SendGrid / SMTP / SES).
-    """
-
     def __init__(self):
         super().__init__(name="TourSafeEmailProvider", channel=NotificationChannel.EMAIL)
         self.smtp_host = os.getenv("SMTP_HOST")
@@ -160,10 +149,6 @@ class EmailNotificationProvider(NotificationProvider):
 
 
 class VoiceCallNotificationProvider(NotificationProvider):
-    """
-    Automated voice call provider stub (e.g., Twilio Voice).
-    """
-
     def __init__(self):
         super().__init__(name="TourSafeVoiceProvider", channel=NotificationChannel.VOICE)
         self.voice_sid = os.getenv("TWILIO_VOICE_SID")
@@ -195,7 +180,8 @@ class VoiceCallNotificationProvider(NotificationProvider):
 
 class NotificationService:
     """
-    Central notification orchestration service.
+    Emergency notification orchestration service.
+    Bridges with central Prompt 14 notification infrastructure.
     """
 
     def __init__(self):
@@ -305,7 +291,7 @@ class NotificationService:
                         "relationship": tourist_doc.get("emergency_contact_relation", "Contact"),
                     }]
 
-            subject = f"TourSafe Safety Alert: Incident reported for your contact"
+            subject = "TourSafe Safety Alert: Incident reported for your contact"
             message = (
                 f"TourSafe Alert: An emergency condition (Severity: {severity}) has been logged for your contact. "
                 f"Authority command operations are actively responding. "

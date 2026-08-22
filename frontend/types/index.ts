@@ -723,5 +723,6 @@ export interface ResponderSelfProfile {
 }
 
 export * from "./geofence";
+export * from "./notification";
 
 

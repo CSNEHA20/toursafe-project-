@@ -100,7 +100,7 @@ class SafetyEventPublisher:
             logger.warning("Failed to broadcast safety.state.changed to tourist: %s", e)
 
     async def publish_incident_created(self, incident: IncidentRecord) -> None:
-        """Broadcasts incident.created to authority operations channel."""
+        """Broadcasts incident.created to authority operations channel and notification infrastructure."""
         envelope = RealtimeEventEnvelope(
             event_type=RealtimeEventType.INCIDENT_CREATED.value,
             source="safety_orchestrator",
@@ -111,6 +111,17 @@ class SafetyEventPublisher:
             logger.info("Broadcasted incident.created [%s] for tourist %s", incident.incident_id, incident.tourist_id)
         except Exception as e:
             logger.warning("Failed to broadcast incident.created: %s", e)
+
+        try:
+            from ..notifications import notification_center
+            await notification_center.handle_domain_event(
+                event_type="incident.created",
+                payload=incident.model_dump(),
+                incident_id=incident.incident_id,
+                tourist_id=incident.tourist_id,
+            )
+        except Exception as e:
+            logger.warning("Failed to process notification policy for incident.created: %s", e)
 
     async def publish_incident_updated(self, incident: IncidentRecord) -> None:
         """Broadcasts incident.updated to authority operations channel."""
@@ -137,6 +148,17 @@ class SafetyEventPublisher:
             await realtime_bus.publish_to_channel(f"tourist:{tourist_id}", envelope)
         except Exception as e:
             logger.warning("Failed to broadcast sos.created: %s", e)
+
+        try:
+            from ..notifications import notification_center
+            await notification_center.handle_domain_event(
+                event_type="incident.created",
+                payload=sos_dict,
+                incident_id=sos_dict.get("incident_id"),
+                tourist_id=tourist_id,
+            )
+        except Exception as e:
+            logger.warning("Failed to process notification policy for sos.created: %s", e)
 
     async def publish_incident_acknowledged(self, incident: IncidentRecord) -> None:
         """Broadcasts incident.acknowledged to authority operations and tourist channels."""
@@ -198,6 +220,19 @@ class SafetyEventPublisher:
         except Exception as e:
             logger.warning("Failed to broadcast incident.assigned: %s", e)
 
+        try:
+            from ..notifications import notification_center
+            await notification_center.handle_domain_event(
+                event_type="incident.assigned",
+                payload=incident.model_dump(),
+                incident_id=incident.incident_id,
+                tourist_id=incident.tourist_id,
+                responder_id=incident.assigned_responder_id,
+                unit_id=incident.assigned_unit_id,
+            )
+        except Exception as e:
+            logger.warning("Failed to process notification policy for incident.assigned: %s", e)
+
     async def publish_incident_response_started(self, incident: IncidentRecord) -> None:
         envelope = RealtimeEventEnvelope(
             event_type=RealtimeEventType.INCIDENT_RESPONSE_STARTED.value,
@@ -231,6 +266,17 @@ class SafetyEventPublisher:
             await realtime_bus.publish_to_channel("authority:operations", envelope)
         except Exception as e:
             logger.warning("Failed to broadcast incident.escalated: %s", e)
+
+        try:
+            from ..notifications import notification_center
+            await notification_center.handle_domain_event(
+                event_type="incident.escalated",
+                payload=incident.model_dump(),
+                incident_id=incident.incident_id,
+                tourist_id=incident.tourist_id,
+            )
+        except Exception as e:
+            logger.warning("Failed to process notification policy for incident.escalated: %s", e)
 
     async def publish_incident_note_added(self, incident_id: str, note_dict: Dict[str, Any]) -> None:
         envelope = RealtimeEventEnvelope(
@@ -290,6 +336,17 @@ class SafetyEventPublisher:
             logger.info("Broadcasted incident.resolved [%s] for tourist %s", incident.incident_id, incident.tourist_id)
         except Exception as e:
             logger.warning("Failed to broadcast incident.resolved: %s", e)
+
+        try:
+            from ..notifications import notification_center
+            await notification_center.handle_domain_event(
+                event_type="incident.resolved",
+                payload=incident.model_dump(),
+                incident_id=incident.incident_id,
+                tourist_id=incident.tourist_id,
+            )
+        except Exception as e:
+            logger.warning("Failed to process notification policy for incident.resolved: %s", e)
 
     async def publish_incident_cancelled(self, incident: IncidentRecord) -> None:
         """Broadcasts incident.cancelled to authority operations and tourist channels."""

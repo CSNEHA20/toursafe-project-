@@ -31,6 +31,7 @@ import {
   Users,
 } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
+import { NotificationBellButton } from '@/components/NotificationBellButton';
 import { responderApi, incidentAssignmentApi } from '@/lib/api';
 import type {
   AssignmentRecord,
@@ -173,15 +174,18 @@ export default function ResponderDashboardScreen() {
           </View>
         </View>
 
-        <TouchableOpacity
-          style={styles.refreshBtn}
-          onPress={() => {
-            setRefreshing(true);
-            loadProfile();
-          }}
-        >
-          <RefreshCw size={18} color="#94A3B8" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <NotificationBellButton />
+          <TouchableOpacity
+            style={styles.refreshBtn}
+            onPress={() => {
+              setRefreshing(true);
+              loadProfile();
+            }}
+          >
+            <RefreshCw size={18} color="#94A3B8" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView

@@ -6,6 +6,7 @@ import { touristApi } from '@/lib/api';
 import type { Tourist } from '@/types';
 import RoleSwitch from '@/components/RoleSwitch';
 import { ConnectionStatusBadge } from '@/components/ConnectionStatusBadge';
+import { NotificationBellButton } from '@/components/NotificationBellButton';
 import { useLocationStore } from '@/store/locationStore';
 import { useIMUStore } from '@/store/imuStore';
 import { imuController } from '@/lib/sensors/imuController';
@@ -74,7 +75,10 @@ export default function TouristDashboard() {
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <RoleSwitch currentRole="tourist" />
-        <ConnectionStatusBadge />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <ConnectionStatusBadge />
+          <NotificationBellButton />
+        </View>
       </View>
       {/* Welcome banner */}
       <View style={styles.welcomeBanner}>
