@@ -22,7 +22,21 @@ import {
   CopilotSession,
   copilotApi,
 } from "@/lib/copilotApi";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import {
+  Sparkles,
+  Bot,
+  X,
+  Send,
+  CheckCircle2,
+  AlertTriangle,
+  ChevronRight,
+  ThumbsUp,
+  ThumbsDown,
+  Shield,
+  FileText,
+  Database,
+  Check,
+} from "lucide-react-native";
 
 interface CopilotPanelProps {
   visible: boolean;
@@ -205,7 +219,7 @@ export const CopilotPanel: React.FC<CopilotPanelProps> = ({
           <View className="flex-row items-center justify-between px-5 py-4 bg-[#1E293B] border-b border-slate-700">
             <View className="flex-row items-center space-x-3">
               <View className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/40 items-center justify-center">
-                <MaterialCommunityIcons name="shield-account" size={20} color="#06B6D4" />
+                <Bot size={18} color="#06B6D4" />
               </View>
               <View>
                 <Text className="text-white font-bold text-base tracking-wide">TourSafe Authority AI Copilot</Text>
@@ -222,8 +236,10 @@ export const CopilotPanel: React.FC<CopilotPanelProps> = ({
               <Pressable
                 onPress={onClose}
                 className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center hover:bg-slate-700"
+                accessibilityRole="button"
+                accessibilityLabel="Close Copilot Panel"
               >
-                <MaterialCommunityIcons name="close" size={18} color="#94A3B8" />
+                <X size={16} color="#94A3B8" />
               </Pressable>
             </View>
           </View>
@@ -292,11 +308,11 @@ export const CopilotPanel: React.FC<CopilotPanelProps> = ({
                               key={cIdx}
                               className="px-2 py-1 rounded bg-slate-800/90 border border-slate-600/60 flex-row items-center space-x-1"
                             >
-                              <MaterialCommunityIcons
-                                name={c.source_type === "document" ? "file-document-outline" : "database-check"}
-                                size={12}
-                                color="#38BDF8"
-                              />
+                              {c.source_type === "document" ? (
+                                <FileText size={12} color="#38BDF8" />
+                              ) : (
+                                <Database size={12} color="#38BDF8" />
+                              )}
                               <Text className="text-[10px] text-sky-300 font-mono">
                                 {c.title} {c.section ? `(${c.section})` : ""}
                               </Text>
@@ -310,7 +326,7 @@ export const CopilotPanel: React.FC<CopilotPanelProps> = ({
                     {m.action_proposal && (
                       <View className="mt-4 p-3.5 rounded-lg bg-amber-950/30 border border-amber-500/60">
                         <View className="flex-row items-center space-x-2 mb-2">
-                          <MaterialCommunityIcons name="alert-decagram" size={16} color="#F59E0B" />
+                          <AlertTriangle size={15} color="#F59E0B" />
                           <Text className="text-xs font-bold text-amber-400 uppercase tracking-wider">
                             Action Proposal: {m.action_proposal.action_type.replace("_", " ")}
                           </Text>
@@ -354,7 +370,7 @@ export const CopilotPanel: React.FC<CopilotPanelProps> = ({
                                 <ActivityIndicator size="small" color="#FFFFFF" />
                               ) : (
                                 <>
-                                  <MaterialCommunityIcons name="check-bold" size={12} color="#FFFFFF" />
+                                  <Check size={12} color="#FFFFFF" />
                                   <Text className="text-xs font-bold text-white">Confirm Execution</Text>
                                 </>
                               )}
@@ -378,13 +394,13 @@ export const CopilotPanel: React.FC<CopilotPanelProps> = ({
                               onPress={() => handleFeedback(m.message_id, "HELPFUL")}
                               className="p-1 rounded hover:bg-slate-800"
                             >
-                              <MaterialCommunityIcons name="thumb-up-outline" size={13} color="#64748B" />
+                              <ThumbsUp size={13} color="#64748B" />
                             </Pressable>
                             <Pressable
                               onPress={() => handleFeedback(m.message_id, "NOT_HELPFUL")}
                               className="p-1 rounded hover:bg-slate-800"
                             >
-                              <MaterialCommunityIcons name="thumb-down-outline" size={13} color="#64748B" />
+                              <ThumbsDown size={13} color="#64748B" />
                             </Pressable>
                           </View>
                         )}
@@ -426,7 +442,7 @@ export const CopilotPanel: React.FC<CopilotPanelProps> = ({
               {loading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <MaterialCommunityIcons name="send" size={18} color="#FFFFFF" />
+                <Send size={16} color="#FFFFFF" />
               )}
             </Pressable>
           </View>

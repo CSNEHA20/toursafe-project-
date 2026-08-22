@@ -10,7 +10,7 @@ import {
   SafeAreaView,
   Platform,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Bell, X, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { realtimeClient } from "@/lib/realtimeClient";
 import type { NotificationRecord, NotificationPriority, NotificationCategory } from "@/types/notification";
@@ -23,10 +23,12 @@ interface NotificationCenterProps {
   onSelectNotification?: (notif: NotificationRecord) => void;
 }
 
+const DEFAULT_API_BASE = process.env.EXPO_PUBLIC_API_URL || "http://localhost:8000";
+
 export function NotificationCenterModal({
   visible,
   onClose,
-  apiBaseUrl = "http://localhost:8000",
+  apiBaseUrl = DEFAULT_API_BASE,
   authToken,
   onSelectNotification,
 }: NotificationCenterProps) {
@@ -186,7 +188,7 @@ export function NotificationCenterModal({
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <View style={styles.bellIconContainer}>
-                <Ionicons name="notifications" size={20} color="#38BDF8" />
+                <Bell size={18} color="#38BDF8" />
               </View>
               <Text style={styles.headerTitle}>Notifications</Text>
               {unreadCount > 0 && (
@@ -197,12 +199,12 @@ export function NotificationCenterModal({
             </View>
             <View style={styles.headerRight}>
               {unreadCount > 0 && (
-                <TouchableOpacity onPress={handleMarkAllRead} style={styles.markAllBtn}>
+                <TouchableOpacity onPress={handleMarkAllRead} style={styles.markAllBtn} accessibilityRole="button">
                   <Text style={styles.markAllText}>Mark all read</Text>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                <Ionicons name="close" size={22} color="#94A3B8" />
+              <TouchableOpacity onPress={onClose} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="Close notifications">
+                <X size={20} color="#94A3B8" />
               </TouchableOpacity>
             </View>
           </View>
@@ -214,6 +216,8 @@ export function NotificationCenterModal({
                 key={tab}
                 onPress={() => setFilterTab(tab)}
                 style={[styles.filterChip, filterTab === tab && styles.filterChipActive]}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: filterTab === tab }}
               >
                 <Text style={[styles.filterChipText, filterTab === tab && styles.filterChipTextActive]}>
                   {tab === "ALL" ? "All" : tab === "UNREAD" ? `Unread (${unreadCount})` : tab.charAt(0) + tab.slice(1).toLowerCase()}
@@ -230,7 +234,7 @@ export function NotificationCenterModal({
             </View>
           ) : filteredList.length === 0 ? (
             <View style={styles.centerBox}>
-              <Ionicons name="checkmark-circle-outline" size={48} color="#475569" />
+              <CheckCircle2 size={44} color="#475569" />
               <Text style={styles.emptyTitle}>No notifications</Text>
               <Text style={styles.emptySubtitle}>You are all caught up with your security and operational alerts.</Text>
             </View>
@@ -246,6 +250,7 @@ export function NotificationCenterModal({
                     style={[styles.card, !item.is_read && styles.cardUnread]}
                     onPress={() => handleItemPress(item)}
                     activeOpacity={0.8}
+                    accessibilityRole="button"
                   >
                     <View style={styles.cardHeader}>
                       <View style={styles.cardHeaderLeft}>
@@ -270,7 +275,7 @@ export function NotificationCenterModal({
                     {item.payload.incident_id && (
                       <View style={styles.actionFooter}>
                         <View style={styles.incidentTag}>
-                          <Ionicons name="alert-circle" size={14} color="#F59E0B" />
+                          <AlertCircle size={14} color="#F59E0B" />
                           <Text style={styles.incidentTagText}>Ref: {item.payload.incident_id}</Text>
                         </View>
                         <Text style={styles.deepLinkText}>View Incident →</Text>

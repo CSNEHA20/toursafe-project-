@@ -9,8 +9,18 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  StyleSheet,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  ShieldCheck,
+  X,
+  Info,
+  CheckCircle2,
+  AlertTriangle,
+  FileText,
+  Download,
+  Lock,
+} from 'lucide-react-native';
 import { usePrivacyStore } from '../../store/privacyStore';
 import { ConsentPurpose, PrivacyRequestType } from '../../types/privacy';
 
@@ -58,39 +68,31 @@ const PURPOSES_CONFIG: Array<{
   {
     id: 'EMERGENCY_COMMUNICATION',
     title: 'Emergency Contact & SMS Notifications',
-    category: 'Safety Communications',
-    description: 'Delivers automated SMS/Voice alerts to designated family and emergency services during an SOS event.',
-    retention: '730 days statutory incident log',
-    access: 'Police, EMS, and verified emergency contacts',
+    category: 'Emergency Dispatch',
+    description: 'Enables automated SMS and voice broadcast to designated emergency contacts during SOS escalations.',
+    retention: 'Duration of active trip',
+    access: 'Automated notification gateway & emergency dispatchers',
     requiredForSafety: true,
-  },
-  {
-    id: 'OPTIONAL_ANALYTICS',
-    title: 'Anonymous Tourism Flow Analytics',
-    category: 'Analytics & Insights',
-    description: 'Aggregates de-identified 2-decimal spatial coordinates to assist regional authorities in improving safety infrastructure.',
-    retention: '3 years (strictly aggregated / no personal identifiers)',
-    access: 'Regional Tourism Board Analytics Officers',
-    requiredForSafety: false,
-  },
-  {
-    id: 'OPTIONAL_PERSONALIZATION',
-    title: 'AI Trip & Safety Recommendations',
-    category: 'Personalization',
-    description: 'Customizes safety warnings and route recommendations based on active itinerary checkpoints.',
-    retention: '60 days',
-    access: 'Tourist (Self)',
-    requiredForSafety: false,
   },
 ];
 
-export const PrivacyConsentCenterModal: React.FC<Props> = ({ visible, onClose }) => {
+export function PrivacyConsentCenterModal({ visible, onClose }: Props) {
+  const {
+    consents,
+    requests,
+    isLoading,
+    fetchConsents,
+    grantConsent,
+    withdrawConsent,
+    fetchRequests,
+    submitRequest,
+    verifyRequest,
+  } = usePrivacyStore();
+
   const [activeTab, setActiveTab] = useState<'CONSENTS' | 'REQUESTS' | 'EXPORTS'>('CONSENTS');
   const [selectedReqType, setSelectedReqType] = useState<PrivacyRequestType>('ACCESS');
   const [reqNotes, setReqNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
-  const { consents, requests, isLoading, fetchConsents, grantConsent, withdrawConsent, fetchRequests, submitRequest, verifyRequest } = usePrivacyStore();
 
   useEffect(() => {
     if (visible) {
@@ -99,22 +101,26 @@ export const PrivacyConsentCenterModal: React.FC<Props> = ({ visible, onClose })
     }
   }, [visible]);
 
-  const isConsentGranted = (purpose: ConsentPurpose) => {
-    const record = consents.find((c) => c.purpose === purpose && c.status === 'GRANTED');
-    return !!record;
+  const isConsentGranted = (purpose: ConsentPurpose): boolean => {
+    const c = consents.find((x) => x.purpose === purpose);
+    return c ? c.status === 'GRANTED' : false;
   };
 
-  const handleToggleConsent = async (purpose: ConsentPurpose, currentVal: boolean) => {
-    if (currentVal) {
-      await withdrawConsent(purpose, 'Revoked by tourist via privacy center');
-    } else {
-      await grantConsent(purpose);
+  const handleToggleConsent = async (purpose: ConsentPurpose, currentGranted: boolean) => {
+    try {
+      if (currentGranted) {
+        await withdrawConsent(purpose, 'Revoked in privacy center');
+      } else {
+        await grantConsent(purpose);
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to update consent preference.');
     }
   };
 
   const handleCreateRequest = async () => {
     setSubmitting(true);
-    const req = await submitRequest(selectedReqType, ['IDENTITY', 'LOCATION', 'CONTACT'], reqNotes);
+    const req = await submitRequest(selectedReqType, [], reqNotes);
     setSubmitting(false);
     if (req) {
       Alert.alert('Request Submitted', `Your privacy request #${req.id.slice(0, 8)} has been logged. Please complete identity verification.`);
@@ -125,34 +131,36 @@ export const PrivacyConsentCenterModal: React.FC<Props> = ({ visible, onClose })
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View className="flex-1 bg-black/80 justify-end">
-        <View className="bg-slate-900 rounded-t-3xl border-t border-slate-800 max-h-[90%] p-5">
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={styles.overlay}>
+        <View style={styles.container}>
           {/* Header */}
-          <View className="flex-row items-center justify-between pb-4 border-b border-slate-800">
-            <View className="flex-row items-center space-x-3">
-              <View className="w-10 h-10 rounded-xl bg-teal-500/10 items-center justify-center border border-teal-500/20">
-                <Ionicons name="shield-checkmark" size={22} color="#14b8a6" />
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <View style={styles.iconBox}>
+                <ShieldCheck size={22} color="#0D7680" />
               </View>
               <View>
-                <Text className="text-lg font-bold text-slate-100">Privacy & Consent Center</Text>
-                <Text className="text-xs text-slate-400">Manage data permissions & subject rights</Text>
+                <Text style={styles.title}>Privacy & Consent Center</Text>
+                <Text style={styles.subtitle}>DPDP Act 2023 / GDPR Sovereign Privacy Management</Text>
               </View>
             </View>
-            <TouchableOpacity onPress={onClose} className="p-2 rounded-full bg-slate-800">
-              <Ionicons name="close" size={20} color="#94a3b8" />
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="Close privacy center">
+              <X size={20} color="#94A3B8" />
             </TouchableOpacity>
           </View>
 
           {/* Tabs */}
-          <View className="flex-row bg-slate-950 p-1 rounded-xl mt-4 border border-slate-800">
+          <View style={styles.tabRow}>
             {(['CONSENTS', 'REQUESTS', 'EXPORTS'] as const).map((tab) => (
               <TouchableOpacity
                 key={tab}
                 onPress={() => setActiveTab(tab)}
-                className={`flex-1 py-2 rounded-lg items-center ${activeTab === tab ? 'bg-slate-800 border border-slate-700' : ''}`}
+                style={[styles.tab, activeTab === tab && styles.tabActive]}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: activeTab === tab }}
               >
-                <Text className={`text-xs font-semibold ${activeTab === tab ? 'text-teal-400' : 'text-slate-400'}`}>
+                <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
                   {tab === 'CONSENTS' ? 'Data Consents' : tab === 'REQUESTS' ? 'Privacy Requests' : 'Data Portability'}
                 </Text>
               </TouchableOpacity>
@@ -160,47 +168,48 @@ export const PrivacyConsentCenterModal: React.FC<Props> = ({ visible, onClose })
           </View>
 
           {/* Tab Content */}
-          <ScrollView className="mt-4" showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
             {activeTab === 'CONSENTS' && (
-              <View className="space-y-4 pb-8">
-                <View className="bg-blue-950/30 border border-blue-800/40 p-3 rounded-xl">
-                  <Text className="text-xs font-medium text-blue-300">
-                    <Ionicons name="information-circle-outline" size={13} color="#93c5fd" /> Privacy by Design: TourSafe collects data solely for verified safety & rescue operations. You have the right to withdraw optional permissions anytime.
+              <View style={styles.contentBlock}>
+                <View style={styles.infoBanner}>
+                  <Info size={14} color="#93C5FD" />
+                  <Text style={styles.infoBannerText}>
+                    Privacy by Design: TourSafe collects data solely for verified safety & rescue operations. You have the right to modify optional permissions anytime.
                   </Text>
                 </View>
 
                 {PURPOSES_CONFIG.map((p) => {
                   const granted = isConsentGranted(p.id);
                   return (
-                    <View key={p.id} className="bg-slate-800/60 p-4 rounded-2xl border border-slate-800">
-                      <View className="flex-row items-center justify-between">
-                        <View className="flex-1 pr-3">
-                          <View className="flex-row items-center space-x-2">
-                            <Text className="text-sm font-bold text-slate-200">{p.title}</Text>
+                    <View key={p.id} style={styles.consentCard}>
+                      <View style={styles.consentCardTop}>
+                        <View style={styles.consentCardLeft}>
+                          <View style={styles.consentTitleRow}>
+                            <Text style={styles.consentTitle}>{p.title}</Text>
                             {p.requiredForSafety && (
-                              <View className="bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30">
-                                <Text className="text-[10px] font-bold text-amber-400">Safety Core</Text>
+                              <View style={styles.safetyTag}>
+                                <Text style={styles.safetyTagText}>Safety Core</Text>
                               </View>
                             )}
                           </View>
-                          <Text className="text-xs text-slate-400 mt-1">{p.description}</Text>
+                          <Text style={styles.consentDesc}>{p.description}</Text>
                         </View>
                         <Switch
                           value={granted}
                           onValueChange={() => handleToggleConsent(p.id, granted)}
-                          trackColor={{ false: '#334155', true: '#0d9488' }}
-                          thumbColor={granted ? '#2dd4bf' : '#94a3b8'}
+                          trackColor={{ false: '#334155', true: '#0D7680' }}
+                          thumbColor={granted ? '#2DD4BF' : '#94A3B8'}
                         />
                       </View>
 
-                      <View className="mt-3 pt-3 border-t border-slate-700/50 space-y-1">
-                        <View className="flex-row justify-between">
-                          <Text className="text-[11px] text-slate-500">Retention:</Text>
-                          <Text className="text-[11px] text-slate-400 font-medium">{p.retention}</Text>
+                      <View style={styles.consentMeta}>
+                        <View style={styles.metaRow}>
+                          <Text style={styles.metaLabel}>Retention:</Text>
+                          <Text style={styles.metaValue}>{p.retention}</Text>
                         </View>
-                        <View className="flex-row justify-between">
-                          <Text className="text-[11px] text-slate-500">Authorized Access:</Text>
-                          <Text className="text-[11px] text-slate-400 font-medium">{p.access}</Text>
+                        <View style={styles.metaRow}>
+                          <Text style={styles.metaLabel}>Authorized Access:</Text>
+                          <Text style={styles.metaValue}>{p.access}</Text>
                         </View>
                       </View>
                     </View>
@@ -210,37 +219,35 @@ export const PrivacyConsentCenterModal: React.FC<Props> = ({ visible, onClose })
             )}
 
             {activeTab === 'REQUESTS' && (
-              <View className="space-y-4 pb-8">
-                <View className="bg-slate-800/80 p-4 rounded-2xl border border-slate-700">
-                  <Text className="text-sm font-bold text-slate-200 mb-2">Submit Data Subject Request (DSR)</Text>
-                  <Text className="text-xs text-slate-400 mb-3">
-                    Exercise your statutory rights (GDPR / DPDP) to access, correct, or erase personal records.
+              <View style={styles.contentBlock}>
+                <View style={styles.formCard}>
+                  <Text style={styles.formCardTitle}>Submit Data Subject Request (DSR)</Text>
+                  <Text style={styles.formCardSubtitle}>
+                    Exercise statutory rights under the DPDP Act 2023 to access, export, correct, or erase your records.
                   </Text>
 
-                  <Text className="text-xs font-semibold text-slate-300 mb-1">Request Type:</Text>
-                  <View className="flex-row flex-wrap gap-2 mb-3">
+                  <Text style={styles.fieldLabel}>Request Type:</Text>
+                  <View style={styles.pillRow}>
                     {(['ACCESS', 'EXPORT', 'CORRECTION', 'DELETION'] as PrivacyRequestType[]).map((type) => (
                       <TouchableOpacity
                         key={type}
                         onPress={() => setSelectedReqType(type)}
-                        className={`px-3 py-1.5 rounded-lg border ${
-                          selectedReqType === type ? 'bg-teal-500/20 border-teal-500 text-teal-300' : 'bg-slate-900 border-slate-700'
-                        }`}
+                        style={[styles.pill, selectedReqType === type && styles.pillActive]}
                       >
-                        <Text className={`text-xs font-medium ${selectedReqType === type ? 'text-teal-400' : 'text-slate-400'}`}>
+                        <Text style={[styles.pillText, selectedReqType === type && styles.pillTextActive]}>
                           {type}
                         </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
 
-                  <Text className="text-xs font-semibold text-slate-300 mb-1">Details / Scope Notes (Optional):</Text>
+                  <Text style={styles.fieldLabel}>Details / Scope Notes (Optional):</Text>
                   <TextInput
                     value={reqNotes}
                     onChangeText={setReqNotes}
-                    placeholder="Specify particular details or reason..."
-                    placeholderTextColor="#64748b"
-                    className="bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 mb-3"
+                    placeholder="Specify details, date range, or reason..."
+                    placeholderTextColor="#64748B"
+                    style={styles.input}
                     multiline
                     numberOfLines={2}
                   />
@@ -248,50 +255,42 @@ export const PrivacyConsentCenterModal: React.FC<Props> = ({ visible, onClose })
                   <TouchableOpacity
                     onPress={handleCreateRequest}
                     disabled={submitting}
-                    className="bg-teal-600 p-3 rounded-xl items-center"
+                    style={styles.submitBtn}
+                    accessibilityRole="button"
                   >
                     {submitting ? (
                       <ActivityIndicator size="small" color="#fff" />
                     ) : (
-                      <Text className="text-xs font-bold text-white">Submit Request</Text>
+                      <Text style={styles.submitBtnText}>Submit Privacy Request</Text>
                     )}
                   </TouchableOpacity>
                 </View>
 
                 {/* Existing Requests */}
-                <Text className="text-sm font-bold text-slate-200 mt-2">Request History</Text>
+                <Text style={styles.historyHeading}>Request History</Text>
                 {requests.length === 0 ? (
-                  <Text className="text-xs text-slate-500 italic py-2">No privacy requests logged yet.</Text>
+                  <Text style={styles.emptyHistory}>No privacy requests logged yet.</Text>
                 ) : (
                   requests.map((r) => (
-                    <View key={r.id} className="bg-slate-800/40 p-3 rounded-xl border border-slate-800 space-y-2">
-                      <View className="flex-row items-center justify-between">
-                        <Text className="text-xs font-bold text-slate-300">
+                    <View key={r.id} style={styles.requestItem}>
+                      <View style={styles.requestItemHeader}>
+                        <Text style={styles.requestId}>
                           #{r.id.slice(0, 8)} • {r.request_type}
                         </Text>
                         <View
-                          className={`px-2 py-0.5 rounded ${
+                          style={[
+                            styles.requestBadge,
                             r.status === 'COMPLETED'
-                              ? 'bg-emerald-500/20 text-emerald-400'
+                              ? styles.badgeSuccess
                               : r.status === 'REJECTED'
-                              ? 'bg-red-500/20 text-red-400'
-                              : 'bg-amber-500/20 text-amber-400'
-                          }`}
+                              ? styles.badgeDanger
+                              : styles.badgeWarning,
+                          ]}
                         >
-                          <Text
-                            className={`text-[10px] font-bold ${
-                              r.status === 'COMPLETED'
-                                ? 'text-emerald-400'
-                                : r.status === 'REJECTED'
-                                ? 'text-red-400'
-                                : 'text-amber-400'
-                            }`}
-                          >
-                            {r.status}
-                          </Text>
+                          <Text style={styles.requestBadgeText}>{r.status}</Text>
                         </View>
                       </View>
-                      <Text className="text-[11px] text-slate-400">
+                      <Text style={styles.requestDate}>
                         Submitted: {new Date(r.created_at).toLocaleDateString()} • Deadline: {new Date(r.deadline_at).toLocaleDateString()}
                       </Text>
 
@@ -301,9 +300,9 @@ export const PrivacyConsentCenterModal: React.FC<Props> = ({ visible, onClose })
                             await verifyRequest(r.id);
                             Alert.alert('Verified', 'Session identity verification confirmed.');
                           }}
-                          className="bg-slate-700 py-1.5 rounded-lg items-center mt-1"
+                          style={styles.verifyBtn}
                         >
-                          <Text className="text-xs font-semibold text-teal-300">Verify Identity with Session</Text>
+                          <Text style={styles.verifyBtnText}>Verify Identity with Session</Text>
                         </TouchableOpacity>
                       )}
                     </View>
@@ -313,11 +312,11 @@ export const PrivacyConsentCenterModal: React.FC<Props> = ({ visible, onClose })
             )}
 
             {activeTab === 'EXPORTS' && (
-              <View className="space-y-4 pb-8">
-                <View className="bg-slate-800/80 p-4 rounded-2xl border border-slate-700">
-                  <Text className="text-sm font-bold text-slate-200 mb-1">Portable Data Export Bundle</Text>
-                  <Text className="text-xs text-slate-400 mb-3">
-                    Download a complete, machine-readable JSON archive of your personal profile, itineraries, emergency contacts, and consent audit records.
+              <View style={styles.contentBlock}>
+                <View style={styles.formCard}>
+                  <Text style={styles.formCardTitle}>Portable Data Export Bundle</Text>
+                  <Text style={styles.formCardSubtitle}>
+                    Generate a machine-readable JSON package containing all location telemetry, itineraries, verified KYC metadata, and audit events.
                   </Text>
 
                   <TouchableOpacity
@@ -325,24 +324,21 @@ export const PrivacyConsentCenterModal: React.FC<Props> = ({ visible, onClose })
                       setSelectedReqType('EXPORT');
                       setActiveTab('REQUESTS');
                     }}
-                    className="bg-slate-700 py-2.5 rounded-xl items-center border border-slate-600"
+                    style={styles.exportTokenBtn}
                   >
-                    <Text className="text-xs font-bold text-teal-300">Generate New Export Token</Text>
+                    <Download size={15} color="#0D7680" />
+                    <Text style={styles.exportTokenText}>Generate New Export Token</Text>
                   </TouchableOpacity>
                 </View>
 
                 {requests.filter((r) => r.export_token).map((r) => (
-                  <View key={r.id} className="bg-slate-800/50 p-4 rounded-xl border border-teal-500/30 space-y-2">
-                    <View className="flex-row items-center justify-between">
-                      <Text className="text-xs font-bold text-teal-400">Export Ready ({r.id.slice(0, 8)})</Text>
-                      <Text className="text-[10px] text-slate-400">Expires in 24h</Text>
+                  <View key={r.id} style={styles.exportReadyCard}>
+                    <View style={styles.requestItemHeader}>
+                      <Text style={styles.exportReadyTitle}>Export Ready ({r.id.slice(0, 8)})</Text>
+                      <Text style={styles.exportExpiry}>Expires in 24h</Text>
                     </View>
-                    <Text className="text-[11px] text-slate-300">
-                      Token: {r.export_token}
-                    </Text>
-                    <Text className="text-[11px] text-slate-400">
-                      Endpoint: /api/v1/privacy/export/{r.export_token}
-                    </Text>
+                    <Text style={styles.exportTokenLine}>Token: {r.export_token}</Text>
+                    <Text style={styles.exportEndpointLine}>Endpoint: /api/v1/privacy/export/{r.export_token}</Text>
                   </View>
                 ))}
               </View>
@@ -352,4 +348,354 @@ export const PrivacyConsentCenterModal: React.FC<Props> = ({ visible, onClose })
       </View>
     </Modal>
   );
-};
+}
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'flex-end',
+  },
+  container: {
+    backgroundColor: '#0F172A',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderTopWidth: 1,
+    borderColor: '#1E293B',
+    maxHeight: '90%',
+    padding: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  iconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(13, 118, 128, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(13, 118, 128, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#F8FAFC',
+  },
+  subtitle: {
+    fontSize: 11,
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+  closeBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#1E293B',
+  },
+  tabRow: {
+    flexDirection: 'row',
+    backgroundColor: '#020617',
+    padding: 4,
+    borderRadius: 12,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  tabActive: {
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  tabText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  tabTextActive: {
+    color: '#2DD4BF',
+  },
+  scrollArea: {
+    marginTop: 16,
+  },
+  contentBlock: {
+    gap: 14,
+    paddingBottom: 36,
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(30, 58, 138, 0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(30, 58, 138, 0.4)',
+    padding: 12,
+    borderRadius: 12,
+  },
+  infoBannerText: {
+    fontSize: 11,
+    color: '#93C5FD',
+    flex: 1,
+    lineHeight: 16,
+  },
+  consentCard: {
+    backgroundColor: 'rgba(30, 41, 59, 0.7)',
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+  },
+  consentCardTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  consentCardLeft: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  consentTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  consentTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#E2E8F0',
+  },
+  safetyTag: {
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+  },
+  safetyTagText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#FBBF24',
+  },
+  consentDesc: {
+    fontSize: 11,
+    color: '#94A3B8',
+    marginTop: 4,
+    lineHeight: 16,
+  },
+  consentMeta: {
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(51, 65, 85, 0.4)',
+    gap: 4,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  metaLabel: {
+    fontSize: 10,
+    color: '#64748B',
+  },
+  metaValue: {
+    fontSize: 10,
+    color: '#94A3B8',
+    fontWeight: '600',
+  },
+  formCard: {
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  formCardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#F8FAFC',
+    marginBottom: 4,
+  },
+  formCardSubtitle: {
+    fontSize: 11,
+    color: '#94A3B8',
+    lineHeight: 16,
+    marginBottom: 12,
+  },
+  fieldLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#CBD5E1',
+    marginBottom: 6,
+  },
+  pillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  pill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#334155',
+    backgroundColor: '#0F172A',
+  },
+  pillActive: {
+    backgroundColor: 'rgba(13, 118, 128, 0.25)',
+    borderColor: '#0D7680',
+  },
+  pillText: {
+    fontSize: 11,
+    color: '#94A3B8',
+    fontWeight: '600',
+  },
+  pillTextActive: {
+    color: '#2DD4BF',
+  },
+  input: {
+    backgroundColor: '#0F172A',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 10,
+    padding: 10,
+    fontSize: 12,
+    color: '#F8FAFC',
+    marginBottom: 12,
+  },
+  submitBtn: {
+    backgroundColor: '#0D7680',
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  submitBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  historyHeading: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#E2E8F0',
+    marginTop: 6,
+  },
+  emptyHistory: {
+    fontSize: 11,
+    color: '#64748B',
+    fontStyle: 'italic',
+  },
+  requestItem: {
+    backgroundColor: 'rgba(30, 41, 59, 0.5)',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    gap: 6,
+  },
+  requestItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  requestId: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#CBD5E1',
+  },
+  requestBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  badgeSuccess: {
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+  },
+  badgeDanger: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+  },
+  badgeWarning: {
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+  },
+  requestBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#F8FAFC',
+  },
+  requestDate: {
+    fontSize: 10,
+    color: '#64748B',
+  },
+  verifyBtn: {
+    backgroundColor: '#1E293B',
+    paddingVertical: 6,
+    borderRadius: 6,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  verifyBtnText: {
+    fontSize: 11,
+    color: '#2DD4BF',
+    fontWeight: '600',
+  },
+  exportTokenBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(13, 118, 128, 0.15)',
+    borderWidth: 1,
+    borderColor: '#0D7680',
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  exportTokenText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#2DD4BF',
+  },
+  exportReadyCard: {
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(13, 118, 128, 0.4)',
+    gap: 4,
+  },
+  exportReadyTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#2DD4BF',
+  },
+  exportExpiry: {
+    fontSize: 10,
+    color: '#94A3B8',
+  },
+  exportTokenLine: {
+    fontSize: 11,
+    color: '#CBD5E1',
+    fontFamily: 'monospace',
+  },
+  exportEndpointLine: {
+    fontSize: 10,
+    color: '#64748B',
+  },
+});

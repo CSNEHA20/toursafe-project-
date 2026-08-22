@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Bell } from "lucide-react-native";
 import { realtimeClient } from "@/lib/realtimeClient";
 import { NotificationCenterModal } from "./NotificationCenterModal";
 
@@ -9,7 +9,9 @@ interface Props {
   authToken?: string;
 }
 
-export function NotificationBellButton({ apiBaseUrl = "http://localhost:8000", authToken }: Props) {
+const DEFAULT_API_BASE = process.env.EXPO_PUBLIC_API_URL || "http://localhost:8000";
+
+export function NotificationBellButton({ apiBaseUrl = DEFAULT_API_BASE, authToken }: Props) {
   const [modalVisible, setModalVisible] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -35,7 +37,7 @@ export function NotificationBellButton({ apiBaseUrl = "http://localhost:8000", a
     return () => {
       unsub();
     };
-  }, [authToken]);
+  }, [authToken, apiBaseUrl]);
 
   return (
     <>
@@ -43,8 +45,10 @@ export function NotificationBellButton({ apiBaseUrl = "http://localhost:8000", a
         style={styles.btn}
         onPress={() => setModalVisible(true)}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`Notifications, ${unreadCount} unread`}
       >
-        <Ionicons name="notifications-outline" size={20} color="#F8FAFC" />
+        <Bell size={18} color="#F8FAFC" />
         {unreadCount > 0 && (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>

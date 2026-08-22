@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useReliabilityStore } from '../../store/reliabilityStore';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Activity, ShieldCheck, AlertTriangle, Cpu } from 'lucide-react-native';
 
 interface Props {
   onOpenDetailedMetrics?: () => void;
@@ -61,12 +61,19 @@ export const OperationalHealthBar: React.FC<Props> = ({ onOpenDetailedMetrics })
       <View style={styles.rightRow}>
         {goldenSignals && (
           <View style={styles.metricBadge}>
+            <Activity size={12} color="#38BDF8" />
             <Text style={styles.metricLabel}>API p95:</Text>
             <Text style={styles.metricValue}>{goldenSignals.latency_ms.p95}ms</Text>
           </View>
         )}
         {onOpenDetailedMetrics && (
-          <TouchableOpacity style={styles.detailsButton} onPress={onOpenDetailedMetrics}>
+          <TouchableOpacity
+            style={styles.detailsButton}
+            onPress={onOpenDetailedMetrics}
+            accessibilityRole="button"
+            accessibilityLabel="Open SRE Health Metrics"
+          >
+            <Cpu size={12} color="#E2E8F0" />
             <Text style={styles.detailsButtonText}>SRE Health</Text>
           </TouchableOpacity>
         )}
@@ -135,6 +142,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   detailsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: '#334155',
     paddingVertical: 5,
     paddingHorizontal: 10,

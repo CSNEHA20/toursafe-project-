@@ -23,6 +23,8 @@ interface AuthState {
   refreshSession: () => Promise<boolean>;
 }
 
+const API_BASE = process.env.EXPO_PUBLIC_API_URL || "http://localhost:8000";
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -89,7 +91,7 @@ export const useAuthStore = create<AuthState>()(
       login: async (email: string, password: string) => {
         set({ isLoading: true });
         try {
-          const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/v1/auth/login`, {
+          const response = await fetch(`${API_BASE}/api/v1/auth/login`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -154,7 +156,7 @@ export const useAuthStore = create<AuthState>()(
         }
 
         try {
-          const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/v1/auth/refresh`, {
+          const response = await fetch(`${API_BASE}/api/v1/auth/refresh`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

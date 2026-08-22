@@ -2,6 +2,23 @@
 
 All notable changes to the TourSafe platform are documented in this file.
 
+## [1.0.0] - 2026-08-22 (Prompt 35: Final B2G Productization & System Finalization)
+### Added
+- Redesigned unified root portal (`frontend/app/index.tsx`) with auto-session detection, 3 operational B2G gateways (Authority, Tourist, Responder), live subsystem status indicators, and compliance badges.
+- Official B2G authentication experience (`frontend/app/auth/login.tsx`) with tabbed role selection (Authority, Responder, Tourist) directly bound to `useAuthStore`.
+- Standardized iconography across the entire application using `lucide-react-native`, eliminating legacy vector-icons dependencies and hydration artifacts.
+- Created comprehensive product documentation suite in `docs/product/` (`README.md`, `workflows.md`, `product-walkthrough.md`, `feature-completeness.md`, `performance-report.md`).
+- Added frontend unit and integration test suites in `frontend/tests/` (kinematics math, jitter statistics, FIFO buffer, geospatial haversine, semantic color tokens).
+- Generated complete Prompt 35 documentation suite containing all 22 required session files in `docs/claude-sessions/prompt-35-final-productization/`.
+
+### Verified
+- Full backend automated test suite: 510 passed, 5 skipped (100% pass rate in 26.29s).
+- Full frontend automated test suite: 29 passed across 11 suites (100% pass rate in 2.04s).
+- Zero TypeScript typecheck errors across all frontend files (`npm run type-check`).
+- Web production bundle export verified via `npx expo export --platform web`.
+
+---
+
 ## [1.0.0-rc1] - 2026-08-22 (Prompt 34: Full-System Integration & Release Cutover)
 ### Added
 - Comprehensive system integration topology and contract maps (`docs/release/system-integration-map.md`).
