@@ -90,13 +90,20 @@ export const useSafetyStore = create<SafetyStoreState>((set, get) => ({
         tourist_id: data.tourist_id,
         current_state: data.current_state,
         previous_state: data.previous_state,
+        decision_id: data.decision_id || "",
+        started_at: data.started_at || data.timestamp || new Date().toISOString(),
+        last_update: data.timestamp || new Date().toISOString(),
         last_evaluated_at: data.timestamp,
         active_incident_id: data.incident_id,
         last_decision_id: data.decision_id || "",
         rule_version: data.rule_version || "safety-rules-v1",
         reasons: data.reasons || [],
+        active_reasons: data.reasons || [],
+        active_signals_summary: data.signals || {},
         quality: data.quality || "GOOD",
         confidence_class: data.confidence_class || "HIGH",
+        risk_score: data.risk_score,
+        risk_assessment: data.risk_assessment,
       };
       get().updateActiveSafetyState(activeState);
     } else if (

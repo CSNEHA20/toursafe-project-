@@ -57,6 +57,9 @@ class RealtimeEventType(str, Enum):
 
     # Safety & Incident events
     SAFETY_STATE_CHANGED = "safety.state.changed"
+    RISK_ASSESSMENT_UPDATED = "risk.assessment.updated"
+    SAFETY_CHECK_REQUESTED = "safety.check.requested"
+    SAFETY_CHECK_RESPONDED = "safety.check.responded"
     INCIDENT_CREATED = "incident.created"
     INCIDENT_UPDATED = "incident.updated"
     INCIDENT_ACKNOWLEDGED = "incident.acknowledged"

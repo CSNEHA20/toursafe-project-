@@ -9,8 +9,10 @@ Explicit, versioned, auditable safety rules categorized into:
 - Category E: Persistence & Recovery
 - Category F: Context & Multi-Signal Correlation
 - Category G: Signal Quality & UNKNOWN Gating
+- Category H: Risk Fusion & False-Positive Reduction
 
-Every decision includes human-readable explainable reasons and triggered rule IDs.
+Every decision includes human-readable explainable reasons, triggered rule IDs,
+and full MultiSignalRiskAssessment metadata.
 """
 
 from datetime import datetime, timezone
@@ -19,6 +21,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ...schemas.safety import (
     ConfidenceClass,
+    MultiSignalRiskAssessment,
     SafetyDecision,
     SafetySignal,
     SafetyState,
@@ -27,6 +30,7 @@ from ...schemas.safety import (
     TriggeredRule,
 )
 from .config import safety_config
+from .fusion import risk_fusion_engine
 from .signals import is_signal_fresh, parse_timestamp_iso
 
 logger = logging.getLogger("toursafe.safety.rules")
@@ -34,7 +38,7 @@ logger = logging.getLogger("toursafe.safety.rules")
 
 class RuleEngine:
     """
-    Evaluates fresh safety signals against deterministic versioned safety rules.
+    Evaluates fresh safety signals against deterministic versioned safety rules and multi-signal risk fusion.
     """
 
     def __init__(self, rule_version: str = "safety-rules-v1"):
@@ -47,10 +51,12 @@ class RuleEngine:
         previous_state: SafetyState,
         active_signals: List[SafetySignal],
         recovery_started_at: Optional[str] = None,
+        tourist_context: Optional[Dict[str, Any]] = None,
+        previous_assessment: Optional[MultiSignalRiskAssessment] = None,
         now: Optional[datetime] = None,
     ) -> SafetyDecision:
         """
-        Deterministic rule evaluation on aggregated active safety signals.
+        Deterministic rule evaluation and multi-signal risk fusion on aggregated active safety signals.
         """
         curr_time = now or datetime.now(timezone.utc)
         curr_iso = curr_time.isoformat()
@@ -72,7 +78,7 @@ class RuleEngine:
             elif s.signal_type in (SignalType.GPS_LOCATION_UPDATE, SignalType.GPS_STALE, SignalType.GPS_UNCERTAIN):
                 gps_sig = s
             elif s.signal_type in (SignalType.ZONE_ENTERED, SignalType.ZONE_EXITED, SignalType.ZONE_DWELL):
-                if s.value.get("membership_state") in ("inside", "uncertain"):
+                if isinstance(s.value, dict) and s.value.get("membership_state") in ("inside", "uncertain", "approaching"):
                     zone_sigs.append(s)
             elif s.signal_type in (SignalType.TELEMETRY_GOOD, SignalType.TELEMETRY_DEGRADED, SignalType.TELEMETRY_OFFLINE):
                 telemetry_sig = s
@@ -84,12 +90,26 @@ class RuleEngine:
         triggered_rules: List[TriggeredRule] = []
         reasons: List[str] = []
 
-        # 2. Check for UNKNOWN state: No fresh GPS, no fresh telemetry, or tracking stopped
+        # 2. Execute Advanced Multi-Signal Risk Fusion Engine
+        risk_assessment = risk_fusion_engine.evaluate_risk_fusion(
+            tourist_id=tourist_id,
+            session_id=session_id,
+            active_signals=fresh_signals,
+            tourist_context=tourist_context,
+            previous_assessment=previous_assessment,
+            now=curr_time,
+        )
+
+        composite_risk = risk_assessment.risk_breakdown.composite_risk_score
+        correlation = risk_assessment.correlation
+        confidence = risk_assessment.confidence.confidence_class
+
+        # 3. Check for UNKNOWN state: No fresh GPS, no fresh telemetry, or tracking stopped
         has_fresh_gps = gps_sig is not None and gps_sig.signal_type != SignalType.GPS_STALE
         has_fresh_telemetry = telemetry_sig is not None and telemetry_sig.signal_type != SignalType.TELEMETRY_OFFLINE
         is_tracking_active = tracking_sig is None or tracking_sig.signal_type == SignalType.TRACKING_ACTIVE
 
-        # Category G / C / D: Unknown / No Data Check
+        # Category G: Signal Quality & UNKNOWN Gating
         if (not has_fresh_gps and not has_fresh_telemetry) or not is_tracking_active:
             reason_txt = "Insufficient real-time telemetry or tracking stopped; position and safety status cannot be verified"
             triggered_rules.append(
@@ -116,15 +136,17 @@ class RuleEngine:
                 signals={s.signal_type.value: s.value for s in fresh_signals},
                 quality=SignalQuality.UNKNOWN,
                 confidence_class=ConfidenceClass.UNKNOWN,
+                risk_score=composite_risk,
+                risk_assessment=risk_assessment,
             )
 
-        # 3. Assess Signal Quality & Confidence Class
+        # 4. Assess Signal Quality & Confidence Class
         quality = SignalQuality.GOOD
-        confidence = ConfidenceClass.HIGH
+        rule_confidence = ConfidenceClass.HIGH
 
         if gps_sig and gps_sig.quality in (SignalQuality.POOR, SignalQuality.DEGRADED):
             quality = SignalQuality.DEGRADED
-            confidence = ConfidenceClass.MEDIUM
+            rule_confidence = ConfidenceClass.MEDIUM
             r_text = f"GPS accuracy degraded ({gps_sig.metadata.get('accuracy_meters', 0)}m)"
             triggered_rules.append(
                 TriggeredRule(
@@ -141,11 +163,11 @@ class RuleEngine:
 
         if telemetry_sig and telemetry_sig.quality in (SignalQuality.POOR, SignalQuality.DEGRADED):
             quality = SignalQuality.DEGRADED
-            if confidence == ConfidenceClass.MEDIUM:
-                confidence = ConfidenceClass.LOW
+            if rule_confidence == ConfidenceClass.MEDIUM:
+                rule_confidence = ConfidenceClass.LOW
             else:
-                confidence = ConfidenceClass.MEDIUM
-            r_text = f"Telemetry packet quality degraded ({telemetry_sig.value.get('overall_quality', 'unknown')})"
+                rule_confidence = ConfidenceClass.MEDIUM
+            r_text = f"Telemetry packet quality degraded ({telemetry_sig.value.get('overall_quality', 'unknown') if isinstance(telemetry_sig.value, dict) else 'degraded'})"
             triggered_rules.append(
                 TriggeredRule(
                     rule_id="RULE_D1_TELEMETRY_DEGRADED",
@@ -159,7 +181,11 @@ class RuleEngine:
             )
             reasons.append(r_text)
 
-        # 4. Evaluate Anomaly Signals (Category A)
+        confidence_ranks = {ConfidenceClass.HIGH: 3, ConfidenceClass.MEDIUM: 2, ConfidenceClass.LOW: 1, ConfidenceClass.UNKNOWN: 0}
+        fused_conf = risk_assessment.confidence.confidence_class
+        confidence = fused_conf if confidence_ranks.get(fused_conf, 0) < confidence_ranks.get(rule_confidence, 3) else rule_confidence
+
+        # 5. Evaluate Anomaly Signals (Category A)
         is_anomalous = False
         anomaly_consecutive = 0
         anomaly_score = 0.0
@@ -167,11 +193,26 @@ class RuleEngine:
 
         if anomaly_sig and anomaly_sig.signal_type == SignalType.ANOMALY_DETECTED:
             is_anomalous = True
-            anomaly_consecutive = anomaly_sig.value.get("consecutive_windows", 1)
-            anomaly_score = anomaly_sig.value.get("score", 0.0)
-            anomaly_thresh = anomaly_sig.value.get("threshold", 0.5)
+            val = anomaly_sig.value if isinstance(anomaly_sig.value, dict) else {}
+            anomaly_consecutive = val.get("consecutive_windows", 1)
+            anomaly_score = float(val.get("score", 0.0))
+            anomaly_thresh = float(val.get("threshold", 0.5))
 
-            if anomaly_consecutive >= safety_config.anomaly_high_persistence_windows and anomaly_score >= (anomaly_thresh * safety_config.anomaly_high_score_multiplier):
+            if correlation.is_false_alarm_suppressed:
+                r_text = f"Motion anomaly filtered by correlation engine ({correlation.correlated_pattern})"
+                triggered_rules.append(
+                    TriggeredRule(
+                        rule_id="RULE_H1_FALSE_ALARM_DAMPENED",
+                        rule_name="False Alarm Suppressed via Correlation",
+                        category="Category H: Risk Fusion",
+                        contributed_state=SafetyState.WATCH,
+                        reason=r_text,
+                        confidence_weight=0.4,
+                        matched_signals=[anomaly_sig.signal_id],
+                    )
+                )
+                reasons.append(r_text)
+            elif anomaly_consecutive >= safety_config.anomaly_high_persistence_windows and anomaly_score >= (anomaly_thresh * safety_config.anomaly_high_score_multiplier):
                 r_text = f"High-severity persistent motion anomaly (score={anomaly_score:.2f}, {anomaly_consecutive} windows)"
                 triggered_rules.append(
                     TriggeredRule(
@@ -214,16 +255,16 @@ class RuleEngine:
                 )
                 reasons.append(r_text)
 
-        # 5. Evaluate Geofence Zones (Category B)
+        # 6. Evaluate Geofence Zones (Category B)
         highest_zone_risk = "safe"
         highest_zone_rank = 1
-        zone_names = []
 
         for z in zone_sigs:
-            z_risk = z.value.get("risk_level", "low").lower()
+            if not isinstance(z.value, dict):
+                continue
+            z_risk = str(z.value.get("risk_level", "low")).lower()
             z_name = z.value.get("zone_name", "Unknown Zone")
             z_rank = safety_config.zone_risk_levels.get(z_risk, 1)
-            zone_names.append(z_name)
 
             if z_rank > highest_zone_rank:
                 highest_zone_rank = z_rank
@@ -289,24 +330,38 @@ class RuleEngine:
                 )
                 reasons.append(r_text)
 
-        # 6. Evaluate Multi-Signal Context & Corroboration (Category F)
-        if is_anomalous and highest_zone_rank >= 4 and anomaly_consecutive >= safety_config.anomaly_min_persistence_windows:
-            if confidence in (ConfidenceClass.HIGH, ConfidenceClass.MEDIUM):
-                r_text = "Multi-signal corroboration: persistent motion anomaly inside high-risk danger zone"
-                matched = [anomaly_sig.signal_id] + [z.signal_id for z in zone_sigs]
-                triggered_rules.append(
-                    TriggeredRule(
-                        rule_id="RULE_F2_PERSISTENT_ANOMALY_IN_DANGER_ZONE",
-                        rule_name="Persistent Anomaly in Danger Zone",
-                        category="Category F: Context & Corroboration",
-                        contributed_state=SafetyState.INCIDENT_CANDIDATE,
-                        reason=r_text,
-                        confidence_weight=1.0,
-                        matched_signals=matched,
-                    )
+        # 7. Evaluate Corroborated Multi-Signal Patterns (Category F & H)
+        if correlation.correlated_pattern in ("CORROBORATED_VEHICULAR_CRASH", "CORROBORATED_HAZARD_FALL"):
+            r_text = f"High-confidence corroborated hazard signature: {correlation.correlated_pattern}"
+            matched = [s.signal_id for s in fresh_signals]
+            triggered_rules.append(
+                TriggeredRule(
+                    rule_id="RULE_H2_CORROBORATED_EMERGENCY_PATTERN",
+                    rule_name="Corroborated High-Risk Pattern",
+                    category="Category H: Risk Fusion",
+                    contributed_state=SafetyState.INCIDENT_CANDIDATE,
+                    reason=r_text,
+                    confidence_weight=1.0,
+                    matched_signals=matched,
                 )
-                reasons.append(r_text)
-        elif is_anomalous and highest_zone_rank >= 3:
+            )
+            reasons.append(r_text)
+        elif is_anomalous and highest_zone_rank >= 4 and anomaly_consecutive >= safety_config.anomaly_min_persistence_windows and not correlation.is_false_alarm_suppressed:
+            r_text = "Multi-signal corroboration: persistent motion anomaly inside high-risk danger zone"
+            matched = [anomaly_sig.signal_id] + [z.signal_id for z in zone_sigs]
+            triggered_rules.append(
+                TriggeredRule(
+                    rule_id="RULE_F2_PERSISTENT_ANOMALY_IN_DANGER_ZONE",
+                    rule_name="Persistent Anomaly in Danger Zone",
+                    category="Category F: Context & Corroboration",
+                    contributed_state=SafetyState.INCIDENT_CANDIDATE,
+                    reason=r_text,
+                    confidence_weight=1.0,
+                    matched_signals=matched,
+                )
+            )
+            reasons.append(r_text)
+        elif is_anomalous and highest_zone_rank >= 3 and not correlation.is_false_alarm_suppressed:
             r_text = "Corroborating motion anomaly within restricted/caution zone"
             matched = [anomaly_sig.signal_id] + [z.signal_id for z in zone_sigs]
             triggered_rules.append(
@@ -322,22 +377,54 @@ class RuleEngine:
             )
             reasons.append(r_text)
 
-        if itinerary_sig:
-            r_text = f"Itinerary route deviation ({itinerary_sig.metadata.get('distance_meters', 0):.0f}m from planned route)"
+        if itinerary_sig and isinstance(itinerary_sig.value, dict):
+            dist_val = itinerary_sig.value.get("distance_meters", 0.0)
+            if not correlation.is_false_alarm_suppressed and dist_val > 50.0:
+                r_text = f"Itinerary route deviation ({dist_val:.0f}m from planned route)"
+                triggered_rules.append(
+                    TriggeredRule(
+                        rule_id="RULE_F3_ITINERARY_DEVIATION",
+                        rule_name="Itinerary Route Deviation",
+                        category="Category F: Context & Corroboration",
+                        contributed_state=SafetyState.WATCH,
+                        reason=r_text,
+                        confidence_weight=0.3,
+                        matched_signals=[itinerary_sig.signal_id],
+                    )
+                )
+                reasons.append(r_text)
+
+        # 8. Evaluate Fused Composite Risk Score Thresholds (Category H)
+        if composite_risk >= safety_config.risk_threshold_candidate and not correlation.is_false_alarm_suppressed:
+            r_text = f"Fused composite risk score critical ({composite_risk:.1f}/100)"
             triggered_rules.append(
                 TriggeredRule(
-                    rule_id="RULE_F3_ITINERARY_DEVIATION",
-                    rule_name="Itinerary Route Deviation",
-                    category="Category F: Context & Corroboration",
-                    contributed_state=SafetyState.WATCH,
+                    rule_id="RULE_H4_FUSED_COMPOSITE_RISK_CRITICAL",
+                    rule_name="Critical Composite Risk Score",
+                    category="Category H: Risk Fusion",
+                    contributed_state=SafetyState.INCIDENT_CANDIDATE,
                     reason=r_text,
-                    confidence_weight=0.3,
-                    matched_signals=[itinerary_sig.signal_id],
+                    confidence_weight=0.95,
+                    matched_signals=[s.signal_id for s in fresh_signals],
+                )
+            )
+            reasons.append(r_text)
+        elif composite_risk >= safety_config.risk_threshold_elevated and not correlation.is_false_alarm_suppressed:
+            r_text = f"Fused composite risk score elevated ({composite_risk:.1f}/100)"
+            triggered_rules.append(
+                TriggeredRule(
+                    rule_id="RULE_H3_FUSED_COMPOSITE_RISK_ELEVATED",
+                    rule_name="Elevated Composite Risk Score",
+                    category="Category H: Risk Fusion",
+                    contributed_state=SafetyState.ELEVATED,
+                    reason=r_text,
+                    confidence_weight=0.85,
+                    matched_signals=[s.signal_id for s in fresh_signals],
                 )
             )
             reasons.append(r_text)
 
-        # 7. Determine Target Candidate State from Triggered Rules
+        # 9. Determine Target Candidate State from Triggered Rules
         state_ranks = {
             SafetyState.NORMAL: 1,
             SafetyState.WATCH: 2,
@@ -348,10 +435,9 @@ class RuleEngine:
             SafetyState.UNKNOWN: 0,
         }
 
-        # Filter out GPS accuracy / telemetry noise if no danger/anomaly
         substantive_rules = [
             r for r in triggered_rules
-            if r.rule_id not in ("RULE_C2_GPS_UNCERTAIN", "RULE_D1_TELEMETRY_DEGRADED", "RULE_F3_ITINERARY_DEVIATION")
+            if r.rule_id not in ("RULE_C2_GPS_UNCERTAIN", "RULE_D1_TELEMETRY_DEGRADED", "RULE_F3_ITINERARY_DEVIATION", "RULE_H1_FALSE_ALARM_DAMPENED")
         ]
 
         if not substantive_rules:
@@ -394,13 +480,11 @@ class RuleEngine:
                     target_state = SafetyState.NORMAL
             else:
                 if triggered_rules:
-                    # e.g. itinerary deviation or minor GPS jitter
                     target_state = SafetyState.WATCH
                 else:
                     reasons.append("All safety signals normal (GPS verified, telemetry healthy, safe zone, no motion anomalies)")
                     target_state = SafetyState.NORMAL
         else:
-            # Find the highest contributed state among triggered substantive rules
             highest_state = SafetyState.NORMAL
             for r in substantive_rules:
                 if state_ranks.get(r.contributed_state, 0) > state_ranks.get(highest_state, 0):
@@ -408,21 +492,23 @@ class RuleEngine:
 
             target_state = highest_state
 
-        # Quality Gating: If confidence is LOW, cap maximum state at ELEVATED
+        # Quality Gating: If confidence is LOW, cap maximum state at ELEVATED unless crash confirmed
         if confidence == ConfidenceClass.LOW and state_ranks.get(target_state, 0) > state_ranks.get(SafetyState.ELEVATED, 0):
-            r_text = "Incident candidate gated to ELEVATED due to low sensor confidence / degraded telemetry"
-            reasons.append(r_text)
-            target_state = SafetyState.ELEVATED
+            if correlation.correlated_pattern not in ("CORROBORATED_VEHICULAR_CRASH", "CORROBORATED_HAZARD_FALL"):
+                r_text = "Incident candidate gated to ELEVATED due to low sensor confidence / degraded telemetry"
+                reasons.append(r_text)
+                target_state = SafetyState.ELEVATED
 
         # Collect model versions & zone metadata
         model_versions = {}
-        if anomaly_sig and "model_version" in anomaly_sig.metadata:
+        if anomaly_sig and isinstance(anomaly_sig.metadata, dict) and "model_version" in anomaly_sig.metadata:
             model_versions["lstm_autoencoder"] = anomaly_sig.metadata["model_version"]
 
         zone_versions = {}
         for z in zone_sigs:
-            zid = z.value.get("zone_id", "unknown")
-            zone_versions[zid] = z.value.get("risk_level", "unknown")
+            if isinstance(z.value, dict):
+                zid = z.value.get("zone_id", "unknown")
+                zone_versions[zid] = z.value.get("risk_level", "unknown")
 
         return SafetyDecision(
             tourist_id=tourist_id,
@@ -438,6 +524,8 @@ class RuleEngine:
             confidence_class=confidence,
             model_versions=model_versions,
             zone_versions=zone_versions,
+            risk_score=composite_risk,
+            risk_assessment=risk_assessment,
         )
 
 

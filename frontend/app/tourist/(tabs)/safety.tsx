@@ -1,8 +1,8 @@
 /**
- * TourSafe Safety & Alerts Center
+ * TourSafe Safety & Alerts Center (Prompt 23 Advanced Safety Intelligence)
  * Displays:
- * - Backend authoritative safety status (SAFE, WATCH, ELEVATED, INCIDENT, UNKNOWN)
- * - Anomaly / Safety Check response UX ("Are you okay?")
+ * - Authoritative multi-signal safety index & status
+ * - Proactive Safety Check response UX ("Are you okay?" with direct backend sync)
  * - Monitored Geofence Zones & Safety Guidance
  * - Live Alert Feed with filtering
  */
@@ -22,7 +22,7 @@ import { useSafetyStore } from "@/store/safetyStore";
 import { useGeofenceStore } from "@/store/geofenceStore";
 import { useAlertStore } from "@/store/alertStore";
 import { useLocationStore } from "@/store/locationStore";
-import { touristApi, safetyCheckApi } from "@/lib/api";
+import { touristApi, api } from "@/lib/api";
 import {
   ShieldCheck,
   ShieldAlert,
@@ -38,6 +38,9 @@ import {
   ExternalLink,
   ChevronRight,
   Sparkles,
+  Gauge,
+  Activity,
+  HeartHandshake,
 } from "lucide-react-native";
 import Toast from "react-native-toast-message";
 
@@ -49,8 +52,7 @@ export default function SafetyScreen() {
   const { currentLocation, trackingStatus } = useLocationStore();
 
   const [loading, setLoading] = useState(false);
-  const [activeCheckPrompt, setActiveCheckPrompt] = useState<string | null>(null);
-  const [safetyFilter, setSafetyFilter] = useState<"ALL" | "CRITICAL" | "INFO">("ALL");
+  const [submittingCheck, setSubmittingCheck] = useState(false);
 
   useEffect(() => {
     loadSafetyStatus();
@@ -59,7 +61,7 @@ export default function SafetyScreen() {
   async function loadSafetyStatus() {
     setLoading(true);
     try {
-      const res = await touristApi.getMyProfileStatus();
+      const res = await api.get("/tourists/me/safety");
       if (res?.data) {
         setTouristSafetyStatus(res.data);
       }
@@ -71,38 +73,61 @@ export default function SafetyScreen() {
   }
 
   async function handleConfirmSafe() {
+    setSubmittingCheck(true);
     try {
-      setActiveCheckPrompt(null);
+      await api.post("/tourists/me/safety/check-response", {
+        response_type: "SAFE_CONFIRMED",
+        user_note: "Tourist confirmed safe from mobile app.",
+        timestamp: new Date().toISOString(),
+      });
       Toast.show({
         type: "success",
-        text1: "Confirmed Safe",
-        text2: "Your status has been updated with the safety center.",
+        text1: "Status Confirmed Safe",
+        text2: "Your verification has been recorded with TourSafe.",
       });
-      loadSafetyStatus();
+      await loadSafetyStatus();
     } catch (e) {
       console.warn(e);
+      Toast.show({
+        type: "error",
+        text1: "Submission Failed",
+        text2: "Unable to update status. Please check your connection.",
+      });
+    } finally {
+      setSubmittingCheck(false);
     }
   }
 
-  function handleTriggerEmergency() {
-    setActiveCheckPrompt(null);
+  async function handleTriggerEmergency() {
+    try {
+      await api.post("/tourists/me/safety/check-response", {
+        response_type: "ASSISTANCE_REQUESTED",
+        user_note: "Assistance requested via prompt response.",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.warn(e);
+    }
     router.push("/tourist/(tabs)/sos");
   }
 
   const rawStatus = touristSafetyStatus?.safety_status || "Normal";
   const isSafe = rawStatus.toLowerCase() === "normal" || rawStatus.toLowerCase() === "safe";
-  const isElevated = rawStatus.toLowerCase() === "elevated" || rawStatus.toLowerCase() === "watch";
-  const isIncident = rawStatus.toLowerCase() === "incident";
-  const isUnknown = rawStatus.toLowerCase() === "unknown";
+  const isElevated = rawStatus.toLowerCase() === "elevated" || rawStatus.toLowerCase() === "attention required" || rawStatus.toLowerCase() === "watch";
+  const isIncident = rawStatus.toLowerCase() === "incident" || rawStatus.toLowerCase() === "assistance available";
+  const isUnknown = rawStatus.toLowerCase() === "unknown" || rawStatus.toLowerCase() === "reconnecting";
+
+  const safetyIndex = touristSafetyStatus?.safety_index ?? (isSafe ? 98 : isElevated ? 65 : isIncident ? 20 : 50);
+  const showPrompt = touristSafetyStatus?.proactive_check_required;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerKicker}>OFFICIAL SAFETY STATUS</Text>
+        <Text style={styles.headerKicker}>OFFICIAL SAFETY INTELLIGENCE</Text>
         <Text style={styles.headerTitle}>Safety & Alerts Center</Text>
         <Text style={styles.headerSub}>
-          Backend-verified travel safety analysis and automated zone alerts.
+          Real-time multi-signal safety analysis, hazard boundaries, and active protection.
         </Text>
       </View>
 
@@ -131,12 +156,12 @@ export default function SafetyScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.heroStatusLevel}>
               {isSafe
-                ? "STATUS: NORMAL / SAFE"
+                ? "STATUS: NORMAL / SECURE"
                 : isElevated
-                ? "STATUS: ELEVATED CAUTION"
+                ? "STATUS: ATTENTION REQUIRED"
                 : isIncident
-                ? "STATUS: ACTIVE INCIDENT"
-                : "STATUS: UNKNOWN"}
+                ? "STATUS: ASSISTANCE AVAILABLE"
+                : "STATUS: RECONNECTING"}
             </Text>
             <Text style={styles.heroMainMessage}>
               {touristSafetyStatus?.guidance_message ||
@@ -151,37 +176,76 @@ export default function SafetyScreen() {
           </View>
         </View>
 
+        {/* Safety Index Rating Metric */}
+        <View style={styles.metricRow}>
+          <View style={styles.metricBox}>
+            <Text style={styles.metricLabel}>SAFETY SCORE</Text>
+            <Text style={[styles.metricValue, { color: isSafe ? "#10B981" : isElevated ? "#F59E0B" : "#EF4444" }]}>
+              {safetyIndex}/100
+            </Text>
+          </View>
+          <View style={styles.metricDivider} />
+          <View style={styles.metricBox}>
+            <Text style={styles.metricLabel}>GEOFENCE ZONE</Text>
+            <Text style={styles.metricValueText}>
+              {touristSafetyStatus?.zone_name || "Standard Area"}
+            </Text>
+          </View>
+          <View style={styles.metricDivider} />
+          <View style={styles.metricBox}>
+            <Text style={styles.metricLabel}>GPS ACCURACY</Text>
+            <Text style={styles.metricValueText}>
+              {touristSafetyStatus?.gps_connected ? "Locked (High)" : "Searching"}
+            </Text>
+          </View>
+        </View>
+
         {/* Action Suggestion */}
         <View style={styles.heroActionBox}>
           <Info size={16} color="#E2E8F0" />
           <Text style={styles.heroActionText}>
             {isSafe
-              ? "No immediate safety actions required. Enjoy your journey!"
+              ? "All telemetry nominal. Stay on designated tourist routes."
               : isElevated
-              ? "Stay on marked tourist trails and monitor local updates."
+              ? "Heightened awareness advised. Check local perimeter notifications."
               : isIncident
-              ? "Stay in a secure location while responders proceed."
-              : "Enable GPS tracking so safety services can monitor your area."}
+              ? "Responders alerted. Maintain your position if safe."
+              : "Enable continuous GPS tracking so safety services can monitor your area."}
           </Text>
         </View>
       </View>
 
-      {/* ANOMALY CONFIRMATION PROMPT ("Are you okay?") */}
-      {activeCheckPrompt && (
+      {/* PROACTIVE SAFETY CHECK PROMPT ("Are you okay?") */}
+      {showPrompt && (
         <View style={styles.checkCard}>
           <View style={styles.checkHeader}>
             <AlertTriangle size={22} color="#F59E0B" />
-            <Text style={styles.checkTitle}>Safety Check Required</Text>
+            <Text style={styles.checkTitle}>Proactive Safety Check</Text>
           </View>
           <Text style={styles.checkDesc}>
-            {activeCheckPrompt || "We noticed an unexpected stop or sudden movement. Are you okay?"}
+            {touristSafetyStatus?.proactive_check_message ||
+              "We noticed an unexpected change in your route or movement dynamics. Please confirm your status:"}
           </Text>
           <View style={styles.checkButtons}>
-            <TouchableOpacity style={styles.btnSafe} onPress={handleConfirmSafe}>
-              <CheckCircle2 size={16} color="#fff" />
-              <Text style={styles.btnSafeText}>YES, I'M SAFE</Text>
+            <TouchableOpacity
+              style={[styles.btnSafe, submittingCheck && { opacity: 0.6 }]}
+              onPress={handleConfirmSafe}
+              disabled={submittingCheck}
+            >
+              {submittingCheck ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <CheckCircle2 size={16} color="#fff" />
+                  <Text style={styles.btnSafeText}>YES, I'M SAFE</Text>
+                </>
+              )}
             </TouchableOpacity>
-            <TouchableOpacity style={styles.btnEmergency} onPress={handleTriggerEmergency}>
+            <TouchableOpacity
+              style={styles.btnEmergency}
+              onPress={handleTriggerEmergency}
+              disabled={submittingCheck}
+            >
               <ShieldAlert size={16} color="#fff" />
               <Text style={styles.btnEmergencyText}>I NEED HELP</Text>
             </TouchableOpacity>
@@ -202,7 +266,6 @@ export default function SafetyScreen() {
                   <MapPin size={16} color="#0D9488" />
                   <Text style={styles.zoneName}>{zone.name || "Monitored Zone"}</Text>
                   <View style={styles.zoneRiskBadge}>
-
                     <Text style={styles.zoneRiskText}>{zone.risk_level?.toUpperCase()}</Text>
                   </View>
                 </View>
@@ -246,7 +309,6 @@ export default function SafetyScreen() {
             ))}
           </View>
         ) : (
-
           <View style={styles.emptyAlertsCard}>
             <ShieldCheck size={28} color="#10B981" />
             <Text style={styles.emptyAlertsTitle}>No Active Safety Alerts</Text>
@@ -298,20 +360,20 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   heroSafe: {
-    backgroundColor: "rgba(16, 185, 129, 0.12)",
-    borderColor: "#10B981",
+    backgroundColor: "rgba(16, 185, 129, 0.1)",
+    borderColor: "rgba(16, 185, 129, 0.4)",
   },
   heroElevated: {
     backgroundColor: "rgba(245, 158, 11, 0.12)",
-    borderColor: "#F59E0B",
+    borderColor: "rgba(245, 158, 11, 0.4)",
   },
   heroIncident: {
     backgroundColor: "rgba(239, 68, 68, 0.15)",
-    borderColor: "#EF4444",
+    borderColor: "rgba(239, 68, 68, 0.5)",
   },
   heroUnknown: {
-    backgroundColor: "rgba(148, 163, 184, 0.12)",
-    borderColor: "#94A3B8",
+    backgroundColor: "rgba(148, 163, 184, 0.08)",
+    borderColor: "rgba(148, 163, 184, 0.25)",
   },
   heroTop: {
     flexDirection: "row",
@@ -319,48 +381,80 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   heroIconBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: "rgba(0, 0, 0, 0.25)",
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
     alignItems: "center",
     justifyContent: "center",
   },
   heroStatusLevel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
+    letterSpacing: 0.6,
     color: "#E2E8F0",
-    letterSpacing: 0.8,
+    marginBottom: 4,
   },
   heroMainMessage: {
-    fontSize: 16,
-    fontWeight: "800",
+    fontSize: 14,
     color: "#FFFFFF",
-    marginTop: 3,
-    lineHeight: 22,
+    lineHeight: 20,
+    fontWeight: "500",
+  },
+  metricRow: {
+    flexDirection: "row",
+    backgroundColor: "rgba(0, 0, 0, 0.2)",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: "center",
+  },
+  metricBox: {
+    flex: 1,
+    alignItems: "center",
+  },
+  metricDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+  },
+  metricLabel: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: "#94A3B8",
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  metricValue: {
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  metricValueText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#E2E8F0",
   },
   heroActionBox: {
     flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.25)",
+    gap: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
     padding: 12,
     borderRadius: 12,
-    gap: 8,
+    alignItems: "center",
   },
   heroActionText: {
     fontSize: 12,
-    color: "#E2E8F0",
+    color: "#CBD5E1",
     flex: 1,
     lineHeight: 16,
-    fontWeight: "500",
   },
   checkCard: {
     backgroundColor: "rgba(245, 158, 11, 0.15)",
-    borderRadius: 18,
-    padding: 16,
     borderWidth: 1.5,
     borderColor: "#F59E0B",
-    gap: 10,
+    borderRadius: 18,
+    padding: 16,
+    gap: 12,
   },
   checkHeader: {
     flexDirection: "row",
@@ -370,11 +464,11 @@ const styles = StyleSheet.create({
   checkTitle: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#FBBF24",
+    color: "#F59E0B",
   },
   checkDesc: {
     fontSize: 13,
-    color: "#FDE68A",
+    color: "#FEF3C7",
     lineHeight: 18,
   },
   checkButtons: {
@@ -384,53 +478,55 @@ const styles = StyleSheet.create({
   },
   btnSafe: {
     flex: 1,
+    backgroundColor: "#10B981",
+    paddingVertical: 12,
+    borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#059669",
-    paddingVertical: 10,
-    borderRadius: 10,
     gap: 6,
   },
   btnSafeText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 13,
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
   btnEmergency: {
     flex: 1,
+    backgroundColor: "#EF4444",
+    paddingVertical: 12,
+    borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#DC2626",
-    paddingVertical: 10,
-    borderRadius: 10,
     gap: 6,
   },
   btnEmergencyText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 13,
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
   section: {
     gap: 10,
   },
   sectionKicker: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "800",
-    color: "#38BDF8",
-    letterSpacing: 0.8,
+    color: "#64748B",
+    letterSpacing: 0.6,
   },
   sectionTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#F8FAFC",
   },
   zonesList: {
     gap: 10,
   },
   zoneCard: {
-    backgroundColor: "rgba(30, 41, 59, 0.6)",
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
@@ -443,21 +539,21 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   zoneName: {
+    flex: 1,
     fontSize: 14,
     fontWeight: "700",
-    color: "#FFFFFF",
-    flex: 1,
+    color: "#E2E8F0",
   },
   zoneRiskBadge: {
-    backgroundColor: "rgba(56, 189, 248, 0.15)",
-    paddingVertical: 2,
+    backgroundColor: "rgba(13, 148, 136, 0.2)",
     paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   zoneRiskText: {
     fontSize: 10,
     fontWeight: "800",
-    color: "#38BDF8",
+    color: "#2DD4BF",
   },
   zoneDesc: {
     fontSize: 12,
@@ -465,34 +561,36 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   emptyZonesCard: {
-    alignItems: "center",
-    backgroundColor: "rgba(30, 41, 59, 0.5)",
-    borderRadius: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.02)",
+    borderRadius: 14,
     padding: 24,
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
-    gap: 6,
+    borderColor: "rgba(255, 255, 255, 0.06)",
+    gap: 8,
   },
   emptyZonesTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#CBD5E1",
   },
   emptyZonesSub: {
     fontSize: 12,
-    color: "#94A3B8",
+    color: "#64748B",
     textAlign: "center",
+    lineHeight: 16,
   },
   alertsList: {
     gap: 8,
   },
   alertCard: {
-    backgroundColor: "rgba(30, 41, 59, 0.6)",
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.08)",
-    gap: 4,
+    gap: 6,
   },
   alertTop: {
     flexDirection: "row",
@@ -500,33 +598,34 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   alertTitle: {
+    flex: 1,
     fontSize: 13,
     fontWeight: "600",
-    color: "#FFFFFF",
-    flex: 1,
+    color: "#F1F5F9",
   },
   alertTime: {
     fontSize: 11,
     color: "#64748B",
-    marginLeft: 24,
   },
   emptyAlertsCard: {
-    alignItems: "center",
-    backgroundColor: "rgba(30, 41, 59, 0.5)",
-    borderRadius: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.02)",
+    borderRadius: 14,
     padding: 24,
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
-    gap: 6,
+    borderColor: "rgba(255, 255, 255, 0.06)",
+    gap: 8,
   },
   emptyAlertsTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#10B981",
   },
   emptyAlertsSub: {
     fontSize: 12,
-    color: "#94A3B8",
+    color: "#64748B",
     textAlign: "center",
+    lineHeight: 16,
   },
 });

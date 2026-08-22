@@ -48,7 +48,7 @@ class SafetyEventPublisher:
         user_id: Optional[str] = None,
     ) -> None:
         """Broadcasts safety.state.changed to authority and tourist channels."""
-        # 1. Authority Operations Payload (Full operational detail)
+        # 1. Authority Operations Payload (Full operational detail with risk fusion)
         auth_payload = {
             "tourist_id": decision.tourist_id,
             "session_id": decision.session_id,
@@ -61,6 +61,8 @@ class SafetyEventPublisher:
             "reasons": decision.reasons,
             "triggered_rules": [r.model_dump() for r in decision.triggered_rules],
             "signals": decision.signals,
+            "risk_score": decision.risk_score,
+            "risk_assessment": decision.risk_assessment.model_dump() if decision.risk_assessment else None,
             "timestamp": decision.timestamp,
         }
 
@@ -75,15 +77,19 @@ class SafetyEventPublisher:
         except Exception as e:
             logger.warning("Failed to broadcast safety.state.changed to authority: %s", e)
 
-        # 2. Tourist Payload (Sanitized and user-friendly)
+        # 2. Tourist Payload (Sanitized, friendly score index and guidance)
         guidance, status_label = map_tourist_guidance(decision.state, decision.reasons)
+        safety_idx = max(0.0, 100.0 - (decision.risk_score or 0.0))
         tourist_payload = {
             "tourist_id": decision.tourist_id,
             "safety_status": status_label,
             "monitoring_active": decision.state != SafetyState.UNKNOWN,
             "gps_connected": decision.quality != "UNKNOWN",
+            "safety_index": round(safety_idx, 1),
+            "risk_level": decision.risk_assessment.risk_breakdown.risk_level_label if decision.risk_assessment else "SAFE",
             "timestamp": decision.timestamp,
-            "guidance_message": guidance,
+            "guidance_message": decision.risk_assessment.explainability.tourist_guidance if decision.risk_assessment else guidance,
+            "proactive_check_required": decision.risk_assessment.decision_support.recommended_action == "PROACTIVE_SAFETY_CHECK" if decision.risk_assessment else False,
         }
 
         envelope_tourist = RealtimeEventEnvelope(
@@ -98,6 +104,48 @@ class SafetyEventPublisher:
                 await realtime_bus.broadcast_to_user(user_id, envelope_tourist)
         except Exception as e:
             logger.warning("Failed to broadcast safety.state.changed to tourist: %s", e)
+
+    async def publish_risk_assessment_updated(self, assessment: Any) -> None:
+        """Broadcasts detailed risk.assessment.updated to authority operations channel."""
+        envelope = RealtimeEventEnvelope(
+            event_type=RealtimeEventType.RISK_ASSESSMENT_UPDATED.value,
+            source="risk_fusion_engine",
+            payload=assessment.model_dump() if hasattr(assessment, "model_dump") else assessment,
+        )
+        try:
+            await realtime_bus.publish_to_channel("authority:operations", envelope)
+        except Exception as e:
+            logger.warning("Failed to broadcast risk.assessment.updated: %s", e)
+
+    async def publish_safety_check_requested(self, tourist_id: str, prompt_message: str, assessment_id: str) -> None:
+        """Broadcasts proactive safety check prompt to tourist channel."""
+        envelope = RealtimeEventEnvelope(
+            event_type=RealtimeEventType.SAFETY_CHECK_REQUESTED.value,
+            source="safety_orchestrator",
+            payload={
+                "tourist_id": tourist_id,
+                "prompt_message": prompt_message,
+                "assessment_id": assessment_id,
+                "requires_response": True,
+            },
+        )
+        try:
+            await realtime_bus.publish_to_channel(f"tourist:{tourist_id}", envelope)
+        except Exception as e:
+            logger.warning("Failed to broadcast safety.check.requested: %s", e)
+
+    async def publish_safety_check_responded(self, tourist_id: str, response_data: Dict[str, Any]) -> None:
+        """Broadcasts tourist safety check response to authority operations."""
+        envelope = RealtimeEventEnvelope(
+            event_type=RealtimeEventType.SAFETY_CHECK_RESPONDED.value,
+            source="tourist_client",
+            payload={"tourist_id": tourist_id, **response_data},
+        )
+        try:
+            await realtime_bus.publish_to_channel("authority:operations", envelope)
+            await realtime_bus.publish_to_channel(f"tourist:{tourist_id}", envelope)
+        except Exception as e:
+            logger.warning("Failed to broadcast safety.check.responded: %s", e)
 
     async def publish_incident_created(self, incident: IncidentRecord) -> None:
         """Broadcasts incident.created to authority operations channel and notification infrastructure."""

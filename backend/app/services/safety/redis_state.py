@@ -70,6 +70,10 @@ class SafetyRedisState:
     async def set_active_state(self, state: ActiveSafetyState) -> None:
         """Saves active safety state to Redis with TTL and in-memory fallback."""
         serializable = state.model_dump()
+        _memory_active_states[state.tourist_id] = (
+            serializable,
+            time.time() + safety_config.redis_state_ttl_seconds,
+        )
         redis = await get_redis_client()
         if redis is not None:
             try:
@@ -80,15 +84,6 @@ class SafetyRedisState:
                 )
             except Exception as e:
                 logger.warning("Redis safety state write error: %s", e)
-                _memory_active_states[state.tourist_id] = (
-                    serializable,
-                    time.time() + safety_config.redis_state_ttl_seconds,
-                )
-        else:
-            _memory_active_states[state.tourist_id] = (
-                serializable,
-                time.time() + safety_config.redis_state_ttl_seconds,
-            )
 
     async def get_active_signals(self, tourist_id: str) -> List[SafetySignal]:
         """Retrieves all active signals for tourist."""
@@ -105,7 +100,8 @@ class SafetyRedisState:
                             signals.append(SafetySignal(**data))
                         except Exception:
                             pass
-                    return signals
+                    if signals:
+                        return signals
             except Exception as e:
                 logger.warning("Redis safety signals read error: %s", e)
 
@@ -125,10 +121,17 @@ class SafetyRedisState:
 
     async def update_active_signal(self, signal: SafetySignal) -> None:
         """Stores or updates a single active safety signal in the tourist's signal set."""
-        redis = await get_redis_client()
         key_field = f"{signal.signal_type.value}:{signal.source}"
         serializable = signal.model_dump()
 
+        if signal.tourist_id not in _memory_active_signals:
+            _memory_active_signals[signal.tourist_id] = {}
+        _memory_active_signals[signal.tourist_id][key_field] = (
+            serializable,
+            time.time() + safety_config.signal_expiry_seconds,
+        )
+
+        redis = await get_redis_client()
         if redis is not None:
             try:
                 pipe = redis.pipeline()
@@ -137,19 +140,6 @@ class SafetyRedisState:
                 await pipe.execute()
             except Exception as e:
                 logger.warning("Redis safety signal write error: %s", e)
-                if signal.tourist_id not in _memory_active_signals:
-                    _memory_active_signals[signal.tourist_id] = {}
-                _memory_active_signals[signal.tourist_id][key_field] = (
-                    serializable,
-                    time.time() + safety_config.signal_expiry_seconds,
-                )
-        else:
-            if signal.tourist_id not in _memory_active_signals:
-                _memory_active_signals[signal.tourist_id] = {}
-            _memory_active_signals[signal.tourist_id][key_field] = (
-                serializable,
-                time.time() + safety_config.signal_expiry_seconds,
-            )
 
     async def _reconstruct_from_db(self, tourist_id: str) -> Optional[ActiveSafetyState]:
         """Rebuilds active safety state from MongoDB history after server restart."""
