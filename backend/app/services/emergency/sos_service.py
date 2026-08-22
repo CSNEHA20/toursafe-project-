@@ -25,6 +25,7 @@ from ...schemas.emergency import (
     IncidentSource,
     IncidentStatus,
     LocationSnapshot,
+    PolicyTriggerType,
     SOSCancelRequest,
     SOSRequest,
     SOSResponse,
@@ -33,6 +34,7 @@ from ...schemas.safety import IncidentRecord
 from ..location_service import calculate_staleness, location_service
 from ..safety.events import safety_event_publisher
 from .incident_service import incident_service
+from .response_orchestrator import response_orchestrator
 
 logger = logging.getLogger("toursafe.emergency.sos")
 
@@ -133,6 +135,15 @@ class SOSService:
                 author_role="tourist",
                 content=f"[Manual SOS Retriggered]: {req.reason or 'Tourist pressed SOS button'}",
             )
+            # Ensure response plan is running
+            try:
+                await response_orchestrator.initiate_response_plan(
+                    incident_id=incident.incident_id,
+                    trigger_type=PolicyTriggerType.MANUAL_SOS,
+                    trigger_metadata={"source": "MANUAL_SOS_RETRIGGER", "severity": "CRITICAL"},
+                )
+            except Exception as orch_err:
+                logger.warning("Error initiating response plan for retriggered SOS: %s", orch_err)
         else:
             incident = await incident_service.create_incident(
                 tourist_id=tourist_id,

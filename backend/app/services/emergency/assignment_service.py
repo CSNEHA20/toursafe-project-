@@ -298,6 +298,17 @@ class AssignmentService:
         except Exception as e:
             logger.warning("Failed to send accept system message: %s", e)
 
+        # Notify response orchestrator
+        try:
+            from .response_orchestrator import response_orchestrator
+            await response_orchestrator.handle_assignment_accepted(
+                incident_id=incident_id,
+                responder_id=responder_id,
+                assignment_id=assignment_id,
+            )
+        except Exception as orch_err:
+            logger.warning("Failed to notify response orchestrator of accept: %s", orch_err)
+
         return assignment
 
     async def reject_assignment(
@@ -370,6 +381,18 @@ class AssignmentService:
             },
             target_role="authority",
         )
+
+        # Notify response orchestrator of decline
+        try:
+            from .response_orchestrator import response_orchestrator
+            await response_orchestrator.handle_assignment_declined(
+                incident_id=incident_id,
+                responder_id=responder_id,
+                reason=assignment.rejection_reason or "Responder declined",
+            )
+        except Exception as orch_err:
+            logger.warning("Failed to notify orchestrator of decline: %s", orch_err)
+
         return assignment
 
     async def start_response(
@@ -547,6 +570,18 @@ class AssignmentService:
             },
             target_role="authority",
         )
+
+        # Notify response orchestrator
+        try:
+            from .response_orchestrator import response_orchestrator
+            await response_orchestrator.handle_responder_arrived(
+                incident_id=incident_id,
+                responder_id=responder_id,
+                arrival_data={"arrival_location": arrival_loc, "proximity_verified": proximity_verified},
+            )
+        except Exception as orch_err:
+            logger.warning("Failed to notify orchestrator of arrival: %s", orch_err)
+
         return assignment
 
     async def complete_response(

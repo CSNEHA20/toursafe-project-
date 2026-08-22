@@ -23,6 +23,7 @@ from ...schemas.emergency import (
     IncidentSource,
     IncidentStatus,
     NotificationChannel,
+    PolicyTriggerType,
     ResolutionCategory,
     TimelineEventRecord,
 )
@@ -198,6 +199,19 @@ class IncidentCommandService:
 
         # Broadcast realtime event
         await safety_event_publisher.publish_incident_created(incident)
+
+        # Trigger response plan orchestration
+        try:
+            from .response_orchestrator import response_orchestrator
+            trigger_type = PolicyTriggerType.MANUAL_SOS if source == IncidentSource.MANUAL_SOS else PolicyTriggerType.SAFETY_STATE
+            await response_orchestrator.initiate_response_plan(
+                incident_id=incident.incident_id,
+                trigger_type=trigger_type,
+                trigger_metadata={"source": source.value, "severity": severity.value},
+            )
+        except Exception as orch_err:
+            logger.warning("Failed to initiate response plan for %s: %s", incident.incident_id, orch_err)
+
         return incident
 
     async def acknowledge_incident(
@@ -636,6 +650,18 @@ class IncidentCommandService:
         db = get_database()
         await db.incidents.replace_one({"incident_id": incident_id}, incident.model_dump())
         await safety_event_publisher.publish_incident_resolved(incident)
+
+        # Notify response orchestrator
+        try:
+            from .response_orchestrator import response_orchestrator
+            await response_orchestrator.handle_incident_resolved(
+                incident_id=incident_id,
+                actor_id=authority_id,
+                resolution_data={"category": incident.resolution_category, "reason": resolution_reason},
+            )
+        except Exception as res_err:
+            logger.warning("Failed to notify orchestrator of resolution for %s: %s", incident_id, res_err)
+
         return incident
 
     async def cancel_incident(
@@ -697,6 +723,18 @@ class IncidentCommandService:
         db = get_database()
         await db.incidents.replace_one({"incident_id": incident_id}, incident.model_dump())
         await safety_event_publisher.publish_incident_cancelled(incident)
+
+        # Notify response orchestrator
+        try:
+            from .response_orchestrator import response_orchestrator
+            await response_orchestrator.handle_incident_cancelled(
+                incident_id=incident_id,
+                actor_id=actor_id,
+                reason=cancellation_reason,
+            )
+        except Exception as canc_err:
+            logger.warning("Failed to notify orchestrator of cancellation for %s: %s", incident_id, canc_err)
+
         return incident
 
     async def close_incident(

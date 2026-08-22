@@ -543,3 +543,47 @@ async def command_center_search(
         results=results,
         total_count=len(results),
     )
+
+
+@router.get(
+    "/incidents/{incident_id}/dossier",
+    summary="Get authoritative incident command dossier with response plan & orchestration controls",
+)
+async def get_incident_dossier(
+    incident_id: str,
+    user_id_role: tuple = Depends(get_current_user),
+):
+    """
+    Returns full incident command dossier including:
+    - Incident records, notes, location snapshots
+    - Active response plan with action dependency graph and execution timeline
+    - Active server-side timers and SLA breach projections
+    - Assigned and recommended responders with distance & capability matching
+    """
+    user_id, role = user_id_role
+    if role not in ("authority", "admin", "supervisor", "operator", "responder"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+    db = get_database()
+    inc = await db.incidents.find_one({"incident_id": incident_id})
+    if not inc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Incident '{incident_id}' not found")
+
+    from ..services.emergency.response_orchestrator import response_orchestrator
+    plan_detail = await response_orchestrator.get_plan_by_incident(incident_id)
+
+    # Fetch assigned responder details if any
+    assigned_responder = None
+    if inc.get("assigned_to"):
+        assigned_responder = await db.responders.find_one({
+            "$or": [{"id": inc["assigned_to"]}, {"responder_id": inc["assigned_to"]}]
+        })
+
+    return {
+        "incident": inc,
+        "response_plan": plan_detail,
+        "assigned_responder": assigned_responder,
+        "operator_id": user_id,
+        "can_override": role in ("authority", "supervisor", "admin"),
+    }
+

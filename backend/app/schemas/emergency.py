@@ -737,3 +737,341 @@ class MessageSearchResponse(BaseModel):
     messages: List[IncidentMessageRecord]
 
 
+# ---------------------------------------------------------------------------
+# Emergency Response Automation & Escalation Orchestration Schemas (Prompt 24)
+# ---------------------------------------------------------------------------
+
+class PolicyStatus(str, Enum):
+    DRAFT = "DRAFT"
+    TESTING = "TESTING"
+    APPROVED = "APPROVED"
+    ACTIVE = "ACTIVE"
+    RETIRED = "RETIRED"
+
+
+class PolicyTriggerType(str, Enum):
+    MANUAL_SOS = "MANUAL_SOS"
+    SAFETY_STATE = "SAFETY_STATE"
+    RISK_EPISODE = "RISK_EPISODE"
+    MANUAL_AUTHORITY = "MANUAL_AUTHORITY"
+    INCIDENT_ESCALATION = "INCIDENT_ESCALATION"
+
+
+class ResponsePlanStatus(str, Enum):
+    CREATED = "CREATED"
+    ACTIVE = "ACTIVE"
+    WAITING_ACK = "WAITING_ACK"
+    RESPONDING = "RESPONDING"
+    ESCALATING = "ESCALATING"
+    RESOLVING = "RESOLVING"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+    FAILED = "FAILED"
+
+
+class ActionType(str, Enum):
+    CREATE_INCIDENT = "CREATE_INCIDENT"
+    NOTIFY_AUTHORITY = "NOTIFY_AUTHORITY"
+    NOTIFY_RESPONDER = "NOTIFY_RESPONDER"
+    NOTIFY_TOURIST = "NOTIFY_TOURIST"
+    DISPATCH_RESPONDER = "DISPATCH_RESPONDER"
+    REQUEST_ACKNOWLEDGEMENT = "REQUEST_ACKNOWLEDGEMENT"
+    ESCALATE = "ESCALATE"
+    ADD_PARTICIPANT = "ADD_PARTICIPANT"
+    REQUEST_HANDOVER = "REQUEST_HANDOVER"
+    REQUEST_SUPERVISOR = "REQUEST_SUPERVISOR"
+    MARK_REQUIRES_HUMAN_REVIEW = "MARK_REQUIRES_HUMAN_REVIEW"
+
+
+class ActionStatus(str, Enum):
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    RETRYING = "RETRYING"
+    CANCELLED = "CANCELLED"
+
+
+class TimerJobStatus(str, Enum):
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+    EXPIRED = "EXPIRED"
+    DEAD_LETTER = "DEAD_LETTER"
+
+
+class SlaStatus(str, Enum):
+    ON_TRACK = "ON_TRACK"
+    AT_RISK = "AT_RISK"
+    BREACHED = "BREACHED"
+
+
+class OrchestratorHealthStatus(str, Enum):
+    HEALTHY = "HEALTHY"
+    DEGRADED = "DEGRADED"
+    FAILED = "FAILED"
+
+
+class ResponseActionConfig(BaseModel):
+    action_key: str
+    type: ActionType
+    target: str = "authority"
+    required_capabilities: List[str] = Field(default_factory=list)
+    target_roles: List[str] = Field(default_factory=list)
+    channels: List[NotificationChannel] = Field(default_factory=lambda: [NotificationChannel.PUSH])
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+    depends_on: List[str] = Field(default_factory=list)
+    timeout_seconds: int = 120
+    max_attempts: int = 3
+    is_critical: bool = True
+
+
+class EscalationStageConfig(BaseModel):
+    stage: int
+    name: str
+    trigger: str = "TIMEOUT"
+    delay_seconds: int = 120
+    escalate_severity_to: IncidentSeverity = IncidentSeverity.HIGH
+    notify_roles: List[str] = Field(default_factory=lambda: ["authority"])
+    channels: List[NotificationChannel] = Field(default_factory=lambda: [NotificationChannel.PUSH])
+    dispatch_rules: Dict[str, Any] = Field(default_factory=dict)
+    require_human_approval: bool = False
+    description: str = ""
+    actions: List[ResponseActionConfig] = Field(default_factory=list)
+
+
+class ResponsePolicy(BaseModel):
+    policy_id: str = Field(default_factory=lambda: f"pol_{uuid.uuid4().hex[:10]}")
+    version: str = "v1.0.0"
+    name: str
+    description: str = ""
+    trigger_type: PolicyTriggerType = PolicyTriggerType.SAFETY_STATE
+    status: PolicyStatus = PolicyStatus.DRAFT
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    created_by: str = "system"
+    approved_by: Optional[str] = None
+    approved_at: Optional[str] = None
+    initial_stage: str = "NOTIFY"
+    stages: List[EscalationStageConfig] = Field(default_factory=list)
+    initial_actions: List[ResponseActionConfig] = Field(default_factory=list)
+    maximum_escalation_level: int = 4
+    cooldown_seconds: int = 60
+    ack_timeout_seconds: int = 120
+    dispatch_timeout_seconds: int = 300
+    max_retry_attempts: int = 3
+    retry_backoff_seconds: int = 15
+    human_override_required: bool = False
+    emergency_contacts_enabled: bool = True
+    target_sla_seconds: int = 600
+    safety_guidance_text: Optional[str] = "Please stay in your current location and keep your device online. Authority response is in progress."
+
+
+class ResponseActionRecord(BaseModel):
+    action_id: str = Field(default_factory=lambda: f"act_{uuid.uuid4().hex[:12]}")
+    plan_id: str
+    incident_id: str
+    action_key: Optional[str] = None
+    type: ActionType
+    target: str
+    status: ActionStatus = ActionStatus.PENDING
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+    depends_on: List[str] = Field(default_factory=list)
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    started_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    failed_at: Optional[str] = None
+    failure_reason: Optional[str] = None
+    attempt_count: int = 0
+    max_attempts: int = 3
+    next_retry_at: Optional[str] = None
+    idempotency_key: str
+    output_data: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ResponsePlanRecord(BaseModel):
+    response_plan_id: str = Field(default_factory=lambda: f"plan_{uuid.uuid4().hex[:12]}")
+    incident_id: str
+    policy_id: str
+    policy_version: str
+    trigger_source: str
+    status: ResponsePlanStatus = ResponsePlanStatus.CREATED
+    current_stage: str = "NOTIFY"
+    escalation_level: int = 0
+    is_paused: bool = False
+    paused_at: Optional[str] = None
+    paused_by: Optional[str] = None
+    paused_reason: Optional[str] = None
+    actions: List[ResponseActionRecord] = Field(default_factory=list)
+    active_timer_job_id: Optional[str] = None
+    ack_deadline: Optional[str] = None
+    escalation_deadline: Optional[str] = None
+    last_escalation_at: Optional[str] = None
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    started_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    cancelled_at: Optional[str] = None
+    timeline: List[Dict[str, Any]] = Field(default_factory=list)
+    metrics: Dict[str, Any] = Field(default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    version: int = 1
+
+
+class ResponseTimerJobRecord(BaseModel):
+    job_id: str = Field(default_factory=lambda: f"tmr_{uuid.uuid4().hex[:12]}")
+    incident_id: str
+    plan_id: str
+    action_id: Optional[str] = None
+    timer_type: str  # "ACKNOWLEDGEMENT", "ESCALATION", "RETRY", "SLA_BREACH"
+    stage: int = 0
+    deadline: str
+    status: TimerJobStatus = TimerJobStatus.PENDING
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    processed_at: Optional[str] = None
+    attempt_count: int = 0
+    max_retries: int = 3
+    payload: Dict[str, Any] = Field(default_factory=dict)
+    error_message: Optional[str] = None
+
+
+class PolicyCreateRequest(BaseModel):
+    name: str = Field(..., min_length=2)
+    description: Optional[str] = ""
+    trigger_type: PolicyTriggerType = PolicyTriggerType.SAFETY_STATE
+    initial_stage: str = "NOTIFY"
+    stages: List[EscalationStageConfig] = Field(default_factory=list)
+    initial_actions: List[ResponseActionConfig] = Field(default_factory=list)
+    maximum_escalation_level: int = 4
+    cooldown_seconds: int = 60
+    ack_timeout_seconds: int = 120
+    dispatch_timeout_seconds: int = 300
+    max_retry_attempts: int = 3
+    retry_backoff_seconds: int = 15
+    human_override_required: bool = False
+    emergency_contacts_enabled: bool = True
+    target_sla_seconds: int = 600
+    safety_guidance_text: Optional[str] = "Please stay in your current location and keep your device online."
+
+
+class PolicyUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    initial_stage: Optional[str] = None
+    stages: Optional[List[EscalationStageConfig]] = None
+    initial_actions: Optional[List[ResponseActionConfig]] = None
+    maximum_escalation_level: Optional[int] = None
+    cooldown_seconds: Optional[int] = None
+    ack_timeout_seconds: Optional[int] = None
+    dispatch_timeout_seconds: Optional[int] = None
+    max_retry_attempts: Optional[int] = None
+    retry_backoff_seconds: Optional[int] = None
+    human_override_required: Optional[bool] = None
+    emergency_contacts_enabled: Optional[bool] = None
+    target_sla_seconds: Optional[int] = None
+    safety_guidance_text: Optional[str] = None
+
+
+class PolicyApproveRequest(BaseModel):
+    reason: str = Field(..., min_length=3)
+
+
+class PolicyRollbackRequest(BaseModel):
+    target_version: str = Field(..., min_length=1)
+    reason: str = Field(..., min_length=3)
+
+
+class PolicySimulationRequest(BaseModel):
+    policy_id: Optional[str] = None
+    custom_policy: Optional[PolicyCreateRequest] = None
+    mock_incident_severity: IncidentSeverity = IncidentSeverity.HIGH
+    mock_trigger_type: PolicyTriggerType = PolicyTriggerType.SAFETY_STATE
+    mock_has_available_responder: bool = True
+    mock_responder_capabilities: List[str] = Field(default_factory=lambda: ["FIRST_AID", "SECURITY"])
+    mock_location: Optional[Dict[str, Any]] = None
+
+
+class PolicySimulationResult(BaseModel):
+    simulation_id: str = Field(default_factory=lambda: f"sim_{uuid.uuid4().hex[:10]}")
+    policy_name: str
+    policy_version: str
+    valid: bool
+    validation_errors: List[str] = Field(default_factory=list)
+    initial_actions_count: int = 0
+    projected_stages: List[Dict[str, Any]] = Field(default_factory=list)
+    simulated_timeline: List[Dict[str, Any]] = Field(default_factory=list)
+    estimated_resolution_time_seconds: int = 0
+    has_supervisor_fallback: bool = False
+    has_secondary_dispatch: bool = False
+    is_safe: bool = True
+    warnings: List[str] = Field(default_factory=list)
+
+
+class ManualOverrideRequest(BaseModel):
+    action_type: str = Field(..., description="'REASSIGN', 'FORCE_ESCALATE', 'CANCEL_ACTION', 'OVERRIDE_STATUS'")
+    target_responder_id: Optional[str] = None
+    target_escalation_stage: Optional[int] = None
+    target_action_id: Optional[str] = None
+    target_plan_status: Optional[ResponsePlanStatus] = None
+    reason: str = Field(..., min_length=3)
+    notes: Optional[str] = None
+
+
+class AutomationPauseRequest(BaseModel):
+    reason: str = Field(..., min_length=3)
+
+
+class AutomationResumeRequest(BaseModel):
+    reason: str = Field(..., min_length=3)
+
+
+class ResponsePlanCancelRequest(BaseModel):
+    reason: str = Field(..., min_length=3)
+
+
+class ResponsePlanDetailResponse(BaseModel):
+    plan: ResponsePlanRecord
+    incident: Optional[Dict[str, Any]] = None
+    policy: Optional[ResponsePolicy] = None
+    active_timers: List[ResponseTimerJobRecord] = Field(default_factory=list)
+    pending_actions: List[ResponseActionRecord] = Field(default_factory=list)
+    completed_actions: List[ResponseActionRecord] = Field(default_factory=list)
+    failed_actions: List[ResponseActionRecord] = Field(default_factory=list)
+    sla_status: SlaStatus = SlaStatus.ON_TRACK
+    time_to_acknowledge_seconds: Optional[float] = None
+    time_to_dispatch_seconds: Optional[float] = None
+    time_to_accept_seconds: Optional[float] = None
+    time_to_arrival_seconds: Optional[float] = None
+    time_to_resolution_seconds: Optional[float] = None
+
+
+class OrchestratorHealthResponse(BaseModel):
+    status: OrchestratorHealthStatus = OrchestratorHealthStatus.HEALTHY
+    uptime_seconds: float = 0.0
+    active_plans_count: int = 0
+    pending_timer_jobs_count: int = 0
+    failed_actions_24h: int = 0
+    active_policies_count: int = 0
+    is_scheduler_running: bool = True
+    last_sweep_at: Optional[str] = None
+    external_emergency_service_status: str = "NOT_CONNECTED"
+    warnings: List[str] = Field(default_factory=list)
+
+
+class ResponseKpiResponse(BaseModel):
+    total_response_plans: int = 0
+    completed_plans: int = 0
+    cancelled_plans: int = 0
+    failed_plans: int = 0
+    avg_time_to_acknowledge_seconds: Optional[float] = None
+    avg_time_to_dispatch_seconds: Optional[float] = None
+    avg_time_to_accept_seconds: Optional[float] = None
+    avg_time_to_arrival_seconds: Optional[float] = None
+    avg_time_to_resolution_seconds: Optional[float] = None
+    escalation_rate_percentage: float = 0.0
+    failed_action_rate_percentage: float = 0.0
+    sla_breach_rate_percentage: float = 0.0
+    multi_responder_incident_count: int = 0
+    supervisor_escalation_count: int = 0
+
+
+
