@@ -38,7 +38,9 @@ from .routers.admin_governance import router as admin_governance_router
 from .routers.copilot import router as copilot_router
 from .routers.integrations import router as integrations_router
 from .core.security_middleware import SecurityHeadersAndCorrelationMiddleware
+from .core.reliability.tracing import TracingMiddleware
 from .routers.security_governance import router as security_governance_router
+from .routers.reliability import router as reliability_router
 from .services.security.security_events import security_event_service
 from .services.integrations import integration_registry
 from .services.ml.engine import ml_inference_engine
@@ -115,6 +117,7 @@ app = FastAPI(
 )
 
 # Defense-in-Depth Security & Correlation Middleware
+app.add_middleware(TracingMiddleware)
 app.add_middleware(SecurityHeadersAndCorrelationMiddleware)
 
 # CORS configuration - environment-based allowed origins
@@ -125,10 +128,11 @@ app.add_middleware(
     allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Set-Cookie", "Accept", "X-Correlation-ID"],
+    allow_headers=["Authorization", "Content-Type", "Set-Cookie", "Accept", "X-Correlation-ID", "X-Trace-ID"],
 )
 
 app.include_router(health_router)
+app.include_router(reliability_router)
 app.include_router(realtime_router)
 app.include_router(dev_realtime_router)
 app.include_router(location_router)

@@ -53,6 +53,7 @@ import { NotificationBellButton } from '@/components/NotificationBellButton';
 import { ConnectionStatusBadge } from '@/components/ConnectionStatusBadge';
 import RealMap, { MapMarkerProp, ZonePolygonProp } from '@/components/RealMap';
 import { CopilotPanel } from '@/components/admin/CopilotPanel';
+import { OperationalHealthBar } from '@/components/admin/OperationalHealthBar';
 import {
   useCommandCenterStore,
   SafetyState,
@@ -463,6 +464,9 @@ export default function AuthorityCommandCenter() {
           </View>
         </View>
       </View>
+
+      {/* Operational Reliability & Degradation Health Bar */}
+      <OperationalHealthBar onOpenDetailedMetrics={() => setHealthModalVisible(true)} />
 
       {/* ── OPERATIONAL KPI BAR (7 LIVE METRICS) ─────────────────────────── */}
       <View style={styles.kpiContainer}>

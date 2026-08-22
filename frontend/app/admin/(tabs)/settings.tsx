@@ -29,6 +29,7 @@ import {
 } from 'lucide-react-native';
 import { useAuthStore } from '@/store/authStore';
 import { useGovernanceStore } from '@/store/governanceStore';
+import { ReliabilityDashboard } from '@/components/admin/ReliabilityDashboard';
 import Toast from 'react-native-toast-message';
 
 export default function AdminSettings() {
@@ -322,22 +323,11 @@ export default function AdminSettings() {
           </View>
         )}
 
-        {/* Tab 5: System Health */}
+        {/* Tab 5: System Health & Production Reliability */}
         {activeTab === 'health' && (
           <View style={styles.tabBody}>
-            <Text style={styles.sectionHeader}>Subsystem Health Probes</Text>
-            {systemHealth?.subsystems.map((sub, idx) => (
-              <View key={idx} style={styles.card}>
-                <View style={styles.rowBetween}>
-                  <Text style={styles.cardTitle}>{sub.subsystem.toUpperCase()}</Text>
-                  <Text style={{ color: sub.status === 'HEALTHY' ? '#10b981' : '#ef4444', fontWeight: '700' }}>
-                    {sub.status}
-                  </Text>
-                </View>
-                <Text style={styles.textSmall}>Latency: {sub.latency_ms ? `${sub.latency_ms}ms` : 'N/A'}</Text>
-                <Text style={styles.textMuted}>Details: {JSON.stringify(sub.details || {})}</Text>
-              </View>
-            ))}
+            <Text style={styles.sectionHeader}>Production Reliability & Observability</Text>
+            <ReliabilityDashboard />
           </View>
         )}
 
