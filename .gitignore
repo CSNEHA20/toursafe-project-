@@ -48,3 +48,7 @@ backend/.env
 *.swo
 .DS_Store
 Thumbs.db
+
+# Test Snapshot & Backup Artifacts
+backups/
+*.json.gz

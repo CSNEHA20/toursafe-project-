@@ -7,6 +7,7 @@ Used across unit, integration, and regression test suites.
 All identities are synthetic. No real PII is used.
 """
 
+import re
 import copy
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -65,6 +66,20 @@ class MockCollection:
         self.docs: List[Dict[str, Any]] = []
 
     def _matches(self, doc: Dict[str, Any], query: Dict[str, Any]) -> bool:
+        def get_field(d: Any, path: str) -> Any:
+            if not isinstance(d, dict):
+                return None
+            if "." in path:
+                parts = path.split(".")
+                curr = d
+                for p in parts:
+                    if isinstance(curr, dict):
+                        curr = curr.get(p)
+                    else:
+                        return None
+                return curr
+            return d.get(path)
+
         for k, v in query.items():
             if k == "$or":
                 if not any(self._matches(doc, sub) for sub in v):
@@ -73,9 +88,12 @@ class MockCollection:
                 if not all(self._matches(doc, sub) for sub in v):
                     return False
             elif isinstance(v, dict):
-                doc_val = doc.get(k)
+                doc_val = get_field(doc, k)
                 if "$in" in v:
-                    if doc_val not in v["$in"]:
+                    if isinstance(doc_val, list):
+                        if not any(item in v["$in"] for item in doc_val):
+                            return False
+                    elif doc_val not in v["$in"]:
                         return False
                 elif "$ne" in v:
                     if doc_val == v["$ne"]:
@@ -93,14 +111,23 @@ class MockCollection:
                     if not (doc_val is not None and doc_val <= v["$lte"]):
                         return False
                 elif "$exists" in v:
-                    exists = k in doc
+                    exists = doc_val is not None or k in doc
                     if v["$exists"] != exists:
+                        return False
+                elif "$regex" in v:
+                    opts = re.IGNORECASE if v.get("$options") == "i" else 0
+                    pat = re.compile(v["$regex"], opts)
+                    if isinstance(doc_val, list):
+                        if not any(pat.search(str(item or "")) for item in doc_val):
+                            return False
+                    elif not pat.search(str(doc_val or "")):
                         return False
                 else:
                     if doc_val != v:
                         return False
             else:
-                if doc.get(k) != v:
+                doc_val = get_field(doc, k)
+                if doc_val != v:
                     return False
         return True
 

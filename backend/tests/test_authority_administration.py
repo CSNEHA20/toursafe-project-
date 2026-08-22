@@ -239,6 +239,32 @@ class MockCollection:
             return type("UpdateResult", (), {"modified_count": 1, "matched_count": 0, "upserted_id": new_doc.get("_id")})()
         return type("UpdateResult", (), {"modified_count": 0, "matched_count": 0})()
 
+    async def delete_one(self, filter_dict=None, *args, **kwargs):
+        filter_dict = filter_dict or {}
+        for i, doc in enumerate(self.docs):
+            if self._matches(doc, filter_dict):
+                self.docs.pop(i)
+                return type("DeleteResult", (), {"deleted_count": 1})()
+        return type("DeleteResult", (), {"deleted_count": 0})()
+
+    async def delete_many(self, filter_dict=None, *args, **kwargs):
+        filter_dict = filter_dict or {}
+        initial_len = len(self.docs)
+        self.docs = [d for d in self.docs if not self._matches(d, filter_dict)]
+        deleted = initial_len - len(self.docs)
+        return type("DeleteResult", (), {"deleted_count": deleted})()
+
+    async def distinct(self, key, filter_dict=None, *args, **kwargs):
+        filter_dict = filter_dict or {}
+        vals = set()
+        for doc in self.docs:
+            if self._matches(doc, filter_dict) and key in doc:
+                vals.add(doc[key])
+        return list(vals)
+
+    async def create_index(self, *args, **kwargs):
+        return None
+
     async def create_indexes(self, *args, **kwargs):
         return None
 
@@ -267,10 +293,23 @@ class MockDatabase:
 
 
 @pytest.fixture(autouse=True)
-def setup_mock_db(monkeypatch):
+def auth_admin_mock_db_fixture(monkeypatch):
     mock_db = MockDatabase()
     monkeypatch.setattr(db_module, "database", mock_db)
     monkeypatch.setattr(db_module, "get_database", lambda: mock_db)
+
+    try:
+        from app.services.authority import config_governance_service as cg_mod
+        from app.services.authority import org_service as os_mod
+        from app.services.authority import jurisdiction_service as js_mod
+        from app.services.authority import auth_admin_service as aa_mod
+        from app.services.authority import simulation_service as ss_mod
+        from app.routers import authority_admin as ra_mod
+        for m in [cg_mod, os_mod, js_mod, aa_mod, ss_mod, ra_mod]:
+            if hasattr(m, "get_database"):
+                monkeypatch.setattr(m, "get_database", lambda: mock_db)
+    except Exception:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -555,6 +594,11 @@ async def test_06_atomic_activation_and_runtime_reconciliation():
     assert safety_config.weight_spatial == 0.35
     assert safety_config.risk_threshold_watch == 28.0
     assert "v1.3.0-hotload" in safety_config.rule_version
+
+    # Restore in-memory safety_config to default baseline for test isolation
+    safety_config.weight_spatial = 0.28
+    safety_config.risk_threshold_watch = 25.0
+    safety_config.rule_version = "safety-rules-v1"
 
 
 # ---------------------------------------------------------------------------

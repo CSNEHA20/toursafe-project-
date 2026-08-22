@@ -150,7 +150,7 @@ class MockDB:
 
 
 @pytest.fixture(autouse=True)
-def setup_mock_db(monkeypatch):
+def sec_hardening_mock_db_fixture(monkeypatch):
     mock_db = MockDB()
     monkeypatch.setattr(db_module, "get_database", lambda: mock_db)
     reset_rate_limit_stores()

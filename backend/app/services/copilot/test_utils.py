@@ -138,8 +138,9 @@ class MockCollection:
             return type("UpdateResult", (), {"matched_count": 0, "upserted_id": "new_1"})()
         return type("UpdateResult", (), {"matched_count": 0, "modified_count": 0})()
 
-    async def update_many(self, filter_dict, update_dict):
+    async def update_many(self, filter_dict=None, update_dict=None, *args, **kwargs):
         filter_dict = filter_dict or {}
+        update_dict = update_dict or {}
         matched = 0
         for d in self.docs:
             if self._matches(d, filter_dict):
@@ -148,7 +149,7 @@ class MockCollection:
                     d.update(copy.deepcopy(update_dict["$set"]))
         return type("UpdateResult", (), {"matched_count": matched, "modified_count": matched})()
 
-    async def delete_one(self, filter_dict):
+    async def delete_one(self, filter_dict=None, *args, **kwargs):
         filter_dict = filter_dict or {}
         for i, d in enumerate(self.docs):
             if self._matches(d, filter_dict):
@@ -156,11 +157,22 @@ class MockCollection:
                 return type("DeleteResult", (), {"deleted_count": 1})()
         return type("DeleteResult", (), {"deleted_count": 0})()
 
-    async def delete_many(self, filter_dict):
+    async def delete_many(self, filter_dict=None, *args, **kwargs):
         filter_dict = filter_dict or {}
         orig_len = len(self.docs)
         self.docs = [d for d in self.docs if not self._matches(d, filter_dict)]
         return type("DeleteResult", (), {"deleted_count": orig_len - len(self.docs)})()
+
+    async def distinct(self, key, filter_dict=None, *args, **kwargs):
+        filter_dict = filter_dict or {}
+        vals = set()
+        for doc in self.docs:
+            if self._matches(doc, filter_dict) and key in doc:
+                vals.add(doc[key])
+        return list(vals)
+
+    async def create_indexes(self, *args, **kwargs):
+        return None
 
 
 class MockDatabase:
@@ -182,4 +194,20 @@ def setup_mock_db(monkeypatch):
     mock_db = MockDatabase()
     monkeypatch.setattr(d_mod, "get_database", lambda: mock_db)
     monkeypatch.setattr(d_mod, "database", mock_db)
+
+    # Patch local get_database bindings in copilot modules
+    try:
+        from app.services.copilot import rag_service as rag_mod
+        from app.services.copilot import copilot_service as cs_mod
+        from app.services.copilot import tool_registry as tr_mod
+        from app.services.copilot import action_executor as ae_mod
+        from app.services.copilot import audit_service as as_mod
+        from app.services.copilot import context_manager as cm_mod
+        from app.routers import copilot as cr_mod
+        for m in [rag_mod, cs_mod, tr_mod, ae_mod, as_mod, cm_mod, cr_mod]:
+            if hasattr(m, "get_database"):
+                monkeypatch.setattr(m, "get_database", lambda: mock_db)
+    except Exception:
+        pass
+
     return mock_db

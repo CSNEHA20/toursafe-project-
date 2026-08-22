@@ -69,24 +69,48 @@ class MockCollection:
             if k == "$or":
                 if not any(self._matches(doc, sub) for sub in v):
                     return False
-            elif isinstance(v, dict):
-                val = doc.get(k)
+                continue
+
+            def get_val(curr, path_parts):
+                if not path_parts:
+                    return [curr]
+                part = path_parts[0]
+                if isinstance(curr, dict):
+                    if part in curr:
+                        return get_val(curr[part], path_parts[1:])
+                    return []
+                elif isinstance(curr, list):
+                    res = []
+                    for item in curr:
+                        res.extend(get_val(item, path_parts))
+                    return res
+                return []
+
+            if "." in k:
+                vals = get_val(doc, k.split("."))
+            else:
+                vals = [doc.get(k)] if k in doc else []
+
+            if isinstance(v, dict):
                 if "$in" in v:
-                    if val not in v["$in"]:
+                    if not any(val in v["$in"] for val in vals):
+                        return False
+                elif "$nin" in v:
+                    if any(val in v["$nin"] for val in vals):
                         return False
                 elif "$gte" in v:
-                    if str(val) < v["$gte"]:
+                    if not any(str(val) >= v["$gte"] for val in vals):
                         return False
                 elif "$lte" in v:
-                    if str(val) > v["$lte"]:
+                    if not any(str(val) <= v["$lte"] for val in vals):
                         return False
                 elif "$regex" in v:
                     import re
                     pattern = re.compile(v["$regex"], re.IGNORECASE if v.get("$options") == "i" else 0)
-                    if not pattern.search(str(val or "")):
+                    if not any(pattern.search(str(val or "")) for val in vals):
                         return False
             else:
-                if doc.get(k) != v:
+                if not any(val == v for val in vals):
                     return False
         return True
 
@@ -152,7 +176,26 @@ class MockCollection:
         for d in self.docs:
             if self._matches(d, filter_dict):
                 if "$set" in update_dict:
-                    d.update(copy.deepcopy(update_dict["$set"]))
+                    for k, v in update_dict["$set"].items():
+                        if ".$." in k:
+                            arr_name, field_name = k.split(".$.", 1)
+                            target_arr = d.get(arr_name, [])
+                            # Find which item in array matches filter
+                            for item in target_arr:
+                                if isinstance(item, dict):
+                                    if filter_dict.get(f"{arr_name}.action_id") == item.get("action_id") or \
+                                       filter_dict.get(f"{arr_name}.id") == item.get("id"):
+                                        item[field_name] = copy.deepcopy(v)
+                        elif "." in k:
+                            parts = k.split(".")
+                            curr = d
+                            for p in parts[:-1]:
+                                if p not in curr or not isinstance(curr[p], dict):
+                                    curr[p] = {}
+                                curr = curr[p]
+                            curr[parts[-1]] = copy.deepcopy(v)
+                        else:
+                            d[k] = copy.deepcopy(v)
                 if "$inc" in update_dict:
                     for ik, iv in update_dict["$inc"].items():
                         d[ik] = d.get(ik, 0) + iv
@@ -165,7 +208,9 @@ class MockCollection:
         if upsert:
             new_doc = copy.deepcopy(filter_dict)
             if "$set" in update_dict:
-                new_doc.update(copy.deepcopy(update_dict["$set"]))
+                for k, v in update_dict["$set"].items():
+                    if ".$." not in k and "." not in k:
+                        new_doc[k] = copy.deepcopy(v)
             self.docs.append(new_doc)
             return type("UpdateResult", (), {"matched_count": 0, "upserted_id": "new_1"})()
         return type("UpdateResult", (), {"matched_count": 0, "modified_count": 0})()
@@ -189,6 +234,30 @@ class MockCollection:
                 if "$set" in update_dict:
                     d.update(copy.deepcopy(update_dict["$set"]))
                 return copy.deepcopy(d)
+    async def delete_one(self, filter_dict=None, *args, **kwargs):
+        filter_dict = filter_dict or {}
+        for i, doc in enumerate(self.docs):
+            if self._matches(doc, filter_dict):
+                self.docs.pop(i)
+                return type("DeleteResult", (), {"deleted_count": 1})()
+        return type("DeleteResult", (), {"deleted_count": 0})()
+
+    async def delete_many(self, filter_dict=None, *args, **kwargs):
+        filter_dict = filter_dict or {}
+        initial_len = len(self.docs)
+        self.docs = [d for d in self.docs if not self._matches(d, filter_dict)]
+        deleted = initial_len - len(self.docs)
+        return type("DeleteResult", (), {"deleted_count": deleted})()
+
+    async def distinct(self, key, filter_dict=None, *args, **kwargs):
+        filter_dict = filter_dict or {}
+        vals = set()
+        for doc in self.docs:
+            if self._matches(doc, filter_dict) and key in doc:
+                vals.add(doc[key])
+        return list(vals)
+
+    async def create_index(self, *args, **kwargs):
         return None
 
 
@@ -246,6 +315,7 @@ def mock_db_fixture(monkeypatch):
         "is_active": True,
     })
 
+    monkeypatch.setattr(db_module, "database", mock_db)
     monkeypatch.setattr(db_module, "get_database", lambda: mock_db)
     monkeypatch.setattr(auth_mod, "get_database", lambda: mock_db)
     return mock_db

@@ -9,71 +9,7 @@ import app.core.database as db_module
 import app.routers.auth as auth_router
 
 
-class MockCollection:
-    def __init__(self):
-        self.data = {}
-    
-    async def find_one(self, filter=None, *args, **kwargs):
-        if filter is None:
-            filter = kwargs
-        if isinstance(filter, dict):
-            email = filter.get("email")
-            if email in self.data:
-                return self.data[email]
-            user_id = filter.get("id") or filter.get("_id")
-            if user_id:
-                for doc in self.data.values():
-                    if doc.get("id") == user_id or doc.get("_id") == user_id:
-                        return doc
-            for doc in self.data.values():
-                match = True
-                for k, v in filter.items():
-                    if doc.get(k) != v:
-                        match = False
-                        break
-                if match:
-                    return doc
-        return None
-    
-    async def insert_one(self, document):
-        email = document.get("email", f"id_{len(self.data)}")
-        doc = document.copy()
-        if "id" not in doc:
-            doc["id"] = f"user_{len(self.data) + 1}"
-        if "_id" not in doc:
-            doc["_id"] = doc["id"]
-        self.data[email] = doc
-        return type("obj", (object,), {"inserted_id": doc["id"]})()
-    
-    async def update_one(self, filter_dict, update_dict, *args, **kwargs):
-        return type("obj", (object,), {"modified_count": 1})()
-
-
-class MockDatabase:
-    def __init__(self):
-        self.collections = {
-            "users": MockCollection(),
-            "tourists": MockCollection(),
-            "authority": MockCollection(),
-        }
-    
-    def __getitem__(self, name):
-        if name not in self.collections:
-            self.collections[name] = MockCollection()
-        return self.collections[name]
-    
-    @property
-    def users(self):
-        return self.collections["users"]
-    
-    @property
-    def tourists(self):
-        return self.collections["tourists"]
-    
-    @property
-    def authority(self):
-        return self.collections["authority"]
-
+from fixtures.conftest_shared import MockCollection, MockDatabase
 
 # Global mock instance
 mock_db = MockDatabase()
@@ -84,15 +20,13 @@ import app.routers.authority as authority_router
 import app.routers.tourists as tourists_router
 
 
-def setup_module_module():
-    """Patch get_database in database module and all routers."""
-    db_module.get_database = lambda: mock_db
-    auth_router.get_database = lambda: mock_db
-    authority_router.get_database = lambda: mock_db
-    tourists_router.get_database = lambda: mock_db
-
-
-setup_module_module()
+@pytest.fixture(autouse=True)
+def auth_mock_db_fixture(monkeypatch):
+    monkeypatch.setattr(db_module, "database", mock_db)
+    monkeypatch.setattr(db_module, "get_database", lambda: mock_db)
+    monkeypatch.setattr(auth_router, "get_database", lambda: mock_db)
+    monkeypatch.setattr(authority_router, "get_database", lambda: mock_db)
+    monkeypatch.setattr(tourists_router, "get_database", lambda: mock_db)
 
 
 class TestAuthRegistration:

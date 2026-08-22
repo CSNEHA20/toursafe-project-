@@ -183,7 +183,7 @@ class MockDatabase:
 
 
 @pytest.fixture(autouse=True)
-def setup_mock_db(monkeypatch):
+def compliance_gov_mock_db_fixture(monkeypatch):
     mock_db = MockDatabase()
     monkeypatch.setattr(db_module, "get_database", lambda: mock_db)
     return mock_db

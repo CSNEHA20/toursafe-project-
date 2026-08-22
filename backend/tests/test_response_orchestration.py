@@ -351,8 +351,8 @@ class MockDatabase:
         return getattr(self, name)
 
 
-@pytest.fixture(autouse=True)
-def setup_mock_db(monkeypatch):
+@pytest.fixture(name="setup_mock_db", autouse=True)
+def resp_orch_mock_db_fixture(monkeypatch):
     mock_db = MockDatabase()
 
     monkeypatch.setattr(db_module, "database", mock_db)

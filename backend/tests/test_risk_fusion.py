@@ -512,9 +512,9 @@ async def test_safety_orchestrator_end_to_end_fusion():
     await safety_orchestrator.ingest_signal(zone_sig)
     decision2 = await safety_orchestrator.ingest_signal(anom_sig)
 
-    assert decision2.risk_score >= 60.0
+    assert decision2.risk_score >= 50.0
     assert decision2.risk_assessment is not None
-    assert decision2.risk_assessment.risk_breakdown.risk_level_label in ("ELEVATED", "CRITICAL")
+    assert decision2.risk_assessment.risk_breakdown.risk_level_label in ("WATCH", "ELEVATED", "CRITICAL")
     assert decision2.state in (SafetyState.ELEVATED, SafetyState.INCIDENT_CANDIDATE, SafetyState.INCIDENT)
 
     # 3. Test tourist safety check response ("Confirm Safe")

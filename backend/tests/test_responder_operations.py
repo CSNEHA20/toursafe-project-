@@ -242,8 +242,8 @@ class MockDatabase:
         return getattr(self, name)
 
 
-@pytest.fixture(autouse=True)
-def setup_mock_db(monkeypatch):
+@pytest.fixture(name="setup_mock_db", autouse=True)
+def resp_ops_mock_db_fixture(monkeypatch):
     mock_db = MockDatabase()
     # Seed mock authority user
     mock_db.users.docs.append({

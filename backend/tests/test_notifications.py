@@ -171,7 +171,7 @@ class MockDatabase:
 
 
 @pytest.fixture(autouse=True)
-def setup_mock_db(monkeypatch):
+def notif_mock_db_fixture(monkeypatch):
     os.environ["ENVIRONMENT"] = "test"
     mock_db = MockDatabase()
     monkeypatch.setattr(db_core, "get_database", lambda: mock_db)

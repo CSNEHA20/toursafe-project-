@@ -13,6 +13,7 @@ from ..core.reliability.redis_resilience import check_resilient_redis_health
 from ..core.reliability.degradation import degradation_manager, SystemMode
 from ..core.reliability.metrics import metrics_collector
 from .auth import get_current_user
+from ..core.config import settings
 from ..core.reliability.logging import get_structured_logger
 
 logger = get_structured_logger("toursafe.health")

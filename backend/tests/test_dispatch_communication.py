@@ -317,8 +317,8 @@ class MockDatabase:
         return getattr(self, name)
 
 
-@pytest.fixture(autouse=True)
-def setup_mock_db(monkeypatch):
+@pytest.fixture(name="setup_mock_db", autouse=True)
+def dispatch_comm_mock_db_fixture(monkeypatch):
     mock_db = MockDatabase()
     from app.services.emergency.messaging_service import _RATE_LIMIT_STORE
     _RATE_LIMIT_STORE.clear()
