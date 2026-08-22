@@ -1,0 +1,225 @@
+lib/battery/batteryService.ts(11,43): error TS2395: Individual declarations in merged declaration 'BATTERY_THRESHOLDS' must be all exported or all local.
+lib/battery/batteryService.ts(11,43): error TS2440: Import declaration conflicts with local declaration of 'BATTERY_THRESHOLDS'.
+lib/battery/batteryService.ts(11,63): error TS2395: Individual declarations in merged declaration 'BATTERY_POLICIES' must be all exported or all local.
+lib/battery/batteryService.ts(11,63): error TS2440: Import declaration conflicts with local declaration of 'BATTERY_POLICIES'.
+lib/battery/batteryService.ts(12,10): error TS2305: Module '"../../store/batteryStore"' has no exported member 'useStore'.
+lib/battery/batteryService.ts(18,14): error TS2395: Individual declarations in merged declaration 'BATTERY_THRESHOLDS' must be all exported or all local.
+lib/battery/batteryService.ts(28,14): error TS2395: Individual declarations in merged declaration 'BATTERY_POLICIES' must be all exported or all local.
+lib/battery/batteryService.ts(68,30): error TS1362: 'BATTERY_THRESHOLDS' cannot be used as a value because it was exported using 'export type'.
+lib/battery/batteryService.ts(70,30): error TS1362: 'BATTERY_THRESHOLDS' cannot be used as a value because it was exported using 'export type'.
+lib/battery/batteryService.ts(76,16): error TS1362: 'BATTERY_POLICIES' cannot be used as a value because it was exported using 'export type'.
+lib/battery/batteryService.ts(103,10): error TS2339: Property 'scheduleCheck' does not exist on type 'BatteryService'.
+lib/battery/batteryService.ts(166,68): error TS7006: Parameter 'state' implicitly has an 'any' type.
+lib/connectivity/connectivityService.ts(10,62): error TS2307: Cannot find module '../../types/connectivity' or its corresponding type declarations.
+lib/connectivity/connectivityService.ts(18,14): error TS2323: Cannot redeclare exported variable 'CONNECTION_TYPES'.
+lib/connectivity/connectivityService.ts(33,14): error TS2323: Cannot redeclare exported variable 'CONNECTIVITY_POLICIES'.
+lib/connectivity/connectivityService.ts(133,10): error TS2339: Property 'scheduleCheck' does not exist on type 'ConnectivityService'.
+lib/connectivity/connectivityService.ts(291,61): error TS2323: Cannot redeclare exported variable 'CONNECTION_TYPES'.
+lib/connectivity/connectivityService.ts(291,61): error TS2484: Export declaration conflicts with exported declaration of 'CONNECTION_TYPES'.
+lib/connectivity/connectivityService.ts(291,79): error TS2323: Cannot redeclare exported variable 'CONNECTIVITY_POLICIES'.
+lib/connectivity/connectivityService.ts(291,79): error TS2484: Export declaration conflicts with exported declaration of 'CONNECTIVITY_POLICIES'.
+lib/device-health/deviceHealthService.ts(18,28): error TS2307: Cannot find module '../lib/utils' or its corresponding type declarations.
+lib/device-health/deviceHealthService.ts(21,3): error TS2305: Module '"@/types"' has no exported member 'DeviceHealthStatus'.
+lib/device-health/deviceHealthService.ts(22,3): error TS2305: Module '"@/types"' has no exported member 'SensorHealthStatus'.
+lib/device-health/deviceHealthService.ts(23,3): error TS2305: Module '"@/types"' has no exported member 'GPSHealthStatus'.
+lib/device-health/deviceHealthService.ts(24,3): error TS2305: Module '"@/types"' has no exported member 'ConnectivityHealthStatus'.
+lib/device-health/deviceHealthService.ts(25,3): error TS2305: Module '"@/types"' has no exported member 'BatteryHealthStatus'.
+lib/device-health/deviceHealthService.ts(26,3): error TS2305: Module '"@/types"' has no exported member 'DeviceCapabilityProfile'.
+lib/device-health/deviceHealthService.ts(27,3): error TS2305: Module '"@/types"' has no exported member 'ClockSkewInfo'.
+lib/device-health/deviceHealthService.ts(28,3): error TS2305: Module '"@/types"' has no exported member 'TrackingSessionLifecycleState'.
+lib/device-health/deviceHealthService.ts(29,3): error TS2305: Module '"@/types"' has no exported member 'TrackingGPSQuality'.
+lib/device-health/deviceHealthService.ts(30,3): error TS2305: Module '"@/types"' has no exported member 'IMUQualityState'.
+lib/device-health/deviceHealthService.ts(173,25): error TS2304: Cannot find name 'batteryService'.
+lib/device-health/deviceHealthService.ts(184,63): error TS2345: Argument of type 'ConnectivityStoreState' is not assignable to parameter of type '{ type: string; isConnected: boolean; }'.
+  Type 'ConnectivityStoreState' is missing the following properties from type '{ type: string; isConnected: boolean; }': type, isConnected
+lib/device-health/deviceHealthService.ts(280,50): error TS18047: 'lastLocation.accuracy' is possibly 'null'.
+lib/device-health/deviceHealthService.ts(282,57): error TS18047: 'lastLocation.accuracy' is possibly 'null'.
+lib/device-health/deviceHealthService.ts(284,57): error TS18047: 'lastLocation.accuracy' is possibly 'null'.
+lib/device-health/deviceHealthService.ts(292,39): error TS2304: Cannot find name 'now'.
+lib/device-health/deviceHealthService.ts(374,19): error TS1308: 'await' expressions are only allowed within async functions and at the top levels of modules.
+lib/device-health/deviceHealthService.ts(385,9): error TS2304: Cannot find name 'estimatedAge'.
+lib/device-health/deviceHealthService.ts(387,15): error TS2304: Cannot find name 'now'.
+lib/device-health/deviceHealthService.ts(427,25): error TS2304: Cannot find name 'telemetryOfflineBuffer'.
+lib/device-health/deviceHealthService.ts(432,7): error TS2322: Type 'number | null | undefined' is not assignable to type 'number | undefined'.
+  Type 'null' is not assignable to type 'number | undefined'.
+lib/device-health/deviceHealthService.ts(669,19): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(timeout: string | number | Timeout | undefined): void', gave the following error.
+    Argument of type 'Timeout | null' is not assignable to parameter of type 'string | number | Timeout | undefined'.
+      Type 'null' is not assignable to type 'string | number | Timeout | undefined'.
+  Overload 2 of 3, '(handle: number): void', gave the following error.
+    Argument of type 'Timeout | null' is not assignable to parameter of type 'number'.
+      Type 'null' is not assignable to type 'number'.
+  Overload 3 of 3, '(id: number | undefined): void', gave the following error.
+    Argument of type 'Timeout | null' is not assignable to parameter of type 'number | undefined'.
+      Type 'null' is not assignable to type 'number | undefined'.
+lib/gps/gpsService.ts(12,22): error TS2305: Module '"../../types/telemetry"' has no exported member 'GPSQualityClassification'.
+lib/gps/gpsService.ts(20,40): error TS2307: Cannot find module '../lib/utils' or its corresponding type declarations.
+lib/gps/gpsService.ts(157,30): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'string | null | undefined' is not assignable to parameter of type 'string | number | Date'.
+      Type 'undefined' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'string | null | undefined' is not assignable to parameter of type 'string | number'.
+      Type 'undefined' is not assignable to type 'string | number'.
+lib/gps/gpsService.ts(158,31): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'string | null | undefined' is not assignable to parameter of type 'string | number | Date'.
+      Type 'undefined' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'string | null | undefined' is not assignable to parameter of type 'string | number'.
+      Type 'undefined' is not assignable to type 'string | number'.
+lib/gps/gpsService.ts(262,33): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'string | null | undefined' is not assignable to parameter of type 'string | number | Date'.
+      Type 'undefined' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'string | null | undefined' is not assignable to parameter of type 'string | number'.
+      Type 'undefined' is not assignable to type 'string | number'.
+lib/gps/gpsService.ts(268,7): error TS2345: Argument of type 'number | null | undefined' is not assignable to parameter of type 'number | null'.
+  Type 'undefined' is not assignable to type 'number | null'.
+lib/gps/gpsService.ts(270,11): error TS2339: Property 'satellitesInView' does not exist on type 'GPSPayload'.
+lib/gps/gpsService.ts(287,7): error TS2322: Type 'number | null | undefined' is not assignable to type 'number | null'.
+  Type 'undefined' is not assignable to type 'number | null'.
+lib/gps/gpsService.ts(328,36): error TS2339: Property 'currentLongitude' does not exist on type 'LocationState'.
+lib/gps/gpsService.ts(358,7): error TS2322: Type 'string | null | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+lib/gps/gpsService.ts(375,53): error TS2339: Property 'permissionService' does not exist on type 'LocationState'.
+lib/gps/gpsService.ts(419,3): error TS2484: Export declaration conflicts with exported declaration of 'GPSAccuracyClassification'.
+lib/gps/gpsService.ts(420,3): error TS2484: Export declaration conflicts with exported declaration of 'GPSQualityMetadata'.
+lib/gps/gpsService.ts(421,3): error TS2484: Export declaration conflicts with exported declaration of 'GPSJumpFilterResult'.
+lib/gps/gpsService.ts(422,3): error TS2484: Export declaration conflicts with exported declaration of 'GGPSampleWithMetadata'.
+lib/index.ts(9,15): error TS2307: Cannot find module '@/lib/battery' or its corresponding type declarations.
+lib/index.ts(10,15): error TS2307: Cannot find module '@/lib/connectivity' or its corresponding type declarations.
+lib/index.ts(11,15): error TS2307: Cannot find module '@/lib/telemetry' or its corresponding type declarations.
+lib/index.ts(12,15): error TS2307: Cannot find module '@/lib/gps' or its corresponding type declarations.
+lib/index.ts(13,15): error TS2307: Cannot find module '@/lib/tracking-session' or its corresponding type declarations.
+lib/index.ts(14,15): error TS2307: Cannot find module '@/lib/device-health' or its corresponding type declarations.
+lib/index.ts(17,3): error TS2304: Cannot find name 'GPSAccuracyClassification'.
+lib/index.ts(18,3): error TS2304: Cannot find name 'GPSQualityMetadata'.
+lib/index.ts(19,3): error TS2304: Cannot find name 'GPSJumpFilterResult'.
+lib/index.ts(20,3): error TS2304: Cannot find name 'GGPSampleWithMetadata'.
+lib/index.ts(21,3): error TS2304: Cannot find name 'BatteryInfo'.
+lib/index.ts(22,3): error TS2304: Cannot find name 'BatteryLevelPolicy'.
+lib/index.ts(23,3): error TS2304: Cannot find name 'ConnectionType'.
+lib/index.ts(24,3): error TS2304: Cannot find name 'NetworkState'.
+lib/index.ts(25,3): error TS2304: Cannot find name 'ConnectionInfo'.
+lib/index.ts(26,3): error TS2304: Cannot find name 'TrackingSessionLifecycleState'.
+lib/index.ts(27,3): error TS2304: Cannot find name 'TrackingSessionMetadata'.
+lib/index.ts(28,3): error TS2304: Cannot find name 'TrackingGPSQuality'.
+lib/index.ts(29,3): error TS2304: Cannot find name 'DeviceHealthStatus'.
+lib/index.ts(30,3): error TS2304: Cannot find name 'SensorHealthStatus'.
+lib/index.ts(31,3): error TS2304: Cannot find name 'GPSHealthStatus'.
+lib/index.ts(32,3): error TS2304: Cannot find name 'ConnectivityHealthStatus'.
+lib/index.ts(33,3): error TS2304: Cannot find name 'BatteryHealthStatus'.
+lib/index.ts(34,3): error TS2304: Cannot find name 'DeviceCapabilityProfile'.
+lib/index.ts(35,3): error TS2304: Cannot find name 'ClockSkewInfo'.
+lib/index.ts(36,3): error TS2304: Cannot find name 'IMUQualityState'.
+lib/index.ts(37,3): error TS2304: Cannot find name 'IMUTrackingStatus'.
+lib/index.ts(38,3): error TS2304: Cannot find name 'SensorHardwareStatus'.
+lib/index.ts(39,3): error TS2304: Cannot find name 'AccelerometerSample'.
+lib/index.ts(40,3): error TS2304: Cannot find name 'GyroscopeSample'.
+lib/index.ts(41,3): error TS2304: Cannot find name 'IMUSample'.
+lib/index.ts(42,3): error TS2304: Cannot find name 'IMUQualityMetrics'.
+lib/index.ts(43,3): error TS2304: Cannot find name 'IMUSession'.
+lib/index.ts(44,3): error TS2304: Cannot find name 'IMUSampleBatch'.
+lib/index.ts(45,3): error TS2304: Cannot find name 'IMUTelemetryMessage'.
+lib/index.ts(46,3): error TS2304: Cannot find name 'TelemetryPacketType'.
+lib/index.ts(47,3): error TS2304: Cannot find name 'QualityState'.
+lib/index.ts(48,3): error TS2304: Cannot find name 'SessionStatus'.
+lib/index.ts(49,3): error TS2304: Cannot find name 'TelemetryAckStatus'.
+lib/index.ts(50,3): error TS2304: Cannot find name 'TelemetryPacketEnvelope'.
+lib/index.ts(51,3): error TS2304: Cannot find name 'TelemetryAck'.
+lib/index.ts(52,3): error TS2304: Cannot find name 'TelemetryBatchRequest'.
+lib/index.ts(53,3): error TS2304: Cannot find name 'TelemetryBatchAck'.
+lib/index.ts(54,3): error TS2304: Cannot find name 'TelemetrySample'.
+lib/index.ts(55,3): error TS2304: Cannot find name 'TelemetryWindow'.
+lib/index.ts(56,3): error TS2304: Cannot find name 'TelemetrySessionMetrics'.
+lib/index.ts(57,3): error TS2304: Cannot find name 'TouristTelemetryStatusResponse'.
+lib/index.ts(58,3): error TS2304: Cannot find name 'AuthorityTelemetryStatusResponse'.
+lib/index.ts(59,3): error TS2304: Cannot find name 'TelemetryDiagnosticsResponse'.
+lib/telemetry/offlineBuffer.ts(14,3): error TS2305: Module '"../../types/telemetry"' has no exported member 'BatchIdempotency'.
+lib/telemetry/offlineBuffer.ts(17,28): error TS2307: Cannot find module '../lib/utils' or its corresponding type declarations.
+lib/telemetry/offlineBuffer.ts(125,26): error TS2339: Property 'retryCount' does not exist on type 'TelemetryPacketEnvelope'.
+lib/telemetry/offlineBuffer.ts(126,29): error TS2339: Property 'last_attempt_at' does not exist on type 'TelemetryPacketEnvelope'.
+lib/telemetry/offlineBuffer.ts(127,23): error TS2339: Property 'batch_id' does not exist on type 'TelemetryPacketEnvelope'.
+lib/telemetry/offlineBuffer.ts(128,30): error TS2339: Property 'idempotency_key' does not exist on type 'TelemetryPacketEnvelope'.
+lib/telemetry/offlineBuffer.ts(130,30): error TS2339: Property 'batch_id' does not exist on type 'TelemetryPacketEnvelope'.
+lib/telemetry/offlineBuffer.ts(132,31): error TS2339: Property 'device_id' does not exist on type 'TelemetryPacketEnvelope'.
+lib/telemetry/offlineBuffer.ts(133,32): error TS2339: Property 'created_at' does not exist on type 'TelemetryPacketEnvelope'.
+lib/telemetry/offlineBuffer.ts(139,31): error TS2339: Property 'device_id' does not exist on type 'TelemetryPacketEnvelope'.
+lib/telemetry/offlineBuffer.ts(337,15): error TS2484: Export declaration conflicts with exported declaration of 'OfflineBufferStats'.
+lib/telemetry/offlineBuffer.ts(337,35): error TS2484: Export declaration conflicts with exported declaration of 'BufferedPacket'.
+lib/telemetry/telemetryService.ts(29,10): error TS2305: Module '"../../lib/utils"' has no exported member 'generateId'.
+lib/telemetry/telemetryService.ts(165,46): error TS2339: Property 'allowsGPSFrequency' does not exist on type 'BatteryLevelPolicy'.
+lib/telemetry/telemetryService.ts(168,46): error TS2339: Property 'allowsIMUFrequency' does not exist on type 'BatteryLevelPolicy'.
+lib/telemetry/telemetryService.ts(196,9): error TS2353: Object literal may only specify known properties, and 'batch_id' does not exist in type 'TelemetryPacketEnvelope'.
+lib/telemetry/telemetryService.ts(209,7): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+lib/telemetry/telemetryService.ts(222,9): error TS2353: Object literal may only specify known properties, and 'batch_id' does not exist in type 'TelemetryPacketEnvelope'.
+lib/telemetry/telemetryService.ts(283,24): error TS2339: Property 'allowsIMUFrequency' does not exist on type 'BatteryLevelPolicy'.
+lib/telemetry/telemetryService.ts(319,46): error TS2551: Property 'isOnline' does not exist on type 'ConnectivityService'. Did you mean 'isOffline'?
+lib/telemetry/telemetryService.ts(347,24): error TS2339: Property 'allowsGPSFrequency' does not exist on type 'BatteryLevelPolicy'.
+lib/telemetry/telemetryService.ts(374,70): error TS2551: Property 'isOnline' does not exist on type 'ConnectivityService'. Did you mean 'isOffline'?
+lib/telemetry/telemetryService.ts(415,42): error TS2551: Property 'isOnline' does not exist on type 'ConnectivityService'. Did you mean 'isOffline'?
+lib/telemetry/telemetryService.ts(498,43): error TS2304: Cannot find name 'batchToSend'.
+lib/telemetry/telemetryService.ts(583,42): error TS2551: Property 'isOnline' does not exist on type 'ConnectivityService'. Did you mean 'isOffline'?
+lib/telemetry/telemetryService.ts(595,42): error TS2339: Property 'allowsCellularUploads' does not exist on type 'BatteryLevelPolicy'.
+lib/tracking-session/trackingSessionService.ts(11,10): error TS2724: '"@/types/location"' has no exported member named 'TrackingSessionStatus'. Did you mean 'TrackingSession'?
+lib/tracking-session/trackingSessionService.ts(18,10): error TS2305: Module '"../battery/batteryService"' has no exported member 'batteryPolicy'.
+lib/tracking-session/trackingSessionService.ts(19,28): error TS2307: Cannot find module '../lib/utils' or its corresponding type declarations.
+lib/tracking-session/trackingSessionService.ts(52,18): error TS2304: Cannot find name 'IMUQualityState'.
+lib/tracking-session/trackingSessionService.ts(118,59): error TS2339: Property 'subscribe' does not exist on type 'BatteryStoreState'.
+lib/tracking-session/trackingSessionService.ts(122,69): error TS2339: Property 'subscribe' does not exist on type 'ConnectivityStoreState'.
+lib/tracking-session/trackingSessionService.ts(224,25): error TS2304: Cannot find name 'useAuthStore'.
+lib/tracking-session/trackingSessionService.ts(247,52): error TS2345: Argument of type 'TrackingSessionMetadata' is not assignable to parameter of type 'TrackingSession'.
+  Types of property 'status' are incompatible.
+    Type 'TrackingSessionLifecycleState' is not assignable to type 'LocationTrackingStatus'.
+      Type '"completed"' is not assignable to type 'LocationTrackingStatus'.
+lib/tracking-session/trackingSessionService.ts(287,55): error TS2339: Property 'permissionService' does not exist on type 'LocationState'.
+lib/tracking-session/trackingSessionService.ts(334,22): error TS2304: Cannot find name 'useAuthStore'.
+lib/tracking-session/trackingSessionService.ts(384,29): error TS2339: Property 'ended_at' does not exist on type 'TrackingSessionMetadata'.
+lib/tracking-session/trackingSessionService.ts(385,14): error TS2339: Property 'currentSampleCount' does not exist on type 'TrackingSessionService'.
+lib/tracking-session/trackingSessionService.ts(394,31): error TS2322: Type 'TrackingSessionMetadata | null' is not assignable to type 'TrackingSessionMetadata | undefined'.
+  Type 'null' is not assignable to type 'TrackingSessionMetadata | undefined'.
+lib/tracking-session/trackingSessionService.ts(522,15): error TS2484: Export declaration conflicts with exported declaration of 'TrackingSessionLifecycleState'.
+lib/tracking-session/trackingSessionService.ts(522,46): error TS2484: Export declaration conflicts with exported declaration of 'TrackingSessionMetadata'.
+lib/tracking-session/trackingSessionService.ts(522,71): error TS2484: Export declaration conflicts with exported declaration of 'TrackingGPSQuality'.
+store/batteryStore.ts(24,7): error TS2739: Type '{ batteryInfo: { level: number; isCharging: false; isLowPowerMode: false; }; lastUpdated: number; policy: any; }' is missing the following properties from type 'BatteryStoreState': setBatteryInfo, setPolicy, updatePolicyFromState, reset
+store/batteryStore.ts(31,11): error TS2304: Cannot find name 'deriveBatteryPolicy'.
+store/batteryStore.ts(43,15): error TS2304: Cannot find name 'deriveBatteryPolicy'.
+store/batteryStore.ts(55,15): error TS2304: Cannot find name 'deriveBatteryPolicy'.
+store/batteryStore.ts(71,15): error TS2304: Cannot find name 'deriveBatteryPolicy'.
+store/batteryStore.ts(81,5): error TS2578: Unused '@ts-expect-error' directive.
+store/batteryStore.ts(84,3): error TS2304: Cannot find name 'persist'.
+store/batteryStore.ts(85,6): error TS7006: Parameter 'state' implicitly has an 'any' type.
+store/batteryStore.ts(92,23): error TS7006: Parameter 'name' implicitly has an 'any' type.
+store/batteryStore.ts(93,20): error TS7006: Parameter 'state' implicitly has an 'any' type.
+store/connectivityStore.ts(14,8): error TS2307: Cannot find module '@/types/connectivity' or its corresponding type declarations.
+store/connectivityStore.ts(30,7): error TS2739: Type '{ networkState: { type: string; isConnected: boolean; isWifi: boolean; isCellular: boolean; isMetered: boolean; effectiveType: string; }; lastUpdated: number; policy: any; }' is missing the following properties from type 'ConnectivityStoreState': setNetworkState, setPolicy, updatePolicyFromState, reset
+store/connectivityStore.ts(65,30): error TS2304: Cannot find name 'get'.
+store/connectivityStore.ts(96,5): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(partial: ConnectivityStoreState | Partial<ConnectivityStoreState> | ((state: ConnectivityStoreState) => ConnectivityStoreState | Partial<...>), replace?: false | undefined): void', gave the following error.
+    Object literal may only specify known properties, and 'name' does not exist in type 'ConnectivityStoreState | Partial<ConnectivityStoreState> | ((state: ConnectivityStoreState) => ConnectivityStoreState | Partial<...>)'.
+  Overload 2 of 2, '(state: ConnectivityStoreState | ((state: ConnectivityStoreState) => ConnectivityStoreState), replace: true): void', gave the following error.
+    Object literal may only specify known properties, and 'name' does not exist in type 'ConnectivityStoreState | ((state: ConnectivityStoreState) => ConnectivityStoreState)'.
+store/connectivityStore.ts(99,3): error TS2304: Cannot find name 'persist'.
+store/connectivityStore.ts(100,6): error TS7006: Parameter 'state' implicitly has an 'any' type.
+store/connectivityStore.ts(107,23): error TS7006: Parameter 'name' implicitly has an 'any' type.
+store/connectivityStore.ts(108,20): error TS7006: Parameter 'state' implicitly has an 'any' type.
+store/deviceHealthStore.ts(16,8): error TS2307: Cannot find module '@/types/device-health' or its corresponding type declarations.
+store/deviceHealthStore.ts(32,7): error TS2739: Type '{ healthStatus: null; lastChecked: number; }' is missing the following properties from type 'DeviceHealthStoreState': setHealthStatus, setClockSkew, updateFromHealthService, reset
+store/deviceHealthStore.ts(67,5): error TS2578: Unused '@ts-expect-error' directive.
+store/deviceHealthStore.ts(70,3): error TS2304: Cannot find name 'persist'.
+store/deviceHealthStore.ts(71,6): error TS7006: Parameter 'state' implicitly has an 'any' type.
+store/deviceHealthStore.ts(77,23): error TS7006: Parameter 'name' implicitly has an 'any' type.
+store/deviceHealthStore.ts(78,20): error TS7006: Parameter 'state' implicitly has an 'any' type.
+store/telemetryStore.ts(15,3): error TS2305: Module '"@/types/telemetry"' has no exported member 'GGPSampleWithMetadata'.
+store/telemetryStore.ts(16,3): error TS2305: Module '"@/types/telemetry"' has no exported member 'DeviceHealthStatus'.
+types/battery.ts(36,14): error TS2323: Cannot redeclare exported variable 'BATTERY_THRESHOLDS'.
+types/battery.ts(47,14): error TS2323: Cannot redeclare exported variable 'BATTERY_POLICIES'.
+types/battery.ts(128,15): error TS2484: Export declaration conflicts with exported declaration of 'BatteryInfo'.
+types/battery.ts(128,28): error TS2484: Export declaration conflicts with exported declaration of 'BatteryLevelPolicy'.
+types/battery.ts(128,48): error TS2323: Cannot redeclare exported variable 'BATTERY_THRESHOLDS'.
+types/battery.ts(128,48): error TS2484: Export declaration conflicts with exported declaration of 'BATTERY_THRESHOLDS'.
+types/battery.ts(128,68): error TS2323: Cannot redeclare exported variable 'BATTERY_POLICIES'.
+types/battery.ts(128,68): error TS2484: Export declaration conflicts with exported declaration of 'BATTERY_POLICIES'.
