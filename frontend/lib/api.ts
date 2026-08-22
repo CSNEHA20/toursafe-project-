@@ -281,7 +281,6 @@ export const responderApi = {
   getById: (id: string) => api.get(`/authority/responders/${id}`),
   create: (data: any) => api.post("/authority/responders", data),
   update: (id: string, data: any) => api.patch(`/authority/responders/${id}`, data),
-  // Prompt 13 endpoints
   getMe: () => api.get<import("@/types").ResponderSelfProfile>("/responders/me"),
   updateStatus: (status: string, reason?: string) =>
     api.post("/responders/me/status", { status, reason }),
@@ -299,6 +298,12 @@ export const responderApi = {
     api.get<import("@/types").ResponderUnitRecord[]>("/responders/units", { params }),
   createUnit: (data: any) => api.post<import("@/types").ResponderUnitRecord>("/responders/units", data),
   updateUnit: (unit_id: string, data: any) => api.patch<import("@/types").ResponderUnitRecord>(`/responders/units/${unit_id}`, data),
+  getHistory: (params?: { limit?: number; skip?: number }) =>
+    api.get<import("@/types").ResponderHistoryResponse>("/responders/me/history", { params }),
+  syncFieldNotes: (data: import("@/types").FieldNotesBatchSyncRequest) =>
+    api.post<import("@/types").FieldNotesBatchSyncResponse>("/responders/me/field-notes/sync", data),
+  requestHandover: (assignment_id: string, data: import("@/types").AssignmentHandoverRequest) =>
+    api.post<import("@/types").AssignmentRecord>(`/responders/me/assignments/${assignment_id}/handover`, data),
 };
 
 export const incidentAssignmentApi = {
@@ -314,6 +319,10 @@ export const incidentAssignmentApi = {
     api.post<import("@/types").AssignmentRecord>(`/authority/incidents/${incident_id}/assignments/${assignment_id}/start`, { notes }),
   markArrived: (incident_id: string, assignment_id: string, data: { latitude?: number; longitude?: number; accuracy?: number; force_override?: boolean; notes?: string }) =>
     api.post<import("@/types").AssignmentRecord>(`/authority/incidents/${incident_id}/assignments/${assignment_id}/arrived`, data),
+  submitSceneAssessment: (incident_id: string, assignment_id: string, data: import("@/types").SceneAssessmentRequest) =>
+    api.post<{ success: boolean; incident_id: string; category: string; timestamp: string }>(`/authority/incidents/${incident_id}/assignments/${assignment_id}/assess-scene`, data),
+  handoverAssignment: (incident_id: string, assignment_id: string, data: import("@/types").AssignmentHandoverRequest) =>
+    api.post<import("@/types").AssignmentRecord>(`/authority/incidents/${incident_id}/assignments/${assignment_id}/handover`, data),
   completeResponse: (incident_id: string, assignment_id: string, data: { completion_reason: string; resolution_notes?: string }) =>
     api.post<import("@/types").AssignmentRecord>(`/authority/incidents/${incident_id}/assignments/${assignment_id}/complete`, data),
   getMessages: (incident_id: string, limit = 50, skip = 0) =>

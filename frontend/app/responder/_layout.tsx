@@ -13,6 +13,8 @@ export default function ResponderLayout() {
       <Stack.Screen name="incident" options={{ title: 'Incident Response' }} />
       <Stack.Screen name="messages" options={{ title: 'Operational Messages' }} />
       <Stack.Screen name="map" options={{ title: 'Tactical Map' }} />
+      <Stack.Screen name="history" options={{ title: 'Mission History' }} />
+      <Stack.Screen name="diagnostics" options={{ title: 'Field Diagnostics' }} />
     </Stack>
   );
 }

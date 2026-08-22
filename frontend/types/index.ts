@@ -729,6 +729,80 @@ export interface ResponderSelfProfile {
   tracking_session?: Record<string, any>;
 }
 
+export type SceneAssessmentCategory =
+  | "TOURIST_SAFE"
+  | "FIRST_AID_RENDERED"
+  | "MEDICAL_ASSISTANCE"
+  | "EVACUATION_REQUIRED"
+  | "FALSE_ALARM"
+  | "HAZARD_CLEARED"
+  | "POLICE_ASSISTANCE"
+  | "SEARCH_CONTINUING";
+
+export interface SceneAssessmentRequest {
+  category: SceneAssessmentCategory;
+  notes?: string;
+  tourist_status_observed?: string;
+  follow_up_required?: boolean;
+  evidence_metadata?: Record<string, any>;
+}
+
+export type HandoverReason =
+  | "FATIGUE_SHIFT_CHANGE"
+  | "WRONG_CAPABILITY"
+  | "TERRAIN_OR_ACCESS"
+  | "CASUALTY_CRITICALITY"
+  | "EQUIPMENT_FAILURE"
+  | "LOCATION"
+  | "COMMAND_DIRECTIVE";
+
+export interface AssignmentHandoverRequest {
+  reason: HandoverReason;
+  details?: string;
+  replacement_capability?: string;
+}
+
+export interface OfflineFieldNoteItem {
+  client_note_id: string;
+  incident_id: string;
+  content: string;
+  recorded_at?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface FieldNotesBatchSyncRequest {
+  notes: OfflineFieldNoteItem[];
+}
+
+export interface FieldNotesBatchSyncResponse {
+  synced_count: number;
+  synced_ids: string[];
+  failed_ids: string[];
+  timestamp: string;
+}
+
+export interface ResponderHistoryItem extends AssignmentRecord {
+  incident_summary?: {
+    incident_id: string;
+    source?: string;
+    severity?: string;
+    status?: string;
+    created_at?: string;
+    location_name?: string;
+    zone_name?: string;
+    latitude?: number;
+    longitude?: number;
+  };
+}
+
+export interface ResponderHistoryResponse {
+  items: ResponderHistoryItem[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
 export interface TripItineraryStop {
   id?: string;
   name: string;

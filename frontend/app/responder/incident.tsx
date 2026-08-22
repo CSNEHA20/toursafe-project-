@@ -18,12 +18,19 @@ import {
   CheckCircle,
   CheckCircle2,
   Clock,
+  Database,
+  FileCheck,
+  FileText,
+  HelpCircle,
   MapPin,
   MessageSquare,
   Navigation,
   Phone,
+  RefreshCw,
+  Share2,
   Shield,
   ShieldAlert,
+  Stethoscope,
   User,
   Users,
   X,
@@ -31,13 +38,37 @@ import {
 } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import { incidentApi, incidentAssignmentApi, responderApi } from '@/lib/api';
+import { useResponderStore } from '@/store/responderStore';
 import type {
   AssignmentRecord,
+  HandoverReason,
   IncidentRecord,
   RejectionReason,
   ResponderSelfProfile,
+  SceneAssessmentCategory,
   TimelineEvent,
 } from '@/types';
+
+const ASSESSMENT_CATEGORIES: Array<{ label: string; value: SceneAssessmentCategory; icon: string }> = [
+  { label: 'Tourist Safe & Stable (No Hazard)', value: 'TOURIST_SAFE', icon: 'CheckCircle' },
+  { label: 'First Aid Administered (Minor)', value: 'FIRST_AID_RENDERED', icon: 'Stethoscope' },
+  { label: 'Advanced Medical / Ambulance Needed', value: 'MEDICAL_ASSISTANCE', icon: 'AlertCircle' },
+  { label: 'Emergency Evacuation Required', value: 'EVACUATION_REQUIRED', icon: 'ShieldAlert' },
+  { label: 'False Alarm / Inadvertent SOS', value: 'FALSE_ALARM', icon: 'HelpCircle' },
+  { label: 'Physical Hazard Cleared', value: 'HAZARD_CLEARED', icon: 'FileCheck' },
+  { label: 'Law Enforcement Required', value: 'POLICE_ASSISTANCE', icon: 'Shield' },
+  { label: 'Search & Sweep Continuing', value: 'SEARCH_CONTINUING', icon: 'Navigation' },
+];
+
+const HANDOVER_REASONS: Array<{ label: string; value: HandoverReason }> = [
+  { label: 'Fatigue / Maximum Shift Limit Reached', value: 'FATIGUE_SHIFT_CHANGE' },
+  { label: 'Specialized Tactical Capability Required', value: 'WRONG_CAPABILITY' },
+  { label: 'Terrain Obstacle / Access Route Impassable', value: 'TERRAIN_OR_ACCESS' },
+  { label: 'Casualty Criticality Beyond Unit Level', value: 'CASUALTY_CRITICALITY' },
+  { label: 'Equipment Malfunction / Depleted Resources', value: 'EQUIPMENT_FAILURE' },
+  { label: 'Displaced Location / Outside Sector', value: 'LOCATION' },
+  { label: 'Authority Command Reassignment Directive', value: 'COMMAND_DIRECTIVE' },
+];
 
 const REJECTION_REASONS: Array<{ label: string; value: RejectionReason }> = [
   { label: 'Unreachable / Communication Outage', value: 'UNREACHABLE_OR_OFFLINE' },
@@ -59,10 +90,30 @@ export default function ResponderIncidentScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Zustand Store
+  const { addOfflineNote, currentGps } = useResponderStore();
+
   // Rejection Modal
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [selectedRejectReason, setSelectedRejectReason] = useState<RejectionReason>('UNREACHABLE_OR_OFFLINE');
   const [rejectDetails, setRejectDetails] = useState('');
+
+  // Scene Assessment Modal
+  const [assessmentModalVisible, setAssessmentModalVisible] = useState(false);
+  const [selectedAssessmentCategory, setSelectedAssessmentCategory] = useState<SceneAssessmentCategory>('TOURIST_SAFE');
+  const [assessmentNotes, setAssessmentNotes] = useState('');
+  const [touristObservedStatus, setTouristObservedStatus] = useState('');
+  const [followUpRequired, setFollowUpRequired] = useState(false);
+
+  // Handover Modal
+  const [handoverModalVisible, setHandoverModalVisible] = useState(false);
+  const [selectedHandoverReason, setSelectedHandoverReason] = useState<HandoverReason>('FATIGUE_SHIFT_CHANGE');
+  const [handoverDetails, setHandoverDetails] = useState('');
+  const [handoverCapability, setHandoverCapability] = useState('');
+
+  // Offline Field Note Input
+  const [fieldNoteText, setFieldNoteText] = useState('');
+  const [isSavingNote, setIsSavingNote] = useState(false);
 
   // Completion Modal
   const [completeModalVisible, setCompleteModalVisible] = useState(false);
@@ -267,6 +318,94 @@ export default function ResponderIncidentScreen() {
     }
   }
 
+  async function handleSubmitAssessment() {
+    if (!incident || !assignment) return;
+    try {
+      setActionLoading(true);
+      await incidentAssignmentApi.submitSceneAssessment(
+        incident.incident_id,
+        assignment.assignment_id,
+        {
+          category: selectedAssessmentCategory,
+          notes: assessmentNotes.trim() || undefined,
+          tourist_status_observed: touristObservedStatus.trim() || undefined,
+          follow_up_required: followUpRequired,
+        }
+      );
+      setAssessmentModalVisible(false);
+      Toast.show({
+        type: 'success',
+        text1: 'Scene Assessment Recorded',
+        text2: `Status categorized as ${selectedAssessmentCategory}`,
+      });
+      await loadIncidentData();
+    } catch (err: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Assessment Submission Failed',
+        text2: err?.response?.data?.detail || err?.message || 'Could not submit assessment',
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleRequestHandover() {
+    if (!incident || !assignment) return;
+    try {
+      setActionLoading(true);
+      await responderApi.requestHandover(assignment.assignment_id, {
+        reason: selectedHandoverReason,
+        details: handoverDetails.trim() || undefined,
+        replacement_capability: handoverCapability.trim() || undefined,
+      });
+      setHandoverModalVisible(false);
+      Toast.show({
+        type: 'info',
+        text1: 'Handover Requested',
+        text2: 'Assignment released. Incident returned to dispatch pool.',
+      });
+      router.replace('/responder');
+    } catch (err: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Handover Failed',
+        text2: err?.response?.data?.detail || err?.message || 'Could not request handover',
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleSaveFieldNote() {
+    if (!incident || !fieldNoteText.trim()) return;
+    try {
+      setIsSavingNote(true);
+      await addOfflineNote(
+        incident.incident_id,
+        fieldNoteText.trim(),
+        currentGps?.latitude,
+        currentGps?.longitude
+      );
+      setFieldNoteText('');
+      Toast.show({
+        type: 'success',
+        text1: 'Field Note Saved',
+        text2: 'Stored locally and synced with timeline.',
+      });
+      await loadIncidentData();
+    } catch (err: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Could not save note',
+        text2: err?.message || 'Note storage error',
+      });
+    } finally {
+      setIsSavingNote(false);
+    }
+  }
+
+
   if (loading && !incident) {
     return (
       <View style={styles.centerContainer}>
@@ -453,17 +592,73 @@ export default function ResponderIncidentScreen() {
             </View>
           )}
 
-          {/* On Scene: Complete Response */}
+          {/* On Scene: Structured Assessment, Handover & Complete Response */}
           {isOnScene && (
-            <TouchableOpacity
-              style={[styles.primaryActionBtn, styles.completeBtn]}
-              disabled={actionLoading}
-              onPress={() => setCompleteModalVisible(true)}
-            >
-              <CheckCircle2 size={18} color="#FFFFFF" />
-              <Text style={styles.primaryActionBtnText}>CONCLUDE INCIDENT RESPONSE</Text>
-            </TouchableOpacity>
+            <View style={styles.onSceneActionStack}>
+              <TouchableOpacity
+                style={[styles.primaryActionBtn, styles.assessBtn]}
+                disabled={actionLoading}
+                onPress={() => setAssessmentModalVisible(true)}
+              >
+                <Stethoscope size={18} color="#FFFFFF" />
+                <Text style={styles.primaryActionBtnText}>SUBMIT SCENE ASSESSMENT</Text>
+              </TouchableOpacity>
+
+              <View style={styles.onSceneSecondaryRow}>
+                <TouchableOpacity
+                  style={[styles.secondaryActionBtn, styles.handoverBtn]}
+                  disabled={actionLoading}
+                  onPress={() => setHandoverModalVisible(true)}
+                >
+                  <Share2 size={16} color="#FBBF24" />
+                  <Text style={styles.handoverBtnText}>REQUEST HANDOVER</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.primaryActionBtn, styles.completeBtn, { flex: 1 }]}
+                  disabled={actionLoading}
+                  onPress={() => setCompleteModalVisible(true)}
+                >
+                  <CheckCircle2 size={18} color="#FFFFFF" />
+                  <Text style={styles.primaryActionBtnText}>RESOLVE / CLOSE</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           )}
+        </View>
+
+        {/* Tactical Offline Field Notes Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderTitleRow}>
+              <Database size={16} color="#38BDF8" />
+              <Text style={styles.cardSectionTitle}>TACTICAL FIELD NOTES (OFFLINE READY)</Text>
+            </View>
+          </View>
+
+          <TextInput
+            style={styles.fieldNoteInput}
+            placeholder="Record observations, tourist vitals, terrain notes..."
+            placeholderTextColor="#64748B"
+            value={fieldNoteText}
+            onChangeText={setFieldNoteText}
+            multiline
+          />
+
+          <TouchableOpacity
+            style={[styles.saveNoteBtn, (!fieldNoteText.trim() || isSavingNote) && styles.saveNoteBtnDisabled]}
+            disabled={!fieldNoteText.trim() || isSavingNote}
+            onPress={handleSaveFieldNote}
+          >
+            {isSavingNote ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <>
+                <FileText size={16} color="#FFFFFF" />
+                <Text style={styles.saveNoteBtnText}>RECORD FIELD NOTE</Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Timeline Events Feed */}
@@ -610,6 +805,160 @@ export default function ResponderIncidentScreen() {
                 onPress={handleCompleteResponse}
               >
                 <Text style={styles.modalSubmitBtnText}>Conclude Response</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* SCENE ASSESSMENT MODAL */}
+      <Modal visible={assessmentModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Structured Scene Assessment</Text>
+              <TouchableOpacity onPress={() => setAssessmentModalVisible(false)}>
+                <X size={20} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalSubtitle}>
+              Categorize on-scene casualty / site condition for central timeline:
+            </Text>
+
+            <ScrollView style={styles.reasonScroll}>
+              {ASSESSMENT_CATEGORIES.map((cat, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={[
+                    styles.reasonOption,
+                    selectedAssessmentCategory === cat.value && styles.reasonOptionSelected,
+                  ]}
+                  onPress={() => setSelectedAssessmentCategory(cat.value)}
+                >
+                  <View
+                    style={[
+                      styles.reasonRadio,
+                      selectedAssessmentCategory === cat.value && styles.reasonRadioSelected,
+                    ]}
+                  />
+                  <Text style={styles.reasonOptionText}>{cat.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TextInput
+              style={styles.modalInputSingle}
+              placeholder="Observed Tourist Status (e.g. Conscious, oriented)"
+              placeholderTextColor="#64748B"
+              value={touristObservedStatus}
+              onChangeText={setTouristObservedStatus}
+            />
+
+            <TextInput
+              style={styles.modalTextInput}
+              placeholder="Assessment notes, triage observations, treatments rendered..."
+              placeholderTextColor="#64748B"
+              value={assessmentNotes}
+              onChangeText={setAssessmentNotes}
+              multiline
+            />
+
+            <TouchableOpacity
+              style={[styles.checkboxRow, followUpRequired && styles.checkboxRowActive]}
+              onPress={() => setFollowUpRequired(!followUpRequired)}
+            >
+              <View style={[styles.checkboxBox, followUpRequired && styles.checkboxBoxActive]}>
+                {followUpRequired && <CheckCircle size={14} color="#FFFFFF" />}
+              </View>
+              <Text style={styles.checkboxLabel}>Secondary follow-up / investigation required</Text>
+            </TouchableOpacity>
+
+            <View style={styles.modalButtonsRow}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setAssessmentModalVisible(false)}
+              >
+                <Text style={styles.modalCancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalSubmitAssessBtn}
+                disabled={actionLoading}
+                onPress={handleSubmitAssessment}
+              >
+                <Text style={styles.modalSubmitBtnText}>Submit Assessment</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* OPERATIONAL HANDOVER MODAL */}
+      <Modal visible={handoverModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Request Operational Handover</Text>
+              <TouchableOpacity onPress={() => setHandoverModalVisible(false)}>
+                <X size={20} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalSubtitle}>
+              Select ground constraint necessitating assignment reassignment:
+            </Text>
+
+            <ScrollView style={styles.reasonScroll}>
+              {HANDOVER_REASONS.map((h, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={[
+                    styles.reasonOption,
+                    selectedHandoverReason === h.value && styles.reasonOptionSelected,
+                  ]}
+                  onPress={() => setSelectedHandoverReason(h.value)}
+                >
+                  <View
+                    style={[
+                      styles.reasonRadio,
+                      selectedHandoverReason === h.value && styles.reasonRadioSelected,
+                    ]}
+                  />
+                  <Text style={styles.reasonOptionText}>{h.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TextInput
+              style={styles.modalInputSingle}
+              placeholder="Replacement Capability Required (e.g. WATER_RESCUE, MEDICAL)"
+              placeholderTextColor="#64748B"
+              value={handoverCapability}
+              onChangeText={setHandoverCapability}
+            />
+
+            <TextInput
+              style={styles.modalTextInput}
+              placeholder="Handover situation details (barrier, casualty condition)..."
+              placeholderTextColor="#64748B"
+              value={handoverDetails}
+              onChangeText={setHandoverDetails}
+              multiline
+            />
+
+            <View style={styles.modalButtonsRow}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setHandoverModalVisible(false)}
+              >
+                <Text style={styles.modalCancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalSubmitHandoverBtn}
+                disabled={actionLoading}
+                onPress={handleRequestHandover}
+              >
+                <Text style={styles.modalSubmitBtnText}>Submit Handover</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1061,9 +1410,107 @@ const styles = StyleSheet.create({
     backgroundColor: '#059669',
     alignItems: 'center',
   },
+  modalSubmitAssessBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+  },
+  modalSubmitHandoverBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#D97706',
+    alignItems: 'center',
+  },
   modalSubmitBtnText: {
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
   },
+  onSceneActionStack: {
+    gap: 10,
+  },
+  assessBtn: {
+    backgroundColor: '#2563EB',
+  },
+  onSceneSecondaryRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  handoverBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#D97706',
+  },
+  handoverBtnText: {
+    color: '#FBBF24',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  fieldNoteInput: {
+    backgroundColor: '#0B1120',
+    color: '#F8FAFC',
+    borderRadius: 8,
+    padding: 12,
+    height: 72,
+    textAlignVertical: 'top',
+    fontSize: 13,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    marginBottom: 10,
+  },
+  saveNoteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#0284C7',
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  saveNoteBtnDisabled: {
+    backgroundColor: '#1E293B',
+  },
+  saveNoteBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 6,
+  },
+  checkboxRowActive: {},
+  checkboxBox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#475569',
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxBoxActive: {
+    backgroundColor: '#2563EB',
+    borderColor: '#3B82F6',
+  },
+  checkboxLabel: {
+    fontSize: 12,
+    color: '#CBD5E1',
+    flex: 1,
+  },
 });
+

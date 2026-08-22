@@ -465,7 +465,7 @@ export default function ResponderDashboardScreen() {
               <Navigation size={20} color="#38BDF8" />
             </View>
             <Text style={styles.shortcutTitle}>Tactical Map</Text>
-            <Text style={styles.shortcutSub}>View GPS & Incidents</Text>
+            <Text style={styles.shortcutSub}>GPS Navigation</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -488,8 +488,30 @@ export default function ResponderDashboardScreen() {
             <View style={[styles.shortcutIconWrap, { backgroundColor: '#1E293B' }]}>
               <MessageSquare size={20} color="#818CF8" />
             </View>
-            <Text style={styles.shortcutTitle}>Operational Chat</Text>
-            <Text style={styles.shortcutSub}>Authority Comms</Text>
+            <Text style={styles.shortcutTitle}>Comms</Text>
+            <Text style={styles.shortcutSub}>Authority Channel</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.shortcutCard}
+            onPress={() => router.push('/responder/history')}
+          >
+            <View style={[styles.shortcutIconWrap, { backgroundColor: '#1E293B' }]}>
+              <Activity size={20} color="#34D399" />
+            </View>
+            <Text style={styles.shortcutTitle}>History</Text>
+            <Text style={styles.shortcutSub}>Mission Logs</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.shortcutCard}
+            onPress={() => router.push('/responder/diagnostics')}
+          >
+            <View style={[styles.shortcutIconWrap, { backgroundColor: '#1E293B' }]}>
+              <Compass size={20} color="#FBBF24" />
+            </View>
+            <Text style={styles.shortcutTitle}>Diagnostics</Text>
+            <Text style={styles.shortcutSub}>Sensors & Queue</Text>
           </TouchableOpacity>
         </View>
 
@@ -832,10 +854,11 @@ const styles = StyleSheet.create({
   },
   shortcutsRow: {
     flexDirection: 'row',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 10,
   },
   shortcutCard: {
-    flex: 1,
+    width: '48%',
     backgroundColor: '#0F172A',
     borderRadius: 14,
     borderWidth: 1,

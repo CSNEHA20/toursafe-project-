@@ -17,15 +17,20 @@ from ...core import database as db_core
 from ...schemas.emergency import (
     AssignmentArrivedRequest,
     AssignmentCompleteRequest,
+    AssignmentHandoverRequest,
     AssignmentRecord,
     AssignmentRejectRequest,
     AssignmentStatus,
+    FieldNotesBatchSyncRequest,
+    FieldNotesBatchSyncResponse,
+    HandoverReason,
     IncidentNoteRecord,
     IncidentStatus,
     NotificationChannel,
     RejectionReason,
     ResponderRecord,
     ResponderStatus,
+    SceneAssessmentRequest,
     TimelineEventRecord,
 )
 from ...schemas.realtime import RealtimeEventEnvelope, RealtimeEventType
@@ -587,5 +592,292 @@ class AssignmentService:
         )
         return assignment
 
+    async def request_handover(
+        self,
+        incident_id: str,
+        assignment_id: str,
+        responder_id: str,
+        req: AssignmentHandoverRequest,
+    ) -> AssignmentRecord:
+        """
+        Responder requests operational handover due to medical, capability, terrain, or shift constraints.
+        Releases current responder, marks assignment CANCELLED or HANDOVER, and prompts authority reassignment.
+        """
+        db = get_database()
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        assignment = await self.get_assignment(assignment_id)
+        if not assignment:
+            raise ValueError(f"Assignment '{assignment_id}' not found")
+        if assignment.responder_id != responder_id:
+            raise ValueError("Unauthorized: You are not the assigned responder for this incident")
+        status_val = assignment.status.value if hasattr(assignment.status, "value") else str(assignment.status)
+        if status_val not in ("ACCEPTED", "ACTIVE", "PENDING"):
+            raise ValueError(f"Cannot request handover for assignment in status '{status_val}'")
+
+        # Update assignment to CANCELLED with handover reason
+        assignment.status = AssignmentStatus.CANCELLED
+        assignment.cancelled_at = now_iso
+        assignment.cancellation_reason = f"HANDOVER_REQUESTED: {req.reason.value} - {req.details or 'No additional details'}"
+        assignment.updated_at = now_iso
+
+        await db.incident_assignments.replace_one({"assignment_id": assignment_id}, assignment.model_dump())
+
+        # Release responder back to AVAILABLE
+        await responder_service.release_from_incident(responder_id)
+
+        # Timeline event & Note
+        tle = TimelineEventRecord(
+            incident_id=incident_id,
+            timestamp=now_iso,
+            actor_type="RESPONDER",
+            actor_id=responder_id,
+            action="responder.handover_requested",
+            previous_state=status_val,
+            new_state=AssignmentStatus.CANCELLED.value,
+            metadata={
+                "assignment_id": assignment_id,
+                "handover_reason": req.reason.value,
+                "details": req.details,
+                "replacement_capability": req.replacement_capability,
+            },
+            reason=f"Handover requested: {req.reason.value}",
+        )
+
+        note_rec = IncidentNoteRecord(
+            incident_id=incident_id,
+            author_id=responder_id,
+            author_role="responder",
+            timestamp=now_iso,
+            content=f"[Handover Requested]: {req.reason.value}. {req.details or ''}. Requested Capability: {req.replacement_capability or 'Standard'}",
+        )
+
+        # Update incident status back to OPEN / ACKNOWLEDGED for dispatch reassignment
+        await db.incidents.update_one(
+            {"incident_id": incident_id},
+            {
+                "$set": {
+                    "status": IncidentStatus.ACKNOWLEDGED.value,
+                    "assigned_to": None,
+                    "updated_at": now_iso,
+                },
+                "$inc": {"version": 1},
+                "$push": {
+                    "timeline": tle.model_dump(),
+                    "notes_list": note_rec.model_dump(),
+                },
+            },
+        )
+
+        # Broadcast realtime event to authority command
+        await realtime_bus.publish_event(
+            event_type="incident.handover_requested",
+            payload={
+                "assignment_id": assignment_id,
+                "incident_id": incident_id,
+                "responder_id": responder_id,
+                "reason": req.reason.value,
+                "details": req.details,
+                "replacement_capability": req.replacement_capability,
+                "timestamp": now_iso,
+            },
+            target_role="authority",
+        )
+        return assignment
+
+    async def submit_scene_assessment(
+        self,
+        incident_id: str,
+        assignment_id: str,
+        responder_id: str,
+        req: SceneAssessmentRequest,
+    ) -> Dict[str, Any]:
+        """
+        Submits structured field scene assessment from responder on scene.
+        Updates incident timeline and notes with auditable assessment categorization.
+        """
+        db = get_database()
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        assignment = await self.get_assignment(assignment_id)
+        if not assignment:
+            raise ValueError(f"Assignment '{assignment_id}' not found")
+        if assignment.responder_id != responder_id:
+            raise ValueError("Unauthorized: You are not the assigned responder for this incident")
+
+        status_val = assignment.status.value if hasattr(assignment.status, "value") else str(assignment.status)
+
+        tle = TimelineEventRecord(
+            incident_id=incident_id,
+            timestamp=now_iso,
+            actor_type="RESPONDER",
+            actor_id=responder_id,
+            action="responder.scene_assessment",
+            previous_state=status_val,
+            new_state=status_val,
+            metadata={
+                "assignment_id": assignment_id,
+                "assessment_category": req.category.value,
+                "tourist_status_observed": req.tourist_status_observed,
+                "follow_up_required": req.follow_up_required,
+                "evidence_metadata": req.evidence_metadata,
+            },
+            reason=f"Scene assessment: {req.category.value}",
+        )
+
+        note_rec = IncidentNoteRecord(
+            incident_id=incident_id,
+            author_id=responder_id,
+            author_role="responder",
+            timestamp=now_iso,
+            content=f"[Scene Assessment - {req.category.value}]: {req.notes or 'No commentary'}. Observed: {req.tourist_status_observed or 'N/A'}. Follow-up: {req.follow_up_required}",
+        )
+
+        await db.incidents.update_one(
+            {"incident_id": incident_id},
+            {
+                "$set": {
+                    "updated_at": now_iso,
+                    "last_scene_assessment": {
+                        "category": req.category.value,
+                        "timestamp": now_iso,
+                        "assessed_by": responder_id,
+                        "follow_up_required": req.follow_up_required,
+                    },
+                },
+                "$inc": {"version": 1},
+                "$push": {
+                    "timeline": tle.model_dump(),
+                    "notes_list": note_rec.model_dump(),
+                },
+            },
+        )
+
+        await realtime_bus.publish_event(
+            event_type="incident.scene_assessed",
+            payload={
+                "incident_id": incident_id,
+                "assignment_id": assignment_id,
+                "responder_id": responder_id,
+                "category": req.category.value,
+                "timestamp": now_iso,
+            },
+            target_role="authority",
+        )
+
+        return {
+            "success": True,
+            "incident_id": incident_id,
+            "category": req.category.value,
+            "timestamp": now_iso,
+        }
+
+    async def sync_field_notes(
+        self,
+        responder_id: str,
+        req: FieldNotesBatchSyncRequest,
+    ) -> FieldNotesBatchSyncResponse:
+        """
+        Batch syncs offline field notes with deduplication and timeline integration.
+        """
+        db = get_database()
+        now_iso = datetime.now(timezone.utc).isoformat()
+        synced_ids = []
+        failed_ids = []
+
+        for item in req.notes:
+            try:
+                inc_doc = await db.incidents.find_one({"incident_id": item.incident_id})
+                if not inc_doc:
+                    failed_ids.append(item.client_note_id)
+                    continue
+
+                notes_list = inc_doc.get("notes_list", [])
+                if any(n.get("client_note_id") == item.client_note_id for n in notes_list if isinstance(n, dict)):
+                    synced_ids.append(item.client_note_id)
+                    continue
+
+                note_doc = {
+                    "note_id": f"fn_{uuid.uuid4().hex[:12]}",
+                    "client_note_id": item.client_note_id,
+                    "incident_id": item.incident_id,
+                    "author_id": responder_id,
+                    "author_role": "responder",
+                    "timestamp": item.recorded_at or now_iso,
+                    "synced_at": now_iso,
+                    "content": f"[Offline Note Sync]: {item.content}",
+                    "location": {
+                        "latitude": item.latitude,
+                        "longitude": item.longitude,
+                    } if item.latitude and item.longitude else None,
+                }
+
+                tle = TimelineEventRecord(
+                    incident_id=item.incident_id,
+                    timestamp=item.recorded_at or now_iso,
+                    actor_type="RESPONDER",
+                    actor_id=responder_id,
+                    action="responder.field_note_synced",
+                    metadata={
+                        "client_note_id": item.client_note_id,
+                        "synced_at": now_iso,
+                    },
+                    reason="Offline field note synced",
+                )
+
+                await db.incidents.update_one(
+                    {"incident_id": item.incident_id},
+                    {
+                        "$set": {"updated_at": now_iso},
+                        "$inc": {"version": 1},
+                        "$push": {
+                            "timeline": tle.model_dump(),
+                            "notes_list": note_doc,
+                        },
+                    },
+                )
+                synced_ids.append(item.client_note_id)
+            except Exception as ex:
+                logger.error("Failed to sync offline note %s: %s", item.client_note_id, ex)
+                failed_ids.append(item.client_note_id)
+
+        return FieldNotesBatchSyncResponse(
+            synced_count=len(synced_ids),
+            synced_ids=synced_ids,
+            failed_ids=failed_ids,
+            timestamp=now_iso,
+        )
+
+
+    async def list_responder_history(
+        self,
+        responder_id: str,
+        limit: int = 50,
+        skip: int = 0,
+    ) -> List[Dict[str, Any]]:
+        """
+        Lists paginated historical assignments and completed missions for a responder.
+        """
+        db = get_database()
+        cursor = db.incident_assignments.find(
+            {"responder_id": responder_id}
+        ).sort("created_at", -1).skip(skip).limit(limit)
+
+        items = []
+        async for doc in cursor:
+            inc_doc = await db.incidents.find_one({"incident_id": doc.get("incident_id")})
+            doc["_id"] = str(doc.get("_id", ""))
+            doc["incident_summary"] = {
+                "incident_id": inc_doc.get("incident_id") if inc_doc else doc.get("incident_id"),
+                "severity": inc_doc.get("severity", "UNKNOWN") if inc_doc else "UNKNOWN",
+                "source": inc_doc.get("source", "SAFETY_ENGINE") if inc_doc else "SAFETY_ENGINE",
+                "status": inc_doc.get("status", "CLOSED") if inc_doc else "CLOSED",
+                "location_data": inc_doc.get("location_data") if inc_doc else None,
+                "reasons": inc_doc.get("reasons", []) if inc_doc else [],
+            } if inc_doc else None
+            items.append(doc)
+        return items
+
 
 assignment_service = AssignmentService()
+

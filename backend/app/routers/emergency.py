@@ -38,6 +38,7 @@ from ..schemas.emergency import (
     AssignmentAcceptRequest,
     AssignmentArrivedRequest,
     AssignmentCompleteRequest,
+    AssignmentHandoverRequest,
     AssignmentRecord,
     AssignmentRejectRequest,
     IncidentAcknowledgeRequest,
@@ -62,6 +63,7 @@ from ..schemas.emergency import (
     SOSCancelRequest,
     SOSRequest,
     SOSResponse,
+    SceneAssessmentRequest,
     TimelineEventRecord,
 )
 from ..schemas.safety import IncidentRecord
@@ -758,6 +760,64 @@ async def complete_assignment(
         )
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+
+@router.post(
+    "/api/v1/authority/incidents/{incident_id}/assignments/{assignment_id}/handover",
+    response_model=AssignmentRecord,
+    summary="Responder requests operational handover",
+)
+async def handover_assignment(
+    incident_id: str,
+    assignment_id: str,
+    payload: AssignmentHandoverRequest,
+    user_id_role: tuple = Depends(get_current_user),
+):
+    user_id, role = user_id_role
+    if role not in ("responder", "authority", "admin"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Responder access required")
+
+    resp = await responder_service.get_responder_by_user_id(user_id)
+    responder_id = resp.responder_id if resp else user_id
+
+    try:
+        return await assignment_service.request_handover(
+            incident_id=incident_id,
+            assignment_id=assignment_id,
+            responder_id=responder_id,
+            req=payload,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+
+@router.post(
+    "/api/v1/authority/incidents/{incident_id}/assignments/{assignment_id}/assess-scene",
+    summary="Responder submits structured on-scene assessment update",
+)
+async def assess_incident_scene(
+    incident_id: str,
+    assignment_id: str,
+    payload: SceneAssessmentRequest,
+    user_id_role: tuple = Depends(get_current_user),
+):
+    user_id, role = user_id_role
+    if role not in ("responder", "authority", "admin"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Responder access required")
+
+    resp = await responder_service.get_responder_by_user_id(user_id)
+    responder_id = resp.responder_id if resp else user_id
+
+    try:
+        return await assignment_service.submit_scene_assessment(
+            incident_id=incident_id,
+            assignment_id=assignment_id,
+            responder_id=responder_id,
+            req=payload,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
 
 
 # ---------------------------------------------------------------------------

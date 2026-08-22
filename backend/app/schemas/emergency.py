@@ -212,6 +212,8 @@ class AssignmentRecord(BaseModel):
     completed_at: Optional[str] = None
     completion_reason: Optional[str] = None
     completion_notes: Optional[str] = None
+    cancelled_at: Optional[str] = None
+    cancellation_reason: Optional[str] = None
     status: AssignmentStatus = AssignmentStatus.PENDING
     notes: Optional[str] = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
@@ -441,6 +443,61 @@ class ResponderRecommendationItem(BaseModel):
     score: float = 0.0
 
 
+class HandoverReason(str, Enum):
+    MEDICAL = "MEDICAL"
+    CAPABILITY = "CAPABILITY"
+    LOCATION = "LOCATION"
+    SHIFT = "SHIFT"
+    UNAVAILABLE = "UNAVAILABLE"
+    OTHER = "OTHER"
+
+
+class AssignmentHandoverRequest(BaseModel):
+    reason: HandoverReason = HandoverReason.OTHER
+    details: Optional[str] = None
+    replacement_capability: Optional[str] = None
+
+
+class SceneAssessmentCategory(str, Enum):
+    TOURIST_SAFE = "TOURIST_SAFE"
+    MEDICAL_ASSISTANCE = "MEDICAL_ASSISTANCE"
+    SECURITY_ASSISTANCE = "SECURITY_ASSISTANCE"
+    LOCATION_ISSUE = "LOCATION_ISSUE"
+    FALSE_ALARM = "FALSE_ALARM"
+    UNABLE_TO_LOCATE = "UNABLE_TO_LOCATE"
+    OTHER = "OTHER"
+
+
+class SceneAssessmentRequest(BaseModel):
+    category: SceneAssessmentCategory
+    notes: Optional[str] = None
+    tourist_status_observed: Optional[str] = None
+    follow_up_required: bool = False
+    evidence_metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class OfflineFieldNoteItem(BaseModel):
+    client_note_id: str
+    incident_id: str
+    content: str
+    recorded_at: str
+    author_id: Optional[str] = None
+    author_role: str = "responder"
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+
+class FieldNotesBatchSyncRequest(BaseModel):
+    notes: List[OfflineFieldNoteItem] = Field(default_factory=list)
+
+
+class FieldNotesBatchSyncResponse(BaseModel):
+    synced_count: int
+    synced_ids: List[str]
+    failed_ids: List[str] = Field(default_factory=list)
+    timestamp: str
+
+
 class IncidentMetricsResponse(BaseModel):
     total_incidents: int
     open_incidents: int
@@ -456,3 +513,4 @@ class IncidentMetricsResponse(BaseModel):
     escalation_count: int = 0
     false_alarm_rate: float = 0.0
     notification_stats: Dict[str, int] = Field(default_factory=dict)
+

@@ -16,7 +16,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from ..core import database as db_core
 from ..routers.auth import get_current_user
 from ..schemas.emergency import (
+    AssignmentHandoverRequest,
     AssignmentRecord,
+    FieldNotesBatchSyncRequest,
+    FieldNotesBatchSyncResponse,
     ResponderCapability,
     ResponderCreateRequest,
     ResponderLocationUpdateRequest,
@@ -204,6 +207,79 @@ async def stop_my_tracking_session(
         session_id=session_id,
     )
     return {"success": success, "status": "COMPLETED", "responder_id": responder_id}
+
+
+@router.get(
+    "/me/history",
+    summary="Get authenticated responder's mission and assignment history",
+)
+async def get_my_history(
+    limit: int = Query(50, ge=1, le=100),
+    skip: int = Query(0, ge=0),
+    user_id_role: tuple = Depends(get_current_user),
+):
+    user_id, role = user_id_role
+    if role not in ("responder", "authority", "admin"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Responder access required")
+
+    responder_id = await resolve_responder_id(user_id, role)
+    items = await assignment_service.list_responder_history(
+        responder_id=responder_id,
+        limit=limit,
+        skip=skip,
+    )
+    return {"total": len(items), "items": items, "limit": limit, "skip": skip}
+
+
+@router.post(
+    "/me/field-notes/sync",
+    response_model=FieldNotesBatchSyncResponse,
+    summary="Batch synchronize offline field notes recorded during response operations",
+)
+async def sync_offline_field_notes(
+    payload: FieldNotesBatchSyncRequest,
+    user_id_role: tuple = Depends(get_current_user),
+):
+    user_id, role = user_id_role
+    if role not in ("responder", "authority", "admin"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Responder access required")
+
+    responder_id = await resolve_responder_id(user_id, role)
+    return await assignment_service.sync_field_notes(
+        responder_id=responder_id,
+        req=payload,
+    )
+
+
+@router.post(
+    "/me/assignments/{assignment_id}/handover",
+    response_model=AssignmentRecord,
+    summary="Authenticated responder requests operational handover",
+)
+async def request_my_assignment_handover(
+    assignment_id: str,
+    payload: AssignmentHandoverRequest,
+    user_id_role: tuple = Depends(get_current_user),
+):
+    user_id, role = user_id_role
+    if role not in ("responder", "authority", "admin"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Responder access required")
+
+    responder_id = await resolve_responder_id(user_id, role)
+    asgn = await assignment_service.get_assignment(assignment_id)
+    if not asgn:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Assignment '{assignment_id}' not found")
+
+    try:
+        return await assignment_service.request_handover(
+            incident_id=asgn.incident_id,
+            assignment_id=assignment_id,
+            responder_id=responder_id,
+            req=payload,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
 
 
 # ---------------------------------------------------------------------------
