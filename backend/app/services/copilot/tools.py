@@ -543,3 +543,107 @@ async def search_knowledge_base(query: str, category: Optional[str] = None, cont
         "source": "TourSafe Approved SOP & Knowledge Base",
         "observed_at": datetime.now(timezone.utc).isoformat(),
     }
+
+
+# ==========================================
+# 10. EXTERNAL INTEGRATION TOOLS
+# ==========================================
+
+async def get_integration_health(context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Retrieve health and circuit breaker status across all registered external providers."""
+    from ..integrations.registry import integration_registry
+    await integration_registry.initialize_defaults()
+    integrations = await integration_registry.list_integrations()
+    return {
+        "success": True,
+        "data": [i.model_dump() if hasattr(i, "model_dump") else i.dict() for i in integrations],
+        "source": "Integration Registry & Health Monitor",
+        "observed_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+async def query_external_weather(latitude: float, longitude: float, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Query normalized weather intelligence and severe advisories via active Weather Adapter."""
+    from ..integrations.registry import integration_registry
+    from ...schemas.integrations import IntegrationType
+    await integration_registry.initialize_defaults()
+    adapter, _ = integration_registry.get_adapter_with_fallback(IntegrationType.WEATHER)
+    if not adapter:
+        return {"success": False, "error": "PROVIDER_UNAVAILABLE", "source": "Weather Adapter"}
+    res = await adapter.get_current_weather(latitude, longitude)
+    return {
+        "success": True,
+        "data": res.model_dump() if hasattr(res, "model_dump") else res.dict(),
+        "source": f"Weather Adapter ({adapter.provider_name})",
+        "observed_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+async def query_external_geocoding(address: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Geocode address to coordinates via active Maps Adapter."""
+    from ..integrations.registry import integration_registry
+    from ...schemas.integrations import IntegrationType
+    await integration_registry.initialize_defaults()
+    adapter, _ = integration_registry.get_adapter_with_fallback(IntegrationType.MAPS)
+    if not adapter:
+        return {"success": False, "error": "PROVIDER_UNAVAILABLE", "source": "Maps Adapter"}
+    res = await adapter.geocode(address)
+    return {
+        "success": True,
+        "data": res.model_dump() if hasattr(res, "model_dump") else res.dict(),
+        "source": f"Maps Adapter ({adapter.provider_name})",
+        "observed_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+async def query_external_routing(origin_lon: float, origin_lat: float, dest_lon: float, dest_lat: float, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Calculate route geometry and ETA via active Maps Adapter with automatic fallback."""
+    from ..integrations.registry import integration_registry
+    from ...schemas.integrations import IntegrationType
+    await integration_registry.initialize_defaults()
+    adapter, _ = integration_registry.get_adapter_with_fallback(IntegrationType.MAPS)
+    if not adapter:
+        return {"success": False, "error": "PROVIDER_UNAVAILABLE", "source": "Maps Adapter"}
+    res = await adapter.calculate_route(origin=[origin_lon, origin_lat], destination=[dest_lon, dest_lat])
+    return {
+        "success": True,
+        "data": res.model_dump() if hasattr(res, "model_dump") else res.dict(),
+        "source": f"Maps Adapter ({adapter.provider_name})",
+        "observed_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+async def list_integration_dead_letters(resolved: bool = False, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Inspect dead-letter queue records for failed integration requests."""
+    from ..integrations.dead_letter import dead_letter_service
+    records = await dead_letter_service.list_records(resolved=resolved, limit=10)
+    return {
+        "success": True,
+        "data": records,
+        "source": "Integration Dead-Letter Queue",
+        "observed_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+async def retry_integration_dead_letter(record_id: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Authorized manual retry of a failed integration dead-letter request (Requires Confirmation)."""
+    from ..integrations.dead_letter import dead_letter_service
+    from ..integrations.audit import integration_audit_service
+    actor_id = context.get("user_id", "AUTHORITY_USER") if context else "AUTHORITY_USER"
+    ok = await dead_letter_service.mark_resolved(record_id, actor_id=actor_id)
+    if not ok:
+        return {"success": False, "error": "NOT_FOUND", "source": "Dead Letter Queue"}
+    await integration_audit_service.log_action(
+        action="COPILOT_RETRY_DEAD_LETTER",
+        actor_id=actor_id,
+        actor_role="ADMIN",
+        status="SUCCESS",
+        details={"record_id": record_id},
+    )
+    return {
+        "success": True,
+        "data": {"record_id": record_id, "status": "RETRY_QUEUED"},
+        "source": "Integration Dead-Letter Queue",
+        "observed_at": datetime.now(timezone.utc).isoformat(),
+    }
+

@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
-import { LayoutDashboard, Map, ShieldAlert, Users, BarChart3, FileText, Settings, Cpu } from 'lucide-react-native';
+import { LayoutDashboard, Map, ShieldAlert, Users, BarChart3, FileText, Settings, Cpu, Layers } from 'lucide-react-native';
 import { useAuthStore } from '@/store/authStore';
 import { useEffect } from 'react';
 
@@ -69,6 +69,13 @@ export default function AdminTabsLayout() {
           options={{
             title: 'ML Ops',
             tabBarIcon: ({ color }) => <Cpu size={20} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="integrations"
+          options={{
+            title: 'Integrations',
+            tabBarIcon: ({ color }) => <Layers size={20} color={color} />,
           }}
         />
         <Tabs.Screen

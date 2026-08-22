@@ -457,5 +457,94 @@ class ToolRegistry:
             handler=tools.search_knowledge_base,
         ))
 
+        # EXTERNAL INTEGRATION & INTEROPERABILITY TOOLS
+        self.register(ToolDefinition(
+            name="get_integration_health",
+            category="integrations",
+            description="Retrieve status and circuit breaker states across all external providers (Maps, SMS, Weather, KYC, CAD).",
+            parameters={"type": "object", "properties": {}},
+            handler=tools.get_integration_health,
+            read_only=True,
+        ))
+
+        self.register(ToolDefinition(
+            name="query_external_weather",
+            category="integrations",
+            description="Query live weather conditions and severe storm advisories for coordinates via active Weather Adapter.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "latitude": {"type": "number", "description": "GPS Latitude"},
+                    "longitude": {"type": "number", "description": "GPS Longitude"},
+                },
+                "required": ["latitude", "longitude"],
+            },
+            handler=tools.query_external_weather,
+            read_only=True,
+        ))
+
+        self.register(ToolDefinition(
+            name="query_external_geocoding",
+            category="integrations",
+            description="Geocode a location or landmark address to coordinates via active Maps Adapter.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "address": {"type": "string", "description": "Location name or address to geocode"},
+                },
+                "required": ["address"],
+            },
+            handler=tools.query_external_geocoding,
+            read_only=True,
+        ))
+
+        self.register(ToolDefinition(
+            name="query_external_routing",
+            category="integrations",
+            description="Calculate route distance, duration, and geometry between coordinates via active Maps Adapter.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "origin_lon": {"type": "number", "description": "Origin longitude"},
+                    "origin_lat": {"type": "number", "description": "Origin latitude"},
+                    "dest_lon": {"type": "number", "description": "Destination longitude"},
+                    "dest_lat": {"type": "number", "description": "Destination latitude"},
+                },
+                "required": ["origin_lon", "origin_lat", "dest_lon", "dest_lat"],
+            },
+            handler=tools.query_external_routing,
+            read_only=True,
+        ))
+
+        self.register(ToolDefinition(
+            name="list_integration_dead_letters",
+            category="integrations",
+            description="List unhandled or failed external integration requests in the Dead-Letter Queue.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "resolved": {"type": "boolean", "description": "Filter by resolved status"},
+                },
+            },
+            handler=tools.list_integration_dead_letters,
+            read_only=True,
+        ))
+
+        self.register(ToolDefinition(
+            name="retry_integration_dead_letter",
+            category="integrations",
+            description="Re-queue and retry a failed integration request from the Dead-Letter Queue (Requires Confirmation).",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "record_id": {"type": "string", "description": "Dead letter record ID to retry"},
+                },
+                "required": ["record_id"],
+            },
+            handler=tools.retry_integration_dead_letter,
+            read_only=False,
+            requires_preview=True,
+        ))
+
 
 copilot_tool_registry = ToolRegistry()

@@ -36,6 +36,8 @@ from .routers.incident_communication import router as incident_communication_rou
 from .routers.emergency_orchestration import router as emergency_orchestration_router
 from .routers.admin_governance import router as admin_governance_router
 from .routers.copilot import router as copilot_router
+from .routers.integrations import router as integrations_router
+from .services.integrations import integration_registry
 from .services.ml.engine import ml_inference_engine
 from .services.safety import safety_repository
 from .services.emergency.response_policy_service import response_policy_service
@@ -70,6 +72,7 @@ async def lifespan(app: FastAPI):
         await config_governance_service.seed_defaults()
         await response_policy_service.init_default_policies()
         await response_orchestrator.reconstruct_timers_on_startup()
+        await integration_registry.initialize_defaults()
         seeded = await seed_initial_zones(db)
         if seeded > 0:
             print(f"✅ Successfully seeded {seeded} initial development geospatial zones")
@@ -149,3 +152,4 @@ app.include_router(incident_communication_router)
 app.include_router(emergency_orchestration_router)
 app.include_router(admin_governance_router)
 app.include_router(copilot_router)
+app.include_router(integrations_router)
