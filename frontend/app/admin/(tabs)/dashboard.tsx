@@ -45,17 +45,21 @@ import {
   Pause,
   Play,
   Trash2,
+  Bot,
+  Sparkles,
 } from 'lucide-react-native';
 import RoleSwitch from '@/components/RoleSwitch';
 import { NotificationBellButton } from '@/components/NotificationBellButton';
 import { ConnectionStatusBadge } from '@/components/ConnectionStatusBadge';
 import RealMap, { MapMarkerProp, ZonePolygonProp } from '@/components/RealMap';
+import { CopilotPanel } from '@/components/admin/CopilotPanel';
 import {
   useCommandCenterStore,
   SafetyState,
   StalenessStatus,
   EventCategory,
 } from '@/store/commandCenterStore';
+
 import Toast from 'react-native-toast-message';
 
 export default function AuthorityCommandCenter() {
@@ -117,6 +121,7 @@ export default function AuthorityCommandCenter() {
   const [escalateModalVisible, setEscalateModalVisible] = useState(false);
   const [resolveModalVisible, setResolveModalVisible] = useState(false);
   const [healthModalVisible, setHealthModalVisible] = useState(false);
+  const [copilotVisible, setCopilotVisible] = useState(false);
 
   // Form states for modals
   const [selectedResponderForAssign, setSelectedResponderForAssign] = useState<string>('');
@@ -429,6 +434,13 @@ export default function AuthorityCommandCenter() {
 
         <View style={styles.headerRight}>
           <View style={styles.headerControlRow}>
+            <TouchableOpacity
+              style={[styles.healthButton, { backgroundColor: '#082f49', borderColor: '#0284c7' }]}
+              onPress={() => setCopilotVisible(true)}
+            >
+              <Bot size={14} color="#38bdf8" />
+              <Text style={[styles.healthButtonText, { color: '#38bdf8' }]}>AI COPILOT</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.healthButton}
               onPress={() => setHealthModalVisible(true)}
@@ -1053,9 +1065,19 @@ export default function AuthorityCommandCenter() {
           </View>
         </View>
       </Modal>
+
+      {/* AI Copilot Operational Decision Support Panel */}
+      <CopilotPanel
+        visible={copilotVisible}
+        onClose={() => setCopilotVisible(false)}
+        activeIncidentId={selectedIncidentId || undefined}
+        activeZoneId={selectedZoneId || undefined}
+        activeResponderId={selectedResponderId || undefined}
+      />
     </ScrollView>
   );
 }
+
 
 // ── COMPONENT HELPERS ────────────────────────────────────────────────────────
 

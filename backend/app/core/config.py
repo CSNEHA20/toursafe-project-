@@ -32,6 +32,18 @@ class Settings(BaseSettings):
     ml_window_samples: int = Field(default=150, alias="ML_WINDOW_SAMPLES")
     ml_feature_count: int = Field(default=8, alias="ML_FEATURE_COUNT")
 
+    # Copilot & AI Intelligence Settings
+    copilot_llm_provider: str = Field(default="gemini", alias="COPILOT_LLM_PROVIDER")
+    copilot_model: str = Field(default="gemini-2.0-flash", alias="COPILOT_MODEL")
+    copilot_temperature: float = Field(default=0.1, alias="COPILOT_TEMPERATURE")
+    copilot_max_tokens: int = Field(default=2048, alias="COPILOT_MAX_TOKENS")
+    copilot_timeout_seconds: float = Field(default=30.0, alias="COPILOT_TIMEOUT_SECONDS")
+    copilot_max_tool_calls_per_turn: int = Field(default=8, alias="COPILOT_MAX_TOOL_CALLS_PER_TURN")
+    copilot_action_token_ttl_seconds: int = Field(default=300, alias="COPILOT_ACTION_TOKEN_TTL_SECONDS")
+    gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
+    openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
+    bedrock_region: str = Field(default="us-east-1", alias="BEDROCK_REGION")
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors_origins(cls, v):
