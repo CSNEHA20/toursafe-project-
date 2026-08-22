@@ -34,10 +34,16 @@ from .routers.credentials import router as credentials_router
 from .routers.command_center import router as command_center_router
 from .routers.incident_communication import router as incident_communication_router
 from .routers.emergency_orchestration import router as emergency_orchestration_router
+from .routers.admin_governance import router as admin_governance_router
 from .services.ml.engine import ml_inference_engine
 from .services.safety import safety_repository
 from .services.emergency.response_policy_service import response_policy_service
 from .services.emergency.response_orchestrator import response_orchestrator
+from .services.governance import (
+    audit_service,
+    jurisdiction_service,
+    config_governance_service,
+)
 from .ml.lifecycle import dataset_registry, model_registry, training_manager, experiment_tracker
 
 
@@ -54,6 +60,11 @@ async def lifespan(app: FastAPI):
         await model_registry.init_indexes()
         await training_manager.init_indexes()
         await experiment_tracker.init_indexes()
+        await audit_service.init_indexes()
+        await jurisdiction_service.init_indexes()
+        await config_governance_service.init_indexes()
+        await jurisdiction_service.seed_defaults()
+        await config_governance_service.seed_defaults()
         await response_policy_service.init_default_policies()
         await response_orchestrator.reconstruct_timers_on_startup()
         seeded = await seed_initial_zones(db)
@@ -133,3 +144,4 @@ app.include_router(credentials_router)
 app.include_router(command_center_router)
 app.include_router(incident_communication_router)
 app.include_router(emergency_orchestration_router)
+app.include_router(admin_governance_router)
