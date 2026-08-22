@@ -135,7 +135,6 @@ export default function DigitalID() {
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
-        json: false,
         body: JSON.stringify({
           document_type: docType,
           issuing_country: issuingCountry,

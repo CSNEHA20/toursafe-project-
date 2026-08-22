@@ -13,8 +13,10 @@ export type ZoneMembershipStateType =
 export type MembershipConfidenceType = "high" | "medium" | "low" | "uncertain";
 
 export interface ActiveZoneMembershipItem {
+  id?: string;
   zone_id: string;
   name: string;
+  description?: string;
   zone_type: "safe" | "warning" | "restricted";
   risk_level: "low" | "medium" | "high" | "critical";
   state: ZoneMembershipStateType;
@@ -30,6 +32,21 @@ export interface ActiveZoneMembershipItem {
   geometry_version?: string;
   properties?: Record<string, any>;
 }
+
+export interface ZoneCoordinate {
+  latitude: number;
+  longitude: number;
+}
+
+export interface ZoneDefinition {
+  id: string;
+  name: string;
+  description?: string;
+  risk_level?: string;
+  zone_type?: string;
+  coordinates?: ZoneCoordinate[];
+}
+
 
 export interface TouristGeofenceSnapshotResponse {
   tourist_id: string;

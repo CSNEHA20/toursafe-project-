@@ -137,6 +137,22 @@ export const touristApi = {
     email?: string;
     priority?: number;
   }) => api.post("/tourists/me/emergency-contacts", data),
+  addEmergencyContact: (data: {
+    name: string;
+    relationship: string;
+    phone?: string;
+    phone_number?: string;
+    is_primary?: boolean;
+    priority_order?: number;
+    email?: string;
+  }) => api.post("/tourists/me/emergency-contacts", {
+    name: data.name,
+    relationship: data.relationship,
+    phone: data.phone_number || data.phone,
+    is_primary: data.is_primary ?? true,
+    priority: data.priority_order || 1,
+    email: data.email,
+  }),
   getMyEmergencyContacts: () => api.get("/tourists/me/emergency-contacts"),
   updateEmergencyContact: (contactId: string, data: {
     name?: string;
@@ -157,6 +173,7 @@ export const touristApi = {
     stops?: any[];
   }) => api.post("/tourists/me/itinerary", data),
   getMyItinerary: () => api.get("/tourists/me/itinerary"),
+  updateMyItinerary: (data: any) => api.patch("/tourists/me/itinerary", data),
   updateItinerary: (itineraryId: string, data: {
     title?: string;
     destination?: string;
@@ -167,7 +184,18 @@ export const touristApi = {
   }) => api.patch(`/tourists/me/itinerary/${itineraryId}`, data),
   deleteItinerary: (itineraryId: string) =>
     api.delete(`/tourists/me/itinerary/${itineraryId}`),
+  triggerSOS: (data: { client_request_id?: string; latitude?: number; longitude?: number; accuracy?: number; reason?: string; description?: string }) =>
+    api.post("/tourists/me/sos", {
+      client_request_id: data.client_request_id || `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      accuracy: data.accuracy,
+      reason: data.reason || data.description || "Manual SOS from app",
+    }),
+  cancelSOS: (data: { incident_id?: string; reason?: string }) =>
+    api.post(`/tourists/me/sos/${data.incident_id || "active"}/cancel`, { reason: data.reason || "Manual cancel" }),
 };
+
 
 export const locationApi = {
   updateLocation: (sample: any) => api.post("/location/update", sample),
@@ -323,12 +351,26 @@ export const zoneApi = {
   getAudits: (id: string) => api.get<ZoneAudit[]>(`/authority/zones/${id}/audits`),
 };
 
+export const emergencyApi = {
+  sendIncidentMessage: (incidentId: string, data: { message: string }) =>
+    api.post(`/incidents/${incidentId}/messages`, data),
+  triggerSOS: (data: any) => sosApi.trigger(data),
+  cancelSOS: (sosId: string, reason: string) => sosApi.cancel(sosId, reason),
+};
+
+export const consentApi = {
+  getConsents: () => api.get("/identity/consents"),
+  updateConsent: (data: any) => api.post("/identity/consents", data),
+};
+
 export const geofenceApi = {
   // Tourist endpoints
+  getZones: () => api.get("/zones"),
   getMyCurrentZones: () =>
     api.get<import("@/types").TouristGeofenceSnapshotResponse>("/tourists/me/zones/current"),
   getMyZoneHistory: (params?: { start_time?: string; end_time?: string; zone_id?: string; limit?: number; skip?: number }) =>
     api.get<{ tourist_id: string; items: import("@/types").ZoneTransitionHistoryRecord[]; total: number; limit: number; skip: number }>("/tourists/me/zones/history", { params }),
+
 
   // Authority endpoints
   getTouristCurrentZones: (touristId: string) =>

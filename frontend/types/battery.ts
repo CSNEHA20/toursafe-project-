@@ -105,17 +105,3 @@ export function deriveBatteryPolicy(
     policyKey,
   };
 }
-
-/**
- * Exported type references for convenience.
- * Note: BATTERY_THRESHOLDS and BATTERY_POLICIES are values (const),
- * not types, so they are referenced by name in documentation but
- * the type exports focus on the interface types.
- */
-export type { BatteryInfo, BatteryLevelPolicy };
-
-/**
- * Backward-compatible exports for the constants as values.
- * These are re-exported so importing code can access the const values.
- */
-export { BATTERY_THRESHOLDS, BATTERY_POLICIES };

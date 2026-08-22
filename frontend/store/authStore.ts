@@ -15,6 +15,7 @@ interface AuthState {
   setUser: (user: AuthUser | null) => void;
   setLoading: (loading: boolean) => void;
   signOut: () => Promise<void>;
+  logout: () => Promise<void>;
   isAuthority: () => boolean;
   isTourist: () => boolean;
   initializeAuth: () => Promise<void>;
@@ -41,6 +42,10 @@ export const useAuthStore = create<AuthState>()(
         realtimeClient.disconnect();
         set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
       },
+      logout: async () => {
+        await get().signOut();
+      },
+
       isAuthority: () => {
         const role = get().user?.role;
         return role === "authority" || role === "admin" || role === "responder";

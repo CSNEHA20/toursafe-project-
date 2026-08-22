@@ -58,11 +58,15 @@ export interface MedicalInfo {
 }
 
 export interface EmergencyContact {
+  id?: string;
+  contact_id?: string;
   name: string;
   relationship: string;
-  phone: string;
+  phone?: string;
+  phone_number?: string;
   email?: string;
   is_primary: boolean;
+  priority_order?: number;
 }
 
 // ─── Alert Types ──────────────────────────────────────────────────────────────
@@ -86,6 +90,8 @@ export interface Alert {
   status: AlertStatus;
   title: string;
   description: string;
+  message?: string;
+  timestamp?: string;
   tourist_id?: string;
   tourist?: Tourist;
   zone_id?: string;
@@ -93,6 +99,7 @@ export interface Alert {
   latitude?: number;
   longitude?: number;
   created_at: string;
+
   acknowledged_at?: string;
   resolved_at?: string;
   assigned_to?: string;
@@ -722,7 +729,116 @@ export interface ResponderSelfProfile {
   tracking_session?: Record<string, any>;
 }
 
+export interface TripItineraryStop {
+  id?: string;
+  name: string;
+  location?: string;
+  latitude?: number;
+  longitude?: number;
+  planned_time?: string;
+  planned_arrival?: string;
+  order_index?: number;
+  notes?: string;
+  status?: "pending" | "reached" | "skipped";
+}
+
+export interface TripItineraryItem {
+  id: string;
+  itinerary_id?: string;
+  tourist_id?: string;
+  title: string;
+  destination?: string;
+  start_date?: string;
+  end_date?: string;
+  notes?: string;
+  description?: string;
+  status: "active" | "completed" | "upcoming" | "cancelled";
+  stops?: TripItineraryStop[];
+  entries?: TripItineraryStop[];
+  itinerary_stops?: TripItineraryStop[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface TouristTrip {
+  id: string;
+  trip_id?: string;
+  tourist_id: string;
+  title: string;
+  destination: string;
+  start_date: string;
+  end_date: string;
+  notes?: string;
+  description?: string;
+  status: "upcoming" | "active" | "completed" | "cancelled";
+  itinerary_stops?: TripItineraryStop[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+
+export interface TouristSelfIdentity {
+  user_id: string;
+  identity_profile_id: string;
+  full_name: string;
+  nationality: string;
+  date_of_birth?: string;
+  phone: string;
+  email: string;
+  identity_status: "NOT_STARTED" | "PENDING" | "ACTION_REQUIRED" | "VERIFIED" | "REJECTED" | "EXPIRED";
+  verified_fields: string[];
+  last_verified_at?: string | null;
+  verification_expires_at?: string | null;
+}
+
+export interface TouristKYCDocument {
+  document_id: string;
+  document_type: "PASSPORT" | "NATIONAL_ID" | "DRIVERS_LICENSE" | "VISA" | "OTHER";
+  issuing_country: string;
+  document_reference_masked: string;
+  verification_status: "PENDING" | "ACTION_REQUIRED" | "VERIFIED" | "REJECTED";
+  submitted_at: string;
+  verified_at?: string | null;
+  rejection_reason?: string | null;
+}
+
+export interface TouristCredentialView {
+  id: string;
+  credential_reference: string;
+  user_id: string;
+  identity_profile_id: string;
+  version: string;
+  status: "ACTIVE" | "SUSPENDED" | "REVOKED" | "EXPIRED";
+  issued_at: string;
+  expires_at: string;
+  signature: string;
+  token_nonce: string;
+  qr_payload: string;
+}
+
+export interface ConsentRecord {
+  id: string;
+  user_id: string;
+  consent_type: "LOCATION_TRACKING" | "MOTION_TELEMETRY" | "CREDENTIAL_SHARING" | "EMERGENCY_DISPATCH" | "ANALYTICS";
+  version: string;
+  granted: boolean;
+  source: string;
+  granted_at: string;
+  withdrawn_at?: string | null;
+  withdrawal_reason?: string | null;
+}
+
 export * from "./geofence";
 export * from "./notification";
+export * from "./battery";
+export * from "./connectivity";
+export * from "./device-health";
+export * from "./telemetry";
+export * from "./location";
+export * from "./imu";
+export * from "./safety";
+export * from "./anomaly";
+export * from "./realtime";
+
 
 

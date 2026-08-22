@@ -13,14 +13,15 @@ import type {
   TelemetryAck,
   TelemetryWindow,
   GGPSampleWithMetadata,
-  DeviceHealthStatus,
 } from '@/types/telemetry';
+import type { DeviceHealthStatus } from '@/types/device-health';
 import { telemetryService } from '@/lib/telemetry/telemetryService';
 import { telemetryOfflineBuffer } from '@/lib/telemetry/offlineBuffer';
 import { batteryService } from '@/lib/battery/batteryService';
 import { connectivityService } from '@/lib/connectivity/connectivityService';
 import { gpsService } from '@/lib/gps/gpsService';
 import { deviceHealthService } from '@/lib/device-health/deviceHealthService';
+
 
 interface TelemetryState {
   sessionStatus: SessionStatus;
@@ -124,11 +125,8 @@ export const useTelemetryStore = create<TelemetryState>((set, get) => ({
 
   forceHealthCheck: async () => {
     try {
-      await deviceHealthService.forceHealthCheck();
-      const health = deviceHealthService.getLastHealthReport();
-      if (health) {
-        set({ deviceHealth: health });
-      }
+      const health = deviceHealthService.evaluateOverallHealth();
+      set({ deviceHealth: health });
     } catch (e) {
       console.warn("Telemetry store health check failed:", e);
     }

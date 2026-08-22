@@ -25,8 +25,9 @@ import { batteryService } from "../battery/batteryService";
 import { connectivityService } from "../connectivity/connectivityService";
 import { useTelemetryStore } from "../../store/telemetryStore";
 import { useBatteryStore } from "../../store/batteryStore";
-import { useConnectivityStore } from "../..//store/connectivityStore";
-import { generateId } from "../../lib/utils";
+import { useConnectivityStore } from "../../store/connectivityStore";
+
+
 
 /**
  * retry configuration for batch uploads.
@@ -162,15 +163,12 @@ class TelemetryService {
     const connectivityPolicy = connectivityService.getCurrentPolicy();
 
     // 2. Determine target sampling rate based on policies
-    const targetGPSFrequency = batteryPolicy.allowsGPSFrequency(1.0)
+    const targetGPSFrequency = batteryService.allowsGPSFrequency(1.0)
       ? 1.0
       : 0.2; // reduced if battery policy doesn't allow
-    const targetIMUFrequency = batteryPolicy.allowsIMUFrequency(50.0)
+    const targetIMUFrequency = batteryService.allowsIMUFrequency(50.0)
       ? 50.0
       : 10.0; // reduced if battery policy doesn't allow
-
-    // 3. Determine upload strategy based on connectivity
-    const uploadStrategy = connectivityPolicy.mode;
 
     try {
       const res = await api.post("/api/v1/telemetry/session/start", {
@@ -191,22 +189,7 @@ class TelemetryService {
       this.startFlushTimer();
       this.notifyListeners();
 
-      // Initialize offline buffer with session context
-      telemetryOfflineBuffer.enqueue({
-        batch_id: `batch_${this.sessionId}_0`,
-        tracking_session_id: this.sessionId,
-        device_id: deviceId || "",
-        created_at: new Date().toISOString(),
-        sensor_type: "session_start",
-        sequence_start: 1,
-        sequence_end: 1,
-        records: [],
-        attempt_count: 0,
-        last_attempt_at: new Date().toISOString(),
-        status: "pending",
-      });
-
-      return this.sessionId;
+      return this.sessionId || "local_session";
     } catch (e) {
       // Degraded offline session initialization
       this.sessionId = `offline_sess_${Date.now()}`;
@@ -217,23 +200,10 @@ class TelemetryService {
       this.startFlushTimer();
       this.notifyListeners();
 
-      // Initialize offline buffer for degraded mode
-      telemetryOfflineBuffer.enqueue({
-        batch_id: `batch_${this.sessionId}_0`,
-        tracking_session_id: this.sessionId,
-        device_id: deviceId || "",
-        created_at: new Date().toISOString(),
-        sensor_type: "session_start",
-        sequence_start: 1,
-        sequence_end: 1,
-        records: [],
-        attempt_count: 0,
-        last_attempt_at: new Date().toISOString(),
-        status: "pending",
-      });
-
       return this.sessionId;
     }
+
+
   }
 
   /**
@@ -279,15 +249,12 @@ class TelemetryService {
     }
 
     // 1. Apply battery-aware sampling decision
-    const batteryPolicy = batteryService.getCurrentPolicy();
-    if (!batteryPolicy.allowsIMUFrequency(50.0)) {
-      // Battery policy restricts IMU frequency - could throttle here
-      // For now, we still record but may upload at reduced rate
+    if (!batteryService.allowsIMUFrequency(50.0)) {
+      // Battery policy restricts IMU frequency
     }
 
     // 2. Apply connectivity-aware decision
-    const connectivityPolicy = connectivityService.getCurrentPolicy();
-    const shouldBuffer = connectivityPolicy.mode === "buffer" || connectivityPolicy.requireServerHealth;
+    const shouldBuffer = connectivityService.isOffline();
 
     this.sequenceNumber += 1;
     const packetId = `pkt_${this.sessionId}_${this.sequenceNumber}_${Date.now()}`;
@@ -316,8 +283,7 @@ class TelemetryService {
     };
 
     // 3. Decide: upload now or buffer?
-    if (shouldBuffer && !connectivityService.isOnline()) {
-      // Network is offline - buffer for later
+    if (shouldBuffer) {
       telemetryOfflineBuffer.enqueue(envelope);
       this.notifyListeners();
       return packetId;
@@ -342,10 +308,8 @@ class TelemetryService {
       return null;
     }
 
-    // Apply battery policy for GPS frequency
-    const batteryPolicy = batteryService.getCurrentPolicy();
-    if (!batteryPolicy.allowsGPSFrequency(1.0)) {
-      // GPS frequency restricted by battery policy
+    if (!batteryService.allowsGPSFrequency(1.0)) {
+      // GPS frequency restricted
     }
 
     this.sequenceNumber += 1;
@@ -369,15 +333,14 @@ class TelemetryService {
       },
     };
 
-    // Apply connectivity decision
-    const connectivityPolicy = connectivityService.getCurrentPolicy();
-    if (connectivityPolicy.mode === "buffer" || !connectivityService.isOnline()) {
+    if (connectivityService.isOffline()) {
       telemetryOfflineBuffer.enqueue(envelope);
       this.notifyListeners();
       return packetId;
     }
 
     this.pendingBatch.push(envelope);
+
 
     if (this.pendingBatch.length >= this.BATCH_MAX_SIZE) {
       this.flushPendingBatch();
@@ -494,8 +457,7 @@ class TelemetryService {
       // Permanent rejection - do not retry
       this.recordRetry(batchId, false, true);
     } else {
-      // Unknown status - buffer for retry
-      telemetryOfflineBuffer.enqueueBatch(batchToSend);
+      // Unknown status - record retry
       this.recordRetry(batchId);
     }
   }
@@ -592,7 +554,7 @@ class TelemetryService {
     }
 
     // Check if we should use cellular
-    const allowsCellular = batteryPolicy.allowsCellularUploads();
+    const allowsCellular = batteryService.allowsCellularUploads();
     const connectivityPolicy = connectivityService.getCurrentPolicy();
 
     // Only retry if conditions allow
@@ -694,8 +656,9 @@ class TelemetryService {
 
           if (ack) {
             // Remove acknowledged packets (up to highest contiguous sequence)
-            telemetryOfflineBuffer.removeAcknowledged(sessionId, ack.highest_contiguous_sequence);
+            telemetryOfflineBuffer.removeAcknowledged(ack.highest_contiguous_sequence, sessionId);
             if (ack.highest_contiguous_sequence > this.highestContiguousAck) {
+
               this.highestContiguousAck = ack.highest_contiguous_sequence;
             }
           } else {

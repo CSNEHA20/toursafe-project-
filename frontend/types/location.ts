@@ -87,3 +87,21 @@ export interface LiveLocationUpdateEvent {
   sequence_number: number;
   tracking_status: string;
 }
+
+export type TrackingSessionStatus = LocationTrackingStatus;
+export type TrackingSessionLifecycleState = "idle" | "starting" | "active" | "paused" | "offline" | "stopping" | "stopped" | "completed" | "error";
+export type TrackingGPSQuality = "excellent" | "good" | "degraded" | "poor" | "unavailable";
+
+
+
+export interface TrackingSessionMetadata {
+  session_id: string;
+  tourist_id: string;
+  device_id?: string;
+  started_at: string;
+  ended_at?: string | null;
+  status: LocationTrackingStatus;
+  sample_count: number;
+  last_sequence_number: number;
+  last_location_timestamp?: string | null;
+}

@@ -3,30 +3,45 @@ import { useAlertStore } from "@/store/alertStore";
 import { useMapStore } from "@/store/mapStore";
 import { useSOSStore } from "@/store/sosStore";
 import { useAnomalyStore } from "@/store/anomalyStore";
+import { useSafetyStore } from "@/store/safetyStore";
+import { useGeofenceStore } from "@/store/geofenceStore";
+import { useTripStore } from "@/store/tripStore";
 import { useCommandCenterStore } from "@/store/commandCenterStore";
 import type { Alert, GeoZone, SOSEvent } from "@/types";
 import type { AnomalyDetectedPayload, AnomalyClearedPayload } from "@/types/anomaly";
 
 let isInitialized = false;
 let unsubscribers: (() => void)[] = [];
+const processedEventIds = new Set<string>();
 
 export function initRealtimeEventDispatcher() {
   if (isInitialized) return;
   isInitialized = true;
 
-  // Track realtime connection status into CommandCenterStore
+  // Track realtime connection status into stores
   const unsubState = realtimeClient.onStateChange((state) => {
     useCommandCenterStore.getState().setConnectionState(state);
     if (state === "connected") {
       useCommandCenterStore.getState().reconcileSnapshot();
+      useTripStore.getState().fetchTrips();
     }
   });
 
-  // Global operational router for Command Center
+  // Global operational router for Command Center & state reconciliation
   const unsubCommandCenterWildcard = realtimeClient.onEvent(
     "*",
     (payload, envelope) => {
       if (envelope) {
+        if (envelope.event_id) {
+          if (processedEventIds.has(envelope.event_id)) {
+            return; // Duplicate event suppression
+          }
+          processedEventIds.add(envelope.event_id);
+          if (processedEventIds.size > 2000) {
+            const first = processedEventIds.values().next().value;
+            if (first) processedEventIds.delete(first);
+          }
+        }
         useCommandCenterStore.getState().applyRealtimeEvent(envelope);
       }
     }
@@ -54,21 +69,90 @@ export function initRealtimeEventDispatcher() {
     }
   );
 
-  const unsubZoneStatus = realtimeClient.onEvent<{ zone_id: string; status: any }>(
-    "zone.status_changed",
+  const unsubZoneEntered = realtimeClient.onEvent<any>(
+    "zone.entered",
     (data) => {
-      if (!data?.zone_id) return;
-      const currentZones = useMapStore.getState().zones;
-      const updated = currentZones.map((z) =>
-        z.id === data.zone_id || z.zone_id === data.zone_id
-          ? { ...z, status: data.status }
-          : z
-      );
-      useMapStore.getState().setZones(updated);
+      if (!data) return;
+      useGeofenceStore.getState().handleRealtimeZoneEvent({ event_type: "zone.entered", data });
+      if (data.zone_name) {
+        useAlertStore.getState().addAlert({
+          id: `zone_enter_${Date.now()}`,
+          type: "system",
+          severity: data.risk_level === "critical" ? "critical" : data.risk_level === "high" ? "high" : "low",
+          status: "active",
+          title: `Entered ${data.zone_name}`,
+          description: `You have entered a monitored ${data.zone_type || "safety"} zone (${data.risk_level || "normal"} risk).`,
+          created_at: new Date().toISOString(),
+        });
+      }
     }
   );
 
-  // 2. Alert Events
+  const unsubZoneExited = realtimeClient.onEvent<any>(
+    "zone.exited",
+    (data) => {
+      if (!data) return;
+      useGeofenceStore.getState().handleRealtimeZoneEvent({ event_type: "zone.exited", data });
+    }
+  );
+
+  // 2. Safety State Changed
+  const unsubSafetyState = realtimeClient.onEvent<any>(
+    "safety.state_changed",
+    (data, envelope) => {
+      if (!data) return;
+      useSafetyStore.getState().handleRealtimeSafetyEvent({
+        event_type: "safety.state_changed",
+        data,
+      });
+    }
+  );
+
+  // 3. Incident Lifecycle Events
+  const unsubIncidentCreated = realtimeClient.onEvent<any>(
+    "incident.created",
+    (data) => {
+      if (!data) return;
+      useSafetyStore.getState().handleRealtimeSafetyEvent({
+        event_type: "incident.created",
+        data,
+      });
+      if (data.is_sos || data.severity === "CRITICAL") {
+        useSOSStore.getState().setActiveIncidentId(data.incident_id);
+        useSOSStore.getState().setSosStatus("triggered");
+      }
+    }
+  );
+
+  const unsubIncidentUpdated = realtimeClient.onEvent<any>(
+    "incident.updated",
+    (data) => {
+      if (!data) return;
+      useSafetyStore.getState().handleRealtimeSafetyEvent({
+        event_type: "incident.updated",
+        data,
+      });
+      if (data.status === "RESOLVED" || data.status === "CLOSED") {
+        useSOSStore.getState().setSosStatus("resolved");
+      } else if (data.status === "IN_PROGRESS" || data.status === "ASSIGNED") {
+        useSOSStore.getState().setSosStatus("responding");
+      }
+    }
+  );
+
+  const unsubIncidentResolved = realtimeClient.onEvent<any>(
+    "incident.resolved",
+    (data) => {
+      if (!data) return;
+      useSafetyStore.getState().handleRealtimeSafetyEvent({
+        event_type: "incident.resolved",
+        data,
+      });
+      useSOSStore.getState().setSosStatus("resolved");
+    }
+  );
+
+  // 4. Alert Events
   const unsubAlertCreated = realtimeClient.onEvent<Alert>(
     "alert.created",
     (alert) => {
@@ -93,7 +177,7 @@ export function initRealtimeEventDispatcher() {
     }
   );
 
-  // 3. SOS Events
+  // 5. SOS Events
   const unsubSOSCreated = realtimeClient.onEvent<SOSEvent>(
     "sos.created",
     (sos) => {
@@ -110,7 +194,7 @@ export function initRealtimeEventDispatcher() {
     }
   );
 
-  // 4. Location Events
+  // 6. Location Events
   const unsubLocationUpdated = realtimeClient.onEvent<any>(
     "location.updated",
     (data) => {
@@ -127,21 +211,20 @@ export function initRealtimeEventDispatcher() {
     }
   );
 
-  // 5. ML Sensor Anomaly Events (Prompt 9: Real-time LSTM Inference)
+  // 7. ML Sensor Anomaly Events
   const unsubAnomalyDetected = realtimeClient.onEvent<AnomalyDetectedPayload>(
     "anomaly.detected",
     (payload) => {
       if (!payload || !payload.tourist_id) return;
       useAnomalyStore.getState().addOrUpdateAnomaly(payload);
 
-      // Create or update operational alert in alert store
       const alertItem: Alert = {
         id: payload.anomaly_id,
         type: "anomaly",
         severity: payload.anomaly_score >= (payload.threshold * 1.3) ? "high" : "medium",
         status: "active",
-        title: "Motion Anomaly Detected",
-        description: `Unusual sensor kinematics (Score: ${payload.anomaly_score.toFixed(2)}, Threshold: ${payload.threshold.toFixed(2)}, Model: ${payload.model_version})`,
+        title: "Unusual Movement Noticed",
+        description: "We noticed unexpected movement or motion patterns. Please check your safety status.",
         tourist_id: payload.tourist_id,
         latitude: payload.last_known_gps?.latitude,
         longitude: payload.last_known_gps?.longitude,
@@ -162,12 +245,25 @@ export function initRealtimeEventDispatcher() {
     }
   );
 
+  // 8. Trip Events
+  const unsubTripUpdated = realtimeClient.onEvent<any>(
+    "trip.updated",
+    () => {
+      useTripStore.getState().fetchTrips();
+    }
+  );
+
   unsubscribers = [
     unsubState,
     unsubCommandCenterWildcard,
     unsubZoneCreated,
     unsubZoneUpdated,
-    unsubZoneStatus,
+    unsubZoneEntered,
+    unsubZoneExited,
+    unsubSafetyState,
+    unsubIncidentCreated,
+    unsubIncidentUpdated,
+    unsubIncidentResolved,
     unsubAlertCreated,
     unsubAlertUpdated,
     unsubAlertResolved,
@@ -176,13 +272,15 @@ export function initRealtimeEventDispatcher() {
     unsubLocationUpdated,
     unsubAnomalyDetected,
     unsubAnomalyCleared,
+    unsubTripUpdated,
   ];
 
-  console.log("[EventDispatcher] Realtime event subscriptions & Command Center router initialized.");
+  console.log("[EventDispatcher] Realtime event subscriptions & state router initialized.");
 }
 
 export function cleanupRealtimeEventDispatcher() {
   unsubscribers.forEach((unsub) => unsub());
   unsubscribers = [];
   isInitialized = false;
+  processedEventIds.clear();
 }

@@ -272,8 +272,9 @@ class TelemetryClient {
         const ack = res.data;
 
         if (ack) {
-          telemetryOfflineBuffer.removeAcknowledged(sessionId, ack.highest_contiguous_sequence);
+          telemetryOfflineBuffer.removeAcknowledged(ack.highest_contiguous_sequence, sessionId);
           if (ack.highest_contiguous_sequence > this.highestContiguousAck) {
+
             this.highestContiguousAck = ack.highest_contiguous_sequence;
           }
         } else {

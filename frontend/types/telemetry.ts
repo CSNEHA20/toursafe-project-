@@ -26,6 +26,15 @@ export type TelemetryAckStatus =
   | 'rejected'
   | 'buffered';
 
+export interface BatchIdempotency {
+  batch_id: string;
+  tracking_session_id: string;
+  device_id: string;
+  created_at: string;
+  payload_hash: string;
+}
+
+
 export interface GPSPayload {
   latitude: number;
   longitude: number;
@@ -213,3 +222,34 @@ export interface TelemetryDiagnosticsResponse {
   redis_health: Record<string, any>;
   mongodb_persistence_ok: boolean;
 }
+
+export type GPSAccuracyClassification = "EXCELLENT" | "GOOD" | "DEGRADED" | "POOR" | "UNKNOWN" | "UNAVAILABLE";
+export type GPSQualityClassification = GPSAccuracyClassification;
+
+export interface GPSQualityMetadata {
+  classification: GPSAccuracyClassification;
+  horizontalAccuracyMeters: number | null;
+  satellitesInView?: number | null;
+  hdop?: number | null;
+  isStale: boolean;
+  ageMs: number;
+}
+
+export interface GPSJumpFilterResult {
+  accepted: boolean;
+  reason?: string;
+  calculatedSpeedMps?: number;
+  distanceDeltaMeters?: number;
+}
+
+export interface GGPSampleWithMetadata {
+  latitude: number;
+  longitude: number;
+  altitude?: number | null;
+  accuracy?: number | null;
+  speed?: number | null;
+  heading?: number | null;
+  timestamp: string;
+  quality: GPSQualityMetadata;
+}
+
