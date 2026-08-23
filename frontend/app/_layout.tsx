@@ -12,12 +12,11 @@ export default function RootLayout() {
         <StatusBar style="light" />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
-          <Stack.Screen name="auth/index" />
-          <Stack.Screen name="auth/login" />
-          <Stack.Screen name="auth/register" />
-          <Stack.Screen name="auth/select-role" />
-          <Stack.Screen name="tourist/(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="admin/(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="auth" />
+          <Stack.Screen name="tourist" />
+          <Stack.Screen name="admin" />
+          <Stack.Screen name="responder" />
+          <Stack.Screen name="dev" />
         </Stack>
         <Toast />
       </SafeAreaProvider>

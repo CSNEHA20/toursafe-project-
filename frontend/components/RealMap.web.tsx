@@ -1,9 +1,40 @@
 import { View, StyleSheet, Text } from 'react-native';
 import { useMemo } from 'react';
 import React from 'react';
-import type { RealMapProps, ZonePolygonProp, MapMarkerProp } from './RealMap';
 
-export type { ZonePolygonProp, MapMarkerProp };
+export type ZonePolygonProp = {
+  coordinates: Array<{ latitude: number; longitude: number }>;
+  color?: string;
+  fillColor?: string;
+  name?: string;
+  risk_level?: string;
+};
+
+export type MapMarkerProp = {
+  latitude: number;
+  longitude: number;
+  title: string;
+  color?: string;
+  icon?: string;
+  subtitle?: string;
+};
+
+export type RealMapProps = {
+  region: {
+    latitude: number;
+    longitude: number;
+    latitudeDelta?: number;
+    longitudeDelta?: number;
+    zoom?: number;
+  };
+  markers?: MapMarkerProp[];
+  route?: Array<{ latitude: number; longitude: number }>;
+  polygon?: Array<{ latitude: number; longitude: number }>;
+  polygons?: ZonePolygonProp[];
+  overlayTitle?: string;
+  overlayText?: string;
+  height?: number | string;
+};
 
 function buildMapHtml({
   region,
@@ -32,7 +63,7 @@ function buildMapHtml({
   const routeJson = JSON.stringify((route || []).map((p) => [p.latitude, p.longitude]));
   const polygonsJson = JSON.stringify(
     allPolygons.map((poly) => ({
-      coords: poly.coordinates.map((p) => [p.latitude, p.longitude]),
+      coords: poly.coordinates.map((p: { latitude: number; longitude: number }) => [p.latitude, p.longitude]),
       color:
         poly.color ||
         (poly.risk_level === 'critical' || poly.risk_level === 'high'

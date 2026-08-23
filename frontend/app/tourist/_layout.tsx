@@ -1,13 +1,11 @@
-import { Tabs } from 'expo-router';
-import { ShieldAlert, LayoutDashboard, Map, CreditCard, User, FileText, CalendarDays } from 'lucide-react-native';
+import { Stack } from 'expo-router';
 
 export default function TouristLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: false }}>
-      <Tabs.Screen
-        name="(tabs)"
-        options={{ tabBarStyle: { display: 'none' } }}
-      />
-    </Tabs>
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="onboarding" />
+      <Stack.Screen name="splash" />
+    </Stack>
   );
 }

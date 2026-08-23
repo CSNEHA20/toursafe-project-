@@ -1,12 +1,9 @@
-import { Tabs } from 'expo-router';
+import { Stack } from 'expo-router';
 
 export default function AdminLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: false }}>
-      <Tabs.Screen
-        name="(tabs)"
-        options={{ tabBarStyle: { display: 'none' } }}
-      />
-    </Tabs>
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" />
+    </Stack>
   );
 }

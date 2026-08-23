@@ -1,3 +1,11 @@
+import sys
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -73,7 +81,7 @@ async def lifespan(app: FastAPI):
     try:
         db = db_core.get_database()
         await db.command("ping")
-        print("✅ MongoDB connection verified on startup")
+        print("[OK] MongoDB connection verified on startup")
         await db_core.init_db_indexes(db)
         await safety_repository.init_indexes()
         await dataset_registry.init_indexes()
@@ -103,20 +111,20 @@ async def lifespan(app: FastAPI):
         if settings.environment.lower() not in ("production", "prod"):
             seeded = await seed_initial_zones(db)
             if seeded > 0:
-                print(f"✅ Successfully seeded {seeded} initial development geospatial zones")
+                print(f"[OK] Successfully seeded {seeded} initial development geospatial zones")
     except Exception as e:
-        print(f"⚠️  MongoDB startup initialization note: {e}")
+        print(f"[WARN] MongoDB startup initialization note: {e}")
 
     try:
         await redis_core.get_redis_client()
     except Exception as e:
-        print(f"⚠️  Redis startup initialization note: {e}")
+        print(f"[WARN] Redis startup initialization note: {e}")
 
     # Initialize ML Inference Engine
     try:
         await ml_inference_engine.start()
     except Exception as e:
-        print(f"⚠️  ML Inference Engine initialization note: {e}")
+        print(f"[WARN] ML Inference Engine initialization note: {e}")
 
     yield
 
@@ -124,7 +132,7 @@ async def lifespan(app: FastAPI):
     try:
         await ml_inference_engine.stop()
     except Exception as e:
-        print(f"⚠️  ML Inference Engine shutdown note: {e}")
+        print(f"[WARN] ML Inference Engine shutdown note: {e}")
     await redis_core.close_redis()
     await db_core.close_database()
 
