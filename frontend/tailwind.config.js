@@ -9,47 +9,47 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // ─── TourSafe brand tokens — unchanged from web app ───
-        "ts-navy": "#1A3C6E",
-        "ts-saffron": "#FF6B00",
-        "ts-green": "#046A38",
-        "ts-teal": "#0D7680",
-        "ts-slate": "#4A5568",
-        "ts-light": "#F7F8FA",
-        "ts-mid": "#E2E8F0",
-        "ts-alert-red": "#C53030",
-        border: "#E2E8F0",
+        // ─── TourSafe brand tokens — updated lighter blue palette ───
+        "ts-navy": "#2B4C7E",        // Lighter navy blue (from dark #1A3C6E)
+        "ts-saffron": "#FF6B00",     // Keep vibrant orange
+        "ts-green": "#059669",       // Slightly lighter green
+        "ts-teal": "#0891B2",        // Lighter teal/cyan
+        "ts-slate": "#64748B",       // Lighter slate gray
+        "ts-light": "#F8FAFC",       // Very light background
+        "ts-mid": "#E2E8F0",         // Keep as is
+        "ts-alert-red": "#DC2626",   // Slightly lighter red
+        border: "#CBD5E1",           // Lighter border
         input: "#E2E8F0",
-        ring: "#1A3C6E",
-        background: "#F7F8FA",
-        foreground: "#1A202C",
+        ring: "#2B4C7E",             // Match lighter navy
+        background: "#FFFFFF",       // Pure white background
+        foreground: "#1E293B",       // Slightly lighter text
         primary: {
-          DEFAULT: "#1A3C6E",
+          DEFAULT: "#2B4C7E",        // Lighter navy
           foreground: "#ffffff",
         },
         secondary: {
-          DEFAULT: "#0D7680",
+          DEFAULT: "#0891B2",        // Lighter teal
           foreground: "#ffffff",
         },
         destructive: {
-          DEFAULT: "#C53030",
+          DEFAULT: "#DC2626",        // Lighter red
           foreground: "#ffffff",
         },
         muted: {
-          DEFAULT: "#F7F8FA",
-          foreground: "#4A5568",
+          DEFAULT: "#F1F5F9",        // Lighter muted background
+          foreground: "#64748B",     // Lighter muted text
         },
         accent: {
-          DEFAULT: "#FF6B00",
+          DEFAULT: "#0284C7",        // Bright blue accent
           foreground: "#ffffff",
         },
         popover: {
           DEFAULT: "#ffffff",
-          foreground: "#1A202C",
+          foreground: "#1E293B",
         },
         card: {
           DEFAULT: "#ffffff",
-          foreground: "#1A202C",
+          foreground: "#1E293B",
         },
       },
       borderRadius: {

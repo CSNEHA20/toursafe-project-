@@ -41,10 +41,10 @@ export function severityBadgeColor(severity: AlertSeverity): string {
 
 export function zoneTypeColor(type: ZoneType): string {
   const map: Record<ZoneType, string> = {
-    safe: "#046A38",
-    warning: "#D97706",
-    danger: "#C53030",
-    restricted: "#4A5568",
+    safe: "#059669",
+    warning: "#F59E0B",
+    danger: "#DC2626",
+    restricted: "#64748B",
   };
   return map[type];
 }

@@ -167,7 +167,7 @@ export default function TourSafeOfficialPortal() {
             {/* Gateway 1: Authority Command Center */}
             <View style={styles.gatewayCard}>
               <View style={styles.gatewayCardHeader}>
-                <View style={[styles.gatewayIconBox, { backgroundColor: '#1A3C6E' }]}>
+                <View style={[styles.gatewayIconBox, { backgroundColor: '#2B4C7E' }]}>
                   <Building2 size={24} color="#ffffff" />
                 </View>
                 <View style={styles.gatewayBadge}>
@@ -180,20 +180,20 @@ export default function TourSafeOfficialPortal() {
               </Text>
               <View style={styles.featureList}>
                 <View style={styles.featureItem}>
-                  <CheckCircle2 size={14} color="#1A3C6E" />
+                  <CheckCircle2 size={14} color="#2B4C7E" />
                   <Text style={styles.featureText}>Live multi-layer geospatial operations map</Text>
                 </View>
                 <View style={styles.featureItem}>
-                  <CheckCircle2 size={14} color="#1A3C6E" />
+                  <CheckCircle2 size={14} color="#2B4C7E" />
                   <Text style={styles.featureText}>AI Copilot tactical query & action execution</Text>
                 </View>
                 <View style={styles.featureItem}>
-                  <CheckCircle2 size={14} color="#1A3C6E" />
+                  <CheckCircle2 size={14} color="#2B4C7E" />
                   <Text style={styles.featureText}>E-FIR generation & legal audit governance</Text>
                 </View>
               </View>
               <TouchableOpacity
-                style={[styles.gatewayButton, { backgroundColor: '#1A3C6E' }]}
+                style={[styles.gatewayButton, { backgroundColor: '#2B4C7E' }]}
                 onPress={() => router.push('/admin/(tabs)/dashboard')}
                 accessibilityRole="button"
                 accessibilityLabel="Enter Authority Command Center"
@@ -206,11 +206,11 @@ export default function TourSafeOfficialPortal() {
             {/* Gateway 2: Tourist Safety Companion */}
             <View style={styles.gatewayCard}>
               <View style={styles.gatewayCardHeader}>
-                <View style={[styles.gatewayIconBox, { backgroundColor: '#046A38' }]}>
+                <View style={[styles.gatewayIconBox, { backgroundColor: '#059669' }]}>
                   <User size={24} color="#ffffff" />
                 </View>
                 <View style={[styles.gatewayBadge, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]}>
-                  <Text style={[styles.gatewayBadgeText, { color: '#046A38' }]}>TRAVELER PORTAL</Text>
+                  <Text style={[styles.gatewayBadgeText, { color: '#059669' }]}>TRAVELER PORTAL</Text>
                 </View>
               </View>
               <Text style={styles.gatewayTitle}>Tourist Safety Companion</Text>
@@ -219,20 +219,20 @@ export default function TourSafeOfficialPortal() {
               </Text>
               <View style={styles.featureList}>
                 <View style={styles.featureItem}>
-                  <CheckCircle2 size={14} color="#046A38" />
+                  <CheckCircle2 size={14} color="#059669" />
                   <Text style={styles.featureText}>One-touch deliberate emergency SOS trigger</Text>
                 </View>
                 <View style={styles.featureItem}>
-                  <CheckCircle2 size={14} color="#046A38" />
+                  <CheckCircle2 size={14} color="#059669" />
                   <Text style={styles.featureText}>Verifiable Digital Tourist Credential (QR / KYC)</Text>
                 </View>
                 <View style={styles.featureItem}>
-                  <CheckCircle2 size={14} color="#046A38" />
+                  <CheckCircle2 size={14} color="#059669" />
                   <Text style={styles.featureText}>Granular privacy & sovereign consent center</Text>
                 </View>
               </View>
               <TouchableOpacity
-                style={[styles.gatewayButton, { backgroundColor: '#046A38' }]}
+                style={[styles.gatewayButton, { backgroundColor: '#059669' }]}
                 onPress={() => router.push('/tourist/(tabs)/dashboard')}
                 accessibilityRole="button"
                 accessibilityLabel="Open Tourist Safety Companion"
@@ -291,7 +291,7 @@ export default function TourSafeOfficialPortal() {
           <View style={[styles.subsystemGrid, isCompact && styles.subsystemGridCompact]}>
             <View style={styles.subsystemCard}>
               <View style={styles.subsystemHeader}>
-                <Cpu size={18} color="#1A3C6E" />
+                <Cpu size={18} color="#2B4C7E" />
                 <View style={styles.statusPillActive}>
                   <Text style={styles.statusPillText}>OPERATIONAL</Text>
                 </View>
@@ -304,7 +304,7 @@ export default function TourSafeOfficialPortal() {
 
             <View style={styles.subsystemCard}>
               <View style={styles.subsystemHeader}>
-                <Radio size={18} color="#046A38" />
+                <Radio size={18} color="#059669" />
                 <View style={styles.statusPillActive}>
                   <Text style={styles.statusPillText}>LIVE BROADCAST</Text>
                 </View>
@@ -330,7 +330,7 @@ export default function TourSafeOfficialPortal() {
 
             <View style={styles.subsystemCard}>
               <View style={styles.subsystemHeader}>
-                <MapPin size={18} color="#0D7680" />
+                <MapPin size={18} color="#0891B2" />
                 <View style={styles.statusPillActive}>
                   <Text style={styles.statusPillText}>GEO-POLYGON ACTIVE</Text>
                 </View>
@@ -346,7 +346,7 @@ export default function TourSafeOfficialPortal() {
         {/* Footer */}
         <View style={styles.footer}>
           <View style={styles.footerBrand}>
-            <Shield size={20} color="#1A3C6E" />
+            <Shield size={20} color="#2B4C7E" />
             <Text style={styles.footerTitle}>TourSafe Sovereign Safety Infrastructure</Text>
           </View>
           <Text style={styles.footerCopyright}>
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: '#1A3C6E',
+    backgroundColor: '#2B4C7E',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#1A3C6E',
+    backgroundColor: '#2B4C7E',
   },
   loginButtonText: {
     fontSize: 12,
@@ -565,7 +565,7 @@ const styles = StyleSheet.create({
   securityTagText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#1E40AF',
+    color: '#2563EB',
     letterSpacing: 0.4,
   },
   realtimeTag: {
@@ -765,7 +765,7 @@ const styles = StyleSheet.create({
   footerTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#2B4C7E',
   },
   footerCopyright: {
     fontSize: 11,
