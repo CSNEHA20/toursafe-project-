@@ -212,7 +212,7 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0B132B",
+    backgroundColor: "#F8FAFC",
   },
   mapContainer: {
     flex: 1,
@@ -234,12 +234,12 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    bordercolor: "#475569",
   },
   mapTitle: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   mapSub: {
     fontSize: 11,
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#64748B",
   },
   trackingBtnText: {
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontSize: 12,
     fontWeight: "700",
   },
@@ -329,11 +329,11 @@ const styles = StyleSheet.create({
   drawerTitle: {
     fontSize: 17,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   drawerDesc: {
     fontSize: 13,
-    color: "#CBD5E1",
+    color: "#475569",
     lineHeight: 18,
   },
   drawerActions: {
@@ -349,8 +349,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   drawerCallText: {
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontSize: 13,
     fontWeight: "700",
   },
 });
+

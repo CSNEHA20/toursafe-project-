@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     marginTop: Platform.OS === "ios" ? 44 : 20,
-    backgroundColor: "#0B1120",
+    backgroundColor: "#F8FAFC",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     borderWidth: 1,
@@ -509,3 +509,4 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+

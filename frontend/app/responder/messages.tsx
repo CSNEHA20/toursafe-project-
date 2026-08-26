@@ -404,3 +404,4 @@ const styles = StyleSheet.create({
     backgroundColor: '#334155',
   },
 });
+

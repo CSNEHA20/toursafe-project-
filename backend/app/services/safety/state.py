@@ -13,7 +13,7 @@ Incident Lifecycle:
 
 from datetime import datetime, timezone
 import logging
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from ...schemas.safety import (
     IncidentRecord,

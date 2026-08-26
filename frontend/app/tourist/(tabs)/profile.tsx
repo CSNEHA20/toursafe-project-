@@ -497,7 +497,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0B132B",
+    backgroundColor: "#F8FAFC",
   },
   scrollContent: {
     padding: 20,
@@ -508,12 +508,12 @@ const styles = StyleSheet.create({
   profileHero: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(30, 41, 59, 0.7)",
+    backgroundcolor: "#0F172A",
     padding: 18,
     borderRadius: 20,
     gap: 16,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    bordercolor: "#475569",
   },
   avatarBox: {
     width: 60,
@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   userEmail: {
     fontSize: 12,
@@ -568,7 +568,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   addContactBtn: {
     flexDirection: "row",
@@ -592,11 +592,11 @@ const styles = StyleSheet.create({
   contactCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(30, 41, 59, 0.6)",
+    backgroundcolor: "#0F172A",
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    bordercolor: "#334155",
     gap: 12,
   },
   contactIcon: {
@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
   contactName: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   primaryBadge: {
     backgroundColor: "rgba(255, 153, 51, 0.2)",
@@ -642,13 +642,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    bordercolor: "#334155",
     gap: 6,
   },
   emptyContactsTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   emptyContactsSub: {
     fontSize: 12,
@@ -657,11 +657,11 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   consentCard: {
-    backgroundColor: "rgba(30, 41, 59, 0.6)",
+    backgroundcolor: "#0F172A",
     borderRadius: 18,
     padding: 16,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    bordercolor: "#334155",
   },
   consentItem: {
     flexDirection: "row",
@@ -672,7 +672,7 @@ const styles = StyleSheet.create({
   consentTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   consentDesc: {
     fontSize: 12,
@@ -692,11 +692,11 @@ const styles = StyleSheet.create({
   },
   permissionCard: {
     width: "48%",
-    backgroundColor: "rgba(30, 41, 59, 0.6)",
+    backgroundcolor: "#0F172A",
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    bordercolor: "#334155",
     gap: 6,
   },
   permissionLabel: {
@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
   permissionStatus: {
     fontSize: 13,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   devBtn: {
     flexDirection: "row",
@@ -717,11 +717,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     gap: 12,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    bordercolor: "#334155",
   },
   devBtnText: {
     flex: 1,
-    color: "#CBD5E1",
+    color: "#475569",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -756,7 +756,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   modalSub: {
     fontSize: 13,
@@ -768,17 +768,17 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#CBD5E1",
+    color: "#475569",
   },
   input: {
     backgroundColor: "#0F172A",
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontSize: 14,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    bordercolor: "#475569",
   },
   modalBtnRow: {
     flexDirection: "row",
@@ -807,7 +807,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   submitBtnText: {
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontSize: 13,
     fontWeight: "700",
   },
@@ -825,7 +825,7 @@ const styles = StyleSheet.create({
   diagVal: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   closeDiagBtn: {
     alignItems: "center",
@@ -835,7 +835,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   closeDiagText: {
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontWeight: "700",
   },
 });

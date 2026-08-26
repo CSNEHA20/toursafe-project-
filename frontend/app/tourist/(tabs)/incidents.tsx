@@ -279,7 +279,7 @@ export default function IncidentsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0B132B",
+    backgroundColor: "#F8FAFC",
   },
   header: {
     flexDirection: "row",
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
     marginTop: 2,
   },
   incidentBadge: {
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   incidentBadgeText: {
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.6,
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   responderCard: {
-    backgroundColor: "rgba(30, 41, 59, 0.7)",
+    backgroundcolor: "#0F172A",
     borderRadius: 18,
     padding: 16,
     borderWidth: 1,
@@ -352,12 +352,12 @@ const styles = StyleSheet.create({
   responderName: {
     fontSize: 15,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
     marginTop: 2,
   },
   responderETA: {
     fontSize: 12,
-    color: "#CBD5E1",
+    color: "#475569",
     marginTop: 2,
   },
   callBtn: {
@@ -375,17 +375,17 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   timelineCard: {
-    backgroundColor: "rgba(30, 41, 59, 0.6)",
+    backgroundcolor: "#0F172A",
     borderRadius: 18,
     padding: 16,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    bordercolor: "#334155",
     gap: 12,
   },
   timelineTitle: {
     fontSize: 14,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   timelineList: {
     gap: 0,
@@ -427,7 +427,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   stepCompletedText: {
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontWeight: "700",
   },
   timelineStepTime: {
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   chatTitle: {
     fontSize: 15,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   chatSub: {
     fontSize: 12,
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     backgroundColor: "rgba(15, 23, 42, 0.8)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    bordercolor: "#475569",
     maxWidth: "96%",
   },
   msgAuthority: {
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
   },
   msgText: {
     fontSize: 13,
-    color: "#FFFFFF",
+    color: "#0F172A",
     lineHeight: 18,
   },
   msgTime: {
@@ -522,10 +522,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 14,
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontSize: 14,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    bordercolor: "#334155",
   },
   sendButton: {
     width: 44,
@@ -536,3 +536,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 });
+

@@ -18,3 +18,4 @@ export default function ResponderLayout() {
     </Stack>
   );
 }
+

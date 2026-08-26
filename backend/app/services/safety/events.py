@@ -18,6 +18,9 @@ from ..realtime_bus import realtime_bus
 logger = logging.getLogger("toursafe.safety.events")
 
 
+Tuple_Guidance = tuple[str, str]
+
+
 def map_tourist_guidance(state: SafetyState, reasons: list) -> Tuple_Guidance:
     """Generates calm, user-appropriate guidance text for the tourist without leaking ML scores or rule IDs."""
     if state == SafetyState.NORMAL:
@@ -32,9 +35,6 @@ def map_tourist_guidance(state: SafetyState, reasons: list) -> Tuple_Guidance:
         return "Safety condition clearing. Resuming normal monitoring.", "Monitoring"
     else:
         return "Location/telemetry signal temporarily degraded. Reconnecting...", "Reconnecting"
-
-
-Tuple_Guidance = tuple[str, str]
 
 
 class SafetyEventPublisher:

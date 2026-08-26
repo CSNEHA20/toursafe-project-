@@ -544,7 +544,7 @@ export default function TouristDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0B132B",
+    backgroundColor: "#F8FAFC",
   },
   scrollContent: {
     padding: 16,
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
   incidentTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
     marginTop: 2,
   },
   incidentDesc: {
@@ -657,7 +657,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   incidentBtnText: {
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontWeight: "700",
     fontSize: 14,
   },
@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundcolor: "#0F172A",
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 12,
@@ -735,11 +735,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   safetyCard: {
-    backgroundColor: "rgba(30, 41, 59, 0.6)",
+    backgroundcolor: "#0F172A",
     borderRadius: 18,
     padding: 16,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    bordercolor: "#334155",
   },
   safetyCardHeader: {
     flexDirection: "row",
@@ -782,12 +782,12 @@ const styles = StyleSheet.create({
   safetyCardTitle: {
     fontSize: 17,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
     marginTop: 2,
   },
   safetyCardSub: {
     fontSize: 13,
-    color: "#CBD5E1",
+    color: "#475569",
     marginTop: 4,
     lineHeight: 18,
   },
@@ -813,7 +813,7 @@ const styles = StyleSheet.create({
   sosBtnText: {
     fontSize: 19,
     fontWeight: "900",
-    color: "#FFFFFF",
+    color: "#0F172A",
     letterSpacing: 1.2,
     marginTop: 4,
   },
@@ -832,25 +832,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(30, 41, 59, 0.7)",
+    backgroundcolor: "#0F172A",
     paddingVertical: 10,
     paddingHorizontal: 8,
     borderRadius: 12,
     gap: 6,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    bordercolor: "#334155",
   },
   helplineText: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#E2E8F0",
+    color: "#334155",
   },
   tripCard: {
-    backgroundColor: "rgba(30, 41, 59, 0.7)",
+    backgroundcolor: "#0F172A",
     borderRadius: 20,
     padding: 18,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    bordercolor: "#475569",
     gap: 14,
   },
   tripHeader: {
@@ -867,7 +867,7 @@ const styles = StyleSheet.create({
   tripTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
     marginTop: 2,
   },
   tripMetaRow: {
@@ -900,12 +900,12 @@ const styles = StyleSheet.create({
   waypointBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(15, 23, 42, 0.6)",
+    backgroundColor: "#F8FAFC",
     padding: 12,
     borderRadius: 12,
     gap: 10,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.05)",
+    bordercolor: "#334155",
   },
   waypointLabel: {
     fontSize: 10,
@@ -916,7 +916,7 @@ const styles = StyleSheet.create({
   waypointName: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#0F172A",
     marginTop: 1,
   },
   waypointLink: {
@@ -925,11 +925,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   noTripCard: {
-    backgroundColor: "rgba(30, 41, 59, 0.6)",
+    backgroundcolor: "#0F172A",
     borderRadius: 20,
     padding: 18,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    bordercolor: "#334155",
     gap: 14,
   },
   noTripHeader: {
@@ -940,7 +940,7 @@ const styles = StyleSheet.create({
   noTripTitle: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   noTripSub: {
     fontSize: 12,
@@ -958,7 +958,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   createTripText: {
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontWeight: "700",
     fontSize: 14,
   },
@@ -991,7 +991,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#D97706",
   },
   toggleText: {
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontSize: 12,
     fontWeight: "700",
   },
@@ -1002,11 +1002,11 @@ const styles = StyleSheet.create({
   },
   statusCard: {
     width: "48%",
-    backgroundColor: "rgba(30, 41, 59, 0.6)",
+    backgroundcolor: "#0F172A",
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    bordercolor: "#334155",
   },
   statusCardTop: {
     flexDirection: "row",
@@ -1021,7 +1021,7 @@ const styles = StyleSheet.create({
   statusCardValue: {
     fontSize: 14,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
     marginTop: 8,
   },
   statusCardSub: {
@@ -1032,7 +1032,7 @@ const styles = StyleSheet.create({
   mapShortcutCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(30, 58, 138, 0.3)",
+    backgroundColor: "#EFF6FF",
     padding: 16,
     borderRadius: 18,
     gap: 12,
@@ -1042,7 +1042,7 @@ const styles = StyleSheet.create({
   mapShortcutTitle: {
     fontSize: 14,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   mapShortcutSub: {
     fontSize: 12,
@@ -1050,3 +1050,4 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 });
+

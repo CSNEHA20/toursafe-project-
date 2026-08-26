@@ -394,7 +394,7 @@ export default function SOSScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0B132B",
+    backgroundColor: "#F8FAFC",
   },
   scrollContent: {
     padding: 20,
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   headerSub: {
     fontSize: 13,
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
   sosButtonLabel: {
     fontSize: 26,
     fontWeight: "900",
-    color: "#FFFFFF",
+    color: "#0F172A",
     letterSpacing: 2,
     marginTop: 2,
   },
@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
   countdownNumber: {
     fontSize: 64,
     fontWeight: "900",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   abortBtn: {
     flexDirection: "row",
@@ -522,7 +522,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   abortBtnText: {
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontWeight: "800",
     fontSize: 14,
   },
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
   incidentStateText: {
     fontSize: 18,
     fontWeight: "900",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   responderCard: {
     flexDirection: "row",
@@ -570,7 +570,7 @@ const styles = StyleSheet.create({
   responderName: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   responderRole: {
     fontSize: 12,
@@ -590,7 +590,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chatBtnText: {
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontWeight: "700",
     fontSize: 14,
   },
@@ -607,17 +607,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   infoCard: {
-    backgroundColor: "rgba(30, 41, 59, 0.6)",
+    backgroundcolor: "#0F172A",
     borderRadius: 18,
     padding: 18,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    bordercolor: "#334155",
     gap: 12,
   },
   infoTitle: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   infoList: {
     gap: 10,
@@ -630,7 +630,7 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 13,
-    color: "#CBD5E1",
+    color: "#475569",
     lineHeight: 18,
   },
   helplineSection: {
@@ -651,17 +651,17 @@ const styles = StyleSheet.create({
     width: "48%",
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(30, 41, 59, 0.6)",
+    backgroundcolor: "#0F172A",
     borderRadius: 14,
     padding: 12,
     gap: 10,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    bordercolor: "#334155",
   },
   helplineNumber: {
     fontSize: 15,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   helplineLabel: {
     fontSize: 11,
@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   modalSub: {
     fontSize: 13,
@@ -697,14 +697,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    bordercolor: "#475569",
   },
   reasonOptionSelected: {
     borderColor: "#EF4444",
     backgroundColor: "rgba(239, 68, 68, 0.15)",
   },
   reasonOptionText: {
-    color: "#CBD5E1",
+    color: "#475569",
     fontSize: 13,
     fontWeight: "600",
   },
@@ -717,10 +717,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 14,
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontSize: 14,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    bordercolor: "#475569",
   },
   modalBtnRow: {
     flexDirection: "row",
@@ -736,7 +736,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   keepActiveText: {
-    color: "#CBD5E1",
+    color: "#475569",
     fontWeight: "700",
     fontSize: 13,
   },
@@ -749,8 +749,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   confirmCancelText: {
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontWeight: "700",
     fontSize: 13,
   },
 });
+

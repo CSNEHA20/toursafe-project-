@@ -1166,7 +1166,7 @@ function EmptyState({ text, icon }: { text: string; icon: any }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090d16',
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
     padding: 16,
@@ -1273,9 +1273,9 @@ const styles = StyleSheet.create({
   kpiCard: {
     flex: 1,
     minWidth: 120,
-    backgroundColor: '#111827',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: '#E2E8F0',
     borderRadius: 10,
     padding: 12,
   },
@@ -1287,12 +1287,12 @@ const styles = StyleSheet.create({
   kpiLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#9ca3af',
+    color: '#64748B',
   },
   kpiValue: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#f9fafb',
+    color: '#0F172A',
     marginTop: 6,
   },
   searchFilterRow: {
@@ -1308,16 +1308,16 @@ const styles = StyleSheet.create({
     minWidth: 260,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#111827',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: '#CBD5E1',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   searchInput: {
     flex: 1,
-    color: '#f9fafb',
+    color: '#0F172A',
     fontSize: 13,
     padding: 0,
   },
@@ -1365,9 +1365,9 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   panel: {
-    backgroundColor: '#111827',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: '#E2E8F0',
     borderRadius: 12,
     padding: 14,
   },

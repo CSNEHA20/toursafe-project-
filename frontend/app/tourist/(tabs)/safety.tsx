@@ -325,7 +325,7 @@ export default function SafetyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0B132B",
+    backgroundColor: "#F8FAFC",
   },
   scrollContent: {
     padding: 20,
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   headerSub: {
     fontSize: 13,
@@ -392,12 +392,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.6,
-    color: "#E2E8F0",
+    color: "#334155",
     marginBottom: 4,
   },
   heroMainMessage: {
     fontSize: 14,
-    color: "#FFFFFF",
+    color: "#0F172A",
     lineHeight: 20,
     fontWeight: "500",
   },
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   metricValueText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#E2E8F0",
+    color: "#334155",
   },
   heroActionBox: {
     flexDirection: "row",
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
   },
   heroActionText: {
     fontSize: 12,
-    color: "#CBD5E1",
+    color: "#475569",
     flex: 1,
     lineHeight: 16,
   },
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   btnSafeText: {
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.5,
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   btnEmergencyText: {
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.5,
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    bordercolor: "#334155",
     gap: 6,
   },
   zoneCardTop: {
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: "700",
-    color: "#E2E8F0",
+    color: "#334155",
   },
   zoneRiskBadge: {
     backgroundColor: "rgba(13, 148, 136, 0.2)",
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
   emptyZonesTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#CBD5E1",
+    color: "#475569",
   },
   emptyZonesSub: {
     fontSize: 12,
@@ -589,7 +589,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    bordercolor: "#334155",
     gap: 6,
   },
   alertTop: {
@@ -629,3 +629,4 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
 });
+

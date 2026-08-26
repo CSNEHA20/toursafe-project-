@@ -624,7 +624,7 @@ export default function ItineraryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0B132B",
+    backgroundColor: "#F8FAFC",
   },
   header: {
     flexDirection: "row",
@@ -643,7 +643,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
     marginTop: 2,
   },
   newTripBtn: {
@@ -656,7 +656,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   newTripBtnText: {
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontSize: 13,
     fontWeight: "700",
   },
@@ -680,7 +680,7 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
   },
   tabTextActive: {
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontWeight: "700",
   },
   content: {
@@ -705,11 +705,11 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   heroCard: {
-    backgroundColor: "rgba(30, 41, 59, 0.7)",
+    backgroundcolor: "#0F172A",
     borderRadius: 20,
     padding: 18,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    bordercolor: "#475569",
     gap: 12,
   },
   heroHeader: {
@@ -736,7 +736,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 19,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   heroMetaRow: {
     flexDirection: "row",
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
   },
   heroDesc: {
     fontSize: 13,
-    color: "#CBD5E1",
+    color: "#475569",
     lineHeight: 18,
   },
   completeBtn: {
@@ -776,17 +776,17 @@ const styles = StyleSheet.create({
   trackingStatusBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(15, 23, 42, 0.6)",
+    backgroundColor: "#F8FAFC",
     padding: 10,
     borderRadius: 10,
     gap: 8,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.05)",
+    bordercolor: "#334155",
   },
   trackingStatusText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#E2E8F0",
+    color: "#334155",
   },
   waypointsHeader: {
     flexDirection: "row",
@@ -796,7 +796,7 @@ const styles = StyleSheet.create({
   waypointsTitle: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   waypointsSub: {
     fontSize: 12,
@@ -859,11 +859,11 @@ const styles = StyleSheet.create({
   },
   stopCard: {
     flex: 1,
-    backgroundColor: "rgba(30, 41, 59, 0.6)",
+    backgroundcolor: "#0F172A",
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    bordercolor: "#334155",
     marginBottom: 14,
     gap: 6,
   },
@@ -875,7 +875,7 @@ const styles = StyleSheet.create({
   stopName: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#0F172A",
     flex: 1,
   },
   stopStatusBadge: {
@@ -906,7 +906,7 @@ const styles = StyleSheet.create({
   },
   stopLocationText: {
     fontSize: 12,
-    color: "#CBD5E1",
+    color: "#475569",
   },
   stopTimeText: {
     fontSize: 12,
@@ -918,13 +918,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    bordercolor: "#334155",
     gap: 8,
   },
   emptyStopsTitle: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   emptyStopsSub: {
     fontSize: 12,
@@ -948,17 +948,17 @@ const styles = StyleSheet.create({
   },
   emptyTripsCard: {
     alignItems: "center",
-    backgroundColor: "rgba(30, 41, 59, 0.6)",
+    backgroundcolor: "#0F172A",
     borderRadius: 20,
     padding: 30,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    bordercolor: "#334155",
     gap: 12,
   },
   emptyTripsTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   emptyTripsDesc: {
     fontSize: 13,
@@ -977,7 +977,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   createFirstTripText: {
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontSize: 14,
     fontWeight: "800",
   },
@@ -985,11 +985,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   tripListItem: {
-    backgroundColor: "rgba(30, 41, 59, 0.6)",
+    backgroundcolor: "#0F172A",
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    bordercolor: "#334155",
     gap: 8,
   },
   tripListTop: {
@@ -1000,7 +1000,7 @@ const styles = StyleSheet.create({
   tripListTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   upcomingBadge: {
     backgroundColor: "rgba(56, 189, 248, 0.15)",
@@ -1047,13 +1047,13 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     padding: 24,
     borderTopWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    bordercolor: "#475569",
     gap: 14,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   modalSub: {
     fontSize: 12,
@@ -1069,17 +1069,17 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#CBD5E1",
+    color: "#475569",
   },
   input: {
     backgroundColor: "#0F172A",
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontSize: 14,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    bordercolor: "#475569",
   },
   modalButtons: {
     flexDirection: "row",
@@ -1108,7 +1108,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   submitBtnText: {
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontSize: 14,
     fontWeight: "700",
   },

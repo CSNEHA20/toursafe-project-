@@ -461,8 +461,8 @@ export default function ResponderDashboardScreen() {
             style={styles.shortcutCard}
             onPress={() => router.push('/responder/map')}
           >
-            <View style={[styles.shortcutIconWrap, { backgroundColor: '#1E293B' }]}>
-              <Navigation size={20} color="#38BDF8" />
+            <View style={[styles.shortcutIconWrap, { backgroundColor: '#DBEAFE' }]}>
+              <Navigation size={20} color="#1E40AF" />
             </View>
             <Text style={styles.shortcutTitle}>Tactical Map</Text>
             <Text style={styles.shortcutSub}>GPS Navigation</Text>
@@ -485,8 +485,8 @@ export default function ResponderDashboardScreen() {
               }
             }}
           >
-            <View style={[styles.shortcutIconWrap, { backgroundColor: '#1E293B' }]}>
-              <MessageSquare size={20} color="#818CF8" />
+            <View style={[styles.shortcutIconWrap, { backgroundColor: '#EEF2FF' }]}>
+              <MessageSquare size={20} color="#6366F1" />
             </View>
             <Text style={styles.shortcutTitle}>Comms</Text>
             <Text style={styles.shortcutSub}>Authority Channel</Text>
@@ -496,8 +496,8 @@ export default function ResponderDashboardScreen() {
             style={styles.shortcutCard}
             onPress={() => router.push('/responder/history')}
           >
-            <View style={[styles.shortcutIconWrap, { backgroundColor: '#1E293B' }]}>
-              <Activity size={20} color="#34D399" />
+            <View style={[styles.shortcutIconWrap, { backgroundColor: '#D1FAE5' }]}>
+              <Activity size={20} color="#059669" />
             </View>
             <Text style={styles.shortcutTitle}>History</Text>
             <Text style={styles.shortcutSub}>Mission Logs</Text>
@@ -507,8 +507,8 @@ export default function ResponderDashboardScreen() {
             style={styles.shortcutCard}
             onPress={() => router.push('/responder/diagnostics')}
           >
-            <View style={[styles.shortcutIconWrap, { backgroundColor: '#1E293B' }]}>
-              <Compass size={20} color="#FBBF24" />
+            <View style={[styles.shortcutIconWrap, { backgroundColor: '#FEF3C7' }]}>
+              <Compass size={20} color="#D97706" />
             </View>
             <Text style={styles.shortcutTitle}>Diagnostics</Text>
             <Text style={styles.shortcutSub}>Sensors & Queue</Text>
@@ -545,17 +545,17 @@ export default function ResponderDashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090D16',
+    backgroundColor: '#F8FAFC',
   },
   centerContainer: {
     flex: 1,
-    backgroundColor: '#090D16',
+    backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 12,
   },
   loadingText: {
-    color: '#94A3B8',
+    color: '#64748B',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -563,9 +563,9 @@ const styles = StyleSheet.create({
     paddingTop: 54,
     paddingHorizontal: 20,
     paddingBottom: 16,
-    backgroundColor: '#0D1424',
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
+    borderBottomColor: '#E2E8F0',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -579,19 +579,19 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#EFF6FF',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#BFDBFE',
     justifyContent: 'center',
     alignItems: 'center',
   },
   responderName: {
-    color: '#F8FAFC',
+    color: '#0F172A',
     fontSize: 16,
     fontWeight: '700',
   },
   responderRole: {
-    color: '#94A3B8',
+    color: '#64748B',
     fontSize: 12,
     marginTop: 2,
   },
@@ -599,7 +599,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -612,10 +612,10 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   card: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: '#E2E8F0',
     padding: 16,
   },
   cardHeader: {
@@ -630,7 +630,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cardSectionTitle: {
-    color: '#94A3B8',
+    color: '#64748B',
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.8,
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   statusDescription: {
-    color: '#CBD5E1',
+    color: '#475569',
     fontSize: 13,
     lineHeight: 18,
     marginBottom: 14,
@@ -667,30 +667,30 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#CBD5E1',
   },
   statusBtnActiveAvailable: {
-    backgroundColor: '#065F46',
+    backgroundColor: '#DCFCE7',
     borderColor: '#10B981',
   },
   statusBtnActiveUnavailable: {
-    backgroundColor: '#7F1D1D',
+    backgroundColor: '#FEE2E2',
     borderColor: '#EF4444',
   },
   statusBtnActiveOffline: {
-    backgroundColor: '#374151',
-    borderColor: '#6B7280',
+    backgroundColor: '#F1F5F9',
+    borderColor: '#94A3B8',
   },
   statusBtnText: {
-    color: '#94A3B8',
+    color: '#64748B',
     fontSize: 11,
     fontWeight: '700',
   },
   statusBtnTextActive: {
-    color: '#FFFFFF',
+    color: '#0F172A',
   },
   locationMetaGrid: {
     flexDirection: 'row',
@@ -699,11 +699,11 @@ const styles = StyleSheet.create({
   },
   locationMetaItem: {
     flex: 1,
-    backgroundColor: '#1E293B60',
+    backgroundColor: '#F8FAFC',
     padding: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#33415550',
+    borderColor: '#E2E8F0',
   },
   metaLabel: {
     color: '#64748B',
@@ -712,7 +712,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   metaValue: {
-    color: '#F1F5F9',
+    color: '#0F172A',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -737,8 +737,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   activeIncidentCard: {
-    borderColor: '#DC262680',
-    backgroundColor: '#18111A',
+    borderColor: '#FECACA',
+    backgroundColor: '#FFF1F2',
   },
   incidentBanner: {
     flexDirection: 'row',
@@ -752,7 +752,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   incidentBannerText: {
-    color: '#F87171',
+    color: '#DC2626',
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.5,
@@ -768,26 +768,26 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   incidentIdText: {
-    color: '#F1F5F9',
+    color: '#0F172A',
     fontSize: 14,
     fontWeight: '700',
   },
   incidentSourceText: {
-    color: '#94A3B8',
+    color: '#64748B',
     fontSize: 12,
     marginTop: 2,
     marginBottom: 8,
   },
   reasonsBox: {
-    backgroundColor: '#2A1723',
+    backgroundColor: '#FEE2E2',
     padding: 8,
     borderRadius: 6,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#4A1D2B',
+    borderColor: '#FECACA',
   },
   reasonsText: {
-    color: '#FCA5A5',
+    color: '#991B1B',
     fontSize: 12,
     fontWeight: '500',
   },
@@ -798,7 +798,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   incidentLocationText: {
-    color: '#93C5FD',
+    color: '#1E40AF',
     fontSize: 12,
   },
   incidentActionsRow: {
@@ -825,30 +825,30 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 8,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#EFF6FF',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#BFDBFE',
   },
   idleIncidentCard: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: '#E2E8F0',
     padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
   },
   idleTitle: {
-    color: '#94A3B8',
+    color: '#64748B',
     fontSize: 14,
     fontWeight: '700',
     marginTop: 6,
   },
   idleSubtitle: {
-    color: '#64748B',
+    color: '#94A3B8',
     fontSize: 12,
     textAlign: 'center',
   },
@@ -859,10 +859,10 @@ const styles = StyleSheet.create({
   },
   shortcutCard: {
     width: '48%',
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: '#E2E8F0',
     padding: 14,
   },
   shortcutIconWrap: {
@@ -874,7 +874,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   shortcutTitle: {
-    color: '#F8FAFC',
+    color: '#0F172A',
     fontSize: 13,
     fontWeight: '700',
   },
@@ -890,12 +890,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   unitName: {
-    color: '#F1F5F9',
+    color: '#0F172A',
     fontSize: 14,
     fontWeight: '700',
   },
   unitType: {
-    color: '#94A3B8',
+    color: '#64748B',
     fontSize: 12,
   },
   capsWrapper: {
@@ -904,16 +904,17 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   capTag: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#CBD5E1',
   },
   capTagText: {
-    color: '#C4B5FD',
+    color: '#6366F1',
     fontSize: 10,
     fontWeight: '600',
   },
 });
+

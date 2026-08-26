@@ -896,3 +896,4 @@ const styles = StyleSheet.create({
   },
   modalSubmitBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
 });
+
